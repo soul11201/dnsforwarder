@@ -281,7 +281,7 @@ static int QueryDNSListenUDP(void *Unused){
 			SecondarySocketPtr = NULL;
 	}
 
-	ExtendableBuffer_Init(&Buffer, 512, 1024);
+	ExtendableBuffer_Init(&Buffer, 512, 10240);
 
 	++ThreadCount;
 	while(TRUE)

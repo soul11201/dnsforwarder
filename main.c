@@ -7,6 +7,7 @@
 #ifndef WIN32
 #include <sys/types.h>
 #include <sys/stat.h>
+#else /* WIN32 */
 #include <curl/curl.h>
 #endif /* WIN32 */
 
@@ -222,7 +223,7 @@ int main(int argc, char *argv[])
         return -1;
 
 	SetConsoleTitle("dnsforwarder");
-#else
+#elseif
 	curl_global_init();
 #endif
 
