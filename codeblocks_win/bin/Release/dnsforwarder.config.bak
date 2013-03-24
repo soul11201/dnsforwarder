@@ -50,13 +50,13 @@ TimeToServer 3000
 # 可以有多条ExcludedDomain
 ExcludedDomain *google*,*proxy*,thawte.com,*wiki*
 
-GfwList https://autoproxy-gfwlist.googlecode.com/svn/trunk/gfwlist.txt
+#GfwList https://autoproxy-gfwlist.googlecode.com/svn/trunk/gfwlist.txt
 
 GfwListFlushTime 7200
 
 # UDPThreads <NUM>
 # 在本地进行 UDP 监听的线程数
-UDPThreads 3
+UDPThreads 1
 
 # DisabledType <STRING>
 # 禁止查询的 DNS 类型列表，每个类型之间用半角逗号 (`,') 分隔，同时注意最后不要有逗号
@@ -102,7 +102,7 @@ DisabledType 28
 
 # DisabledDomain <STRING>
 # 禁止查询的域列表，每个域之间用半角逗号 (`,') 分隔，同时注意最后不要有逗号
-DisabledDomain *dnserror*.wo.com.cn,.googleadservices.com,.doubleclick.net,wqzyt.net,cpro.baidu.com,drmcmm.baidu.com,eiv.baidu.com,cnzz.com,gdt.qq.com,pgdt.gtimg.cn,ishop.baidu.com,0355114.org,netloader.cc,kd0351.com,njzzw.com
+DisabledDomain *dnserror*.wo.com.cn,.googleadservices.com,.doubleclick.net,wqzyt.net,cpro.baidu.com,drmcmm.baidu.com,eiv.baidu.com,cnzz.com,gdt.qq.com,pgdt.gtimg.cn,ishop.baidu.com,0355114.org,netloader.cc,kd0351.com,njzzw.com,z.alimama.com
 
 # UseCache <BOOLEAN>
 # 是否使用缓存 (文件缓存)
@@ -111,7 +111,7 @@ UseCache true
 
 # CacheSize <NUM>
 # 缓存大小 (字节)
-CacheSize 1048576
+CacheSize 5242880
 
 # IgnoreTTL <BOOLEAN>
 # 是否忽略 TTL
@@ -139,7 +139,7 @@ ReloadCache true
 
 OverwriteCache true
 
-Hosts https://smarthosts.googlecode.com/svn/trunk/hosts
+#Hosts https://smarthosts.googlecode.com/svn/trunk/hosts
 
 #Hosts https://huhamhire-hosts.googlecode.com/git/downloads/raw/ipv4_win_ansi/hosts
 

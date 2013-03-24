@@ -271,7 +271,7 @@ static int TCPRecv(RecvInfo *Info)
 			SecondarySocketPtr = NULL;
 	}
 
-	ExtendableBuffer_Init(&Buffer, 512, 10240);
+	ExtendableBuffer_Init(&Buffer, 512, 1024);
 
 	while(TRUE){
 		state = recv(Socket, ResultBuffer, sizeof(ResultBuffer), MSG_NOSIGNAL);
