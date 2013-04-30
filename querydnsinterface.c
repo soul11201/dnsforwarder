@@ -159,6 +159,9 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "GfwList", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "GFW List");
 
+    TmpTypeDescriptor.boolean = TRUE;
+    ConfigAddOption(&ConfigInfo, "GfwListBase64Decode", STRATEGY_UNKNOWN, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
+
     TmpTypeDescriptor.INT32 = 7200;
     ConfigAddOption(&ConfigInfo, "GfwListFlushTime", STRATEGY_UNKNOWN, TYPE_INT32, TmpTypeDescriptor, NULL);
 

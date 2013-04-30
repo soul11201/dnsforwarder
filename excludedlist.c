@@ -234,6 +234,7 @@ int LoadGfwList_Thread(void *Unused)
 	const char	*GfwList	=	ConfigGetString(&ConfigInfo, "GfwList");
 	const char	*ExcludedList	=	ConfigGetString(&ConfigInfo, "ExcludedDomain");
 	const char	*File	=	ConfigGetString(&ConfigInfo, "GfwListDownloadPath");
+	const BOOL	NeedBase64Decode	=	ConfigGetBoolean(&ConfigInfo, "GfwListBase64Decode");
 	int			Count;
 
 	if( GfwList == NULL )
@@ -257,7 +258,7 @@ int LoadGfwList_Thread(void *Unused)
 
 			INFO("GFW List saved at %s.\n", File);
 
-			if( Base64Decode(File) != 0 )
+			if( (NeedBase64Decode == TRUE) && (Base64Decode(File) != 0) )
 			{
 				ERRORMSG("Decoding GFW List failed. Waiting %d second(s) for retry.\n", FlushTimeOnFailed);
 				SLEEP(FlushTimeOnFailed * 1000);
@@ -351,6 +352,7 @@ int LoadGfwList(void)
 
 	RWLock_UnWLock(ExcludedListLock);
 	INFO("Loading GFW List done. %d effective items.\n", Count);
+
 END:
 	CREATE_THREAD(LoadGfwList_Thread, NULL, gt);
 
