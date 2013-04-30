@@ -71,22 +71,22 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
 	ConfigInitInfo(&ConfigInfo);
 
     TmpTypeDescriptor.boolean = FALSE;
-    ConfigAddOption(&ConfigInfo, "Debug", STRATEGY_UNKNOWN, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "Debug", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = "127.0.0.1";
     ConfigAddOption(&ConfigInfo, "LocalInterface", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Local working interface");
 
     TmpTypeDescriptor.INT32 = 53;
-    ConfigAddOption(&ConfigInfo, "LocalPort", STRATEGY_UNKNOWN, TYPE_INT32, TmpTypeDescriptor, "Local working port");
+    ConfigAddOption(&ConfigInfo, "LocalPort", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, "Local working port");
 
     TmpTypeDescriptor.boolean = FALSE;
-    ConfigAddOption(&ConfigInfo, "OpenLocalTCP", STRATEGY_UNKNOWN, TYPE_BOOLEAN, TmpTypeDescriptor, "Local TCP is opened");
+    ConfigAddOption(&ConfigInfo, "OpenLocalTCP", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "Local TCP is opened");
 
     TmpTypeDescriptor.str = "TCP";
     ConfigAddOption(&ConfigInfo, "PrimaryServer", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Primary server");
 
     TmpTypeDescriptor.INT32 = 3;
-    ConfigAddOption(&ConfigInfo, "UDPThreads", STRATEGY_UNKNOWN, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "UDPThreads", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "DisabledType", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
@@ -98,16 +98,16 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     ConfigAddOption(&ConfigInfo, "UDPServer", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "UDP Server");
 
     TmpTypeDescriptor.INT32 = 3000;
-    ConfigAddOption(&ConfigInfo, "TimeToServer", STRATEGY_UNKNOWN, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "TimeToServer", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "Hosts", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Hosts File");
 
     TmpTypeDescriptor.INT32 = 600;
-    ConfigAddOption(&ConfigInfo, "HostsFlushTime", STRATEGY_UNKNOWN, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "HostsFlushTime", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.INT32 = 30;
-    ConfigAddOption(&ConfigInfo, "HostsFlushTimeOnFailed", STRATEGY_UNKNOWN, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "HostsFlushTimeOnFailed", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
 	GetFileDirectory(TmpStr);
 	strcat(TmpStr, PATH_SLASH_STR);
@@ -123,7 +123,7 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     ConfigAddOption(&ConfigInfo, "AppendHosts", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.INT32 = 1048576;
-    ConfigAddOption(&ConfigInfo, "CacheSize", STRATEGY_UNKNOWN, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "CacheSize", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
 	GetFileDirectory(TmpStr);
 	strcat(TmpStr, PATH_SLASH_STR);
@@ -133,22 +133,22 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     ConfigAddOption(&ConfigInfo, "CacheFile", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.boolean = TRUE;
-    ConfigAddOption(&ConfigInfo, "UseCache", STRATEGY_UNKNOWN, TYPE_BOOLEAN, TmpTypeDescriptor, "Use cache");
+    ConfigAddOption(&ConfigInfo, "UseCache", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "Use cache");
 
     TmpTypeDescriptor.boolean = FALSE;
-    ConfigAddOption(&ConfigInfo, "IgnoreTTL", STRATEGY_UNKNOWN, TYPE_BOOLEAN, TmpTypeDescriptor, "Ignore TTL");
+    ConfigAddOption(&ConfigInfo, "IgnoreTTL", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "Ignore TTL");
 
     TmpTypeDescriptor.INT32 = -1;
-    ConfigAddOption(&ConfigInfo, "ForceTTL", STRATEGY_UNKNOWN, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "ForceTTL", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.INT32 = 1;
-    ConfigAddOption(&ConfigInfo, "MultipleTTL", STRATEGY_UNKNOWN, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "MultipleTTL", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.boolean = FALSE;
-    ConfigAddOption(&ConfigInfo, "ReloadCache", STRATEGY_UNKNOWN, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "ReloadCache", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.boolean = FALSE;
-    ConfigAddOption(&ConfigInfo, "OverwriteCache", STRATEGY_UNKNOWN, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "OverwriteCache", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "ExcludedDomain", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
@@ -160,13 +160,13 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     ConfigAddOption(&ConfigInfo, "GfwList", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "GFW List");
 
     TmpTypeDescriptor.boolean = TRUE;
-    ConfigAddOption(&ConfigInfo, "GfwListBase64Decode", STRATEGY_UNKNOWN, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "GfwListBase64Decode", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.INT32 = 7200;
-    ConfigAddOption(&ConfigInfo, "GfwListFlushTime", STRATEGY_UNKNOWN, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "GfwListFlushTime", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.INT32 = 30;
-    ConfigAddOption(&ConfigInfo, "GfwListFlushTimeOnFailed", STRATEGY_UNKNOWN, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "GfwListFlushTimeOnFailed", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
 	GetFileDirectory(TmpStr);
 	strcat(TmpStr, PATH_SLASH_STR);

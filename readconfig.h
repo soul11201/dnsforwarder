@@ -30,7 +30,7 @@ typedef enum _OptionType{
 } OptionType;
 
 typedef enum _MultilineStrategy{
-	STRATEGY_UNKNOWN = 0,
+	STRATEGY_DEFAULT = 0,
 	STRATEGY_REPLACE,
 	STRATEGY_APPEND,
 	STRATEGY_APPEND_DISCARD_DEFAULT
@@ -38,7 +38,7 @@ typedef enum _MultilineStrategy{
 
 typedef union _VType{
 	char		*str;
-	int			INT32;
+	_32BIT_INT	INT32;
 	BOOL		boolean;
 } VType;
 
@@ -95,7 +95,7 @@ int ConfigRead(ConfigFileInfo *Info);
 
 const char *ConfigGetString(ConfigFileInfo *Info, char *KeyName);
 
-int ConfigGetInt32(ConfigFileInfo *Info, char *KeyName);
+_32BIT_INT ConfigGetInt32(ConfigFileInfo *Info, char *KeyName);
 
 BOOL ConfigGetBoolean(ConfigFileInfo *Info, char *KeyName);
 

@@ -141,6 +141,29 @@ static const char *GetValuePosition(const char *Line)
 		return itr;
 }
 
+static BOOL GetBoolealValueFromString(char *str)
+{
+	if( isdigit(*str) )
+	{
+		if( *str == '0' )
+			return FALSE;
+		else
+			return TRUE;
+	} else {
+		StrToLower(str);
+
+		if( strstr(str, "false") != NULL )
+			return FALSE;
+		else if( strstr(str, "true") != NULL )
+			return TRUE;
+
+		if( strstr(str, "no") != NULL )
+			return FALSE;
+		else if( strstr(str, "yes") != NULL )
+			return TRUE;
+	}
+}
+
 int ConfigRead(ConfigFileInfo *Info)
 {
 	int				NumOfRead	=	0;
@@ -171,28 +194,71 @@ int ConfigRead(ConfigFileInfo *Info)
 		switch( Option -> Type )
 		{
 			case TYPE_INT32:
-				sscanf(ValuePos, "%d", &(Option -> Holder.INT32));
+				switch (Option -> Strategy)
+				{
+					case STRATEGY_APPEND_DISCARD_DEFAULT:
+						if( Option -> Status == STATUS_DEFAULT_VALUE )
+						{
+							Option -> Strategy = STRATEGY_APPEND;
+						}
+						/* No break */
+
+					case STRATEGY_DEFAULT:
+					case STRATEGY_REPLACE:
+						sscanf(ValuePos, "%d", &(Option -> Holder.INT32));
+						Option -> Status = STATUS_SPECIAL_VALUE;
+						break;
+
+					case STRATEGY_APPEND:
+						{
+							_32BIT_INT SpecifiedValue;
+
+							sscanf(ValuePos, "%d", &SpecifiedValue);
+							Option -> Holder.INT32 += SpecifiedValue;
+
+							Option -> Status = STATUS_SPECIAL_VALUE;
+						}
+						break;
+
+					default:
+						continue;
+						break;
+				}
 				break;
 
 			case TYPE_BOOLEAN:
-				if( isdigit(*ValuePos) )
+				switch (Option -> Strategy)
 				{
-					if( *ValuePos == '0' )
-						Option -> Holder.boolean = FALSE;
-					else
-						Option -> Holder.boolean = TRUE;
-				} else {
-					StrToLower(ValuePos);
+					case STRATEGY_APPEND_DISCARD_DEFAULT:
+						if( Option -> Status == STATUS_DEFAULT_VALUE )
+						{
+							Option -> Strategy = STRATEGY_APPEND;
+						}
+						/* No break */
 
-					if( strstr(ValuePos, "false") != NULL )
-						Option -> Holder.boolean = FALSE;
-					else if( strstr(ValuePos, "true") != NULL )
-						Option -> Holder.boolean = TRUE;
+					case STRATEGY_DEFAULT:
+					case STRATEGY_REPLACE:
 
-					if( strstr(ValuePos, "no") != NULL )
-						Option -> Holder.boolean = FALSE;
-					else if( strstr(ValuePos, "yes") != NULL )
-						Option -> Holder.boolean = TRUE;
+						Option -> Holder.boolean = GetBoolealValueFromString(ValuePos);
+
+						Option -> Status = STATUS_SPECIAL_VALUE;
+						break;
+
+					case STRATEGY_APPEND:
+						{
+							BOOL SpecifiedValue;
+
+							SpecifiedValue = GetBoolealValueFromString(ValuePos);
+							Option -> Holder.boolean |= SpecifiedValue;
+
+							Option -> Status = STATUS_SPECIAL_VALUE;
+						}
+						break;
+
+						default:
+							continue;
+							break;
+
 				}
 				break;
 
@@ -202,10 +268,6 @@ int ConfigRead(ConfigFileInfo *Info)
 
 					switch (Option -> Strategy)
 					{
-						case STRATEGY_UNKNOWN:
-							continue;
-							break;
-
 						case STRATEGY_APPEND_DISCARD_DEFAULT:
 							if( Option -> Status == STATUS_DEFAULT_VALUE )
 							{
@@ -213,6 +275,7 @@ int ConfigRead(ConfigFileInfo *Info)
 							}
 							/* No break */
 
+						case STRATEGY_DEFAULT:
 						case STRATEGY_REPLACE:
 							if( Option -> Holder.str != NULL )
 							{
@@ -252,9 +315,9 @@ int ConfigRead(ConfigFileInfo *Info)
 							Option -> Status = STATUS_SPECIAL_VALUE;
 							break;
 
-							default:
-								continue;
-								break;
+						default:
+							continue;
+							break;
 					}
 
 					while( ReadStatus != READ_DONE ){
@@ -301,7 +364,7 @@ const char *ConfigGetString(ConfigFileInfo *Info, char *KeyName)
 	return 0;
 }
 
-int ConfigGetInt32(ConfigFileInfo *Info, char *KeyName)
+_32BIT_INT ConfigGetInt32(ConfigFileInfo *Info, char *KeyName)
 {
 	int loop;
 	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
