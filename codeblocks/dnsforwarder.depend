@@ -452,7 +452,7 @@
 	"readconfig.h"
 	"querydnsinterface.h"
 
-1357011108 /media/Documents/My_File/VC/dnsforwarder/readconfig.h
+1367302665 /media/Documents/My_File/VC/dnsforwarder/readconfig.h
 	<stdio.h>
 	"common.h"
 
@@ -473,7 +473,7 @@
 	<openssl/bio.h>
 	<openssl/evp.h>
 
-1359525208 source:/media/Documents/My_File/VC/dnsforwarder/querydnslistentcp.c
+1364093763 source:/media/Documents/My_File/VC/dnsforwarder/querydnslistentcp.c
 	<stdio.h>
 	<string.h>
 	<stdlib.h>
@@ -514,7 +514,7 @@
 	"rwlock.h"
 	"hashtable.h"
 
-1359167728 source:/media/Documents/My_File/VC/dnsforwarder/querydnsinterface.c
+1367302086 source:/media/Documents/My_File/VC/dnsforwarder/querydnsinterface.c
 	<string.h>
 	"common.h"
 	"querydnsinterface.h"
@@ -564,7 +564,7 @@
 	"dnsparser.h"
 	"dnsgenerator.h"
 
-1359525208 source:/media/Documents/My_File/VC/dnsforwarder/querydnslistenudp.c
+1364093771 source:/media/Documents/My_File/VC/dnsforwarder/querydnslistenudp.c
 	<stdio.h>
 	<string.h>
 	<time.h>
@@ -642,7 +642,7 @@
 1360306544 /media/Documents/My_File/VC/dnsforwarder/extendablebuffer.h
 	"common.h"
 
-1360376566 source:/media/Documents/My_File/VC/dnsforwarder/excludedlist.c
+1367300137 source:/media/Documents/My_File/VC/dnsforwarder/excludedlist.c
 	<string.h>
 	<time.h>
 	"excludedlist.h"
@@ -671,9 +671,10 @@
 	"common.h"
 	"readline.h"
 
-1360404075 source:/media/Documents/My_File/VC/dnsforwarder/addresslist.c
+1367301915 source:/media/Documents/My_File/VC/dnsforwarder/addresslist.c
 	<stdio.h>
 	<ctype.h>
+	<string.h>
 	"addresslist.h"
 	"common.h"
 	"utils.h"
