@@ -25,7 +25,7 @@
 	<pwd.h>
 	<fnmatch.h>
 
-1360376577 source:d:\my_file\vc\dnsforwarder\dnscache.c
+1370776236 source:d:\my_file\vc\dnsforwarder\dnscache.c
 	<stdio.h>
 	<string.h>
 	<math.h>
@@ -69,7 +69,7 @@
 1346504015 source:d:\my_file\vc\dnsforwarder\dnsrelated.c
 	"dnsrelated.h"
 
-1359167380 source:d:\my_file\vc\dnsforwarder\main.c
+1364093734 source:d:\my_file\vc\dnsforwarder\main.c
 	<stdio.h>
 	<string.h>
 	<time.h>
@@ -77,6 +77,7 @@
 	<ctype.h>
 	<sys/types.h>
 	<sys/stat.h>
+	<curl/curl.h>
 	"dnsrelated.h"
 	"common.h"
 	"utils.h"
@@ -111,7 +112,7 @@
 	"addresslist.h"
 	"stringlist.h"
 
-1359525208 source:d:\my_file\vc\dnsforwarder\querydnslistentcp.c
+1364093763 source:d:\my_file\vc\dnsforwarder\querydnslistentcp.c
 	<stdio.h>
 	<string.h>
 	<stdlib.h>
@@ -127,7 +128,7 @@
 	"excludedlist.h"
 	"addresslist.h"
 
-1359525208 source:d:\my_file\vc\dnsforwarder\querydnslistenudp.c
+1370776287 source:d:\my_file\vc\dnsforwarder\querydnslistenudp.c
 	<stdio.h>
 	<string.h>
 	<time.h>
@@ -146,7 +147,7 @@
 	<stdio.h>
 	"common.h"
 
-1359689156 source:d:\my_file\vc\dnsforwarder\utils.c
+1361685570 source:d:\my_file\vc\dnsforwarder\utils.c
 	<stdlib.h>
 	<ctype.h>
 	<stdio.h>
@@ -157,8 +158,10 @@
 	"utils.h"
 	"dnsgenerator.h"
 	<wincrypt.h>
+	<openssl/bio.h>
+	<openssl/evp.h>
 
-1357012356 source:d:\my_file\vc\dnsforwarder\readconfig.c
+1367303413 source:d:\my_file\vc\dnsforwarder\readconfig.c
 	<ctype.h>
 	<stdio.h>
 	<string.h>
@@ -166,14 +169,14 @@
 	"utils.h"
 	"readline.h"
 
-1357011108 d:\my_file\vc\dnsforwarder\readconfig.h
+1367302665 d:\my_file\vc\dnsforwarder\readconfig.h
 	<stdio.h>
 	"common.h"
 
 1358471377 d:\my_file\vc\dnsforwarder\querydnsinterface.h
 	"common.h"
 
-1359167728 source:d:\my_file\vc\dnsforwarder\querydnsinterface.c
+1367302086 source:d:\my_file\vc\dnsforwarder\querydnsinterface.c
 	<string.h>
 	"common.h"
 	"querydnsinterface.h"
@@ -241,11 +244,12 @@
 	"retcode.h"
 	"common.h"
 
-1358917149 source:d:\my_file\vc\dnsforwarder\downloader.c
+1361521341 source:d:\my_file\vc\dnsforwarder\downloader.c
 	<stdio.h>
 	<stdlib.h>
 	"common.h"
 	<limits.h>
+	<curl/curl.h>
 	"downloader.h"
 
 1356927551 d:\my_file\vc\dnsforwarder\downloader.h
@@ -267,7 +271,7 @@
 	"extendablebuffer.h"
 	"utils.h"
 
-1360376566 source:d:\my_file\vc\dnsforwarder\excludedlist.c
+1367300137 source:d:\my_file\vc\dnsforwarder\excludedlist.c
 	<string.h>
 	<time.h>
 	"excludedlist.h"
@@ -282,9 +286,10 @@
 1358486986 d:\my_file\vc\dnsforwarder\excludedlist.h
 	"stringlist.h"
 
-1360404075 source:d:\my_file\vc\dnsforwarder\addresslist.c
+1367301915 source:d:\my_file\vc\dnsforwarder\addresslist.c
 	<stdio.h>
 	<ctype.h>
+	<string.h>
 	"addresslist.h"
 	"common.h"
 	"utils.h"
@@ -293,6 +298,6 @@
 	"array.h"
 	"common.h"
 
-1358843431 d:\my_file\vc\dnsforwarder\rwlock.h
+1369378104 d:\my_file\vc\dnsforwarder\rwlock.h
 	"common.h"
 

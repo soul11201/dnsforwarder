@@ -288,7 +288,6 @@ static int QueryDNSListenUDP(void *Unused){
 	{
 		memset(&ClientAddr, 0, sizeof(ClientAddr));
 		GET_MUTEX(ListenMutex);
-
 		if( Family == AF_INET )
 		{
 			AddrLen = sizeof(struct sockaddr);
@@ -301,7 +300,6 @@ static int QueryDNSListenUDP(void *Unused){
 		}
 
 		RELEASE_MUTEX(ListenMutex);
-
 		if(State < 1)
 		{
 			if( ErrorMessages == TRUE )

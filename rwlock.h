@@ -44,12 +44,27 @@ typedef pthread_rwlock_t  RWLock;
 	#endif /* WIN64 */
 #else /* WIN32 */
 
+
 	#define RWLock_Init(l)		pthread_rwlock_init(&(l), NULL)
 	#define RWLock_RdLock(l)	pthread_rwlock_rdlock(&(l))
 	#define RWLock_WrLock(l)	pthread_rwlock_wrlock(&(l))
 	#define RWLock_UnRLock(l)	pthread_rwlock_unlock(&(l))
 	#define RWLock_UnWLock(l)	pthread_rwlock_unlock(&(l))
 	#define RWLock_Destroy(l)	pthread_rwlock_destroy(&(l))
+
+/*
+	#define RWLock_Init(l)		pthread_rwlock_init(&(l), NULL)
+	#define RWLock_RdLock(l)	printf("      Read Lock %s at %s : %d .\n", #l, __FILE__, __LINE__); \
+								pthread_rwlock_rdlock(&(l))
+	#define RWLock_WrLock(l)	printf("      Write Lock %s at %s : %d .\n", #l, __FILE__, __LINE__); \
+								pthread_rwlock_wrlock(&(l))
+	#define RWLock_UnRLock(l)	printf("      UnRead Lock %s at %s : %d .", #l, __FILE__, __LINE__); \
+								printf("      Return Value %d .\n", pthread_rwlock_unlock(&(l)));
+	#define RWLock_UnWLock(l)	printf("      UnWrite Lock %s at %s : %d .", #l, __FILE__, __LINE__); \
+								printf("      Return Value %d .\n", pthread_rwlock_unlock(&(l)));
+	#define RWLock_Destroy(l)	pthread_rwlock_destroy(&(l))
+
+*/
 
 #endif /* WIN32 */
 

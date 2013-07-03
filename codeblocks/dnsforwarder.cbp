@@ -11,7 +11,6 @@
 				<Option object_output="/tmp/obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters='-f &quot;/home/ho121/.dnsforwarder&quot;' />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -109,6 +108,7 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../readline.h" />
+		<Unit filename="../rwlock.h" />
 		<Unit filename="../stringlist.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -120,6 +120,7 @@
 		<Extensions>
 			<code_completion />
 			<debugger />
+			<envvars />
 		</Extensions>
 	</Project>
 </CodeBlocks_project_file>

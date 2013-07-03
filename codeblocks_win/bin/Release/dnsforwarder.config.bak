@@ -48,11 +48,11 @@ TimeToServer 3000
 # ExcludedDomain <STRING>
 # 排除列表，每个域之间用半角逗号 (`,') 分隔，同时注意最后不要有逗号
 # 可以有多条ExcludedDomain
-ExcludedDomain *google*,*proxy*,thawte.com,*wiki*
+ExcludedDomain *google*,*proxy*,thawte.com,*wiki*,inoreader.com
 
 GfwList https://autoproxy-gfwlist.googlecode.com/svn/trunk/gfwlist.txt
 
-GfwListBase64Decode false
+GfwListBase64Decode true
 
 GfwListFlushTime 7200
 
@@ -104,7 +104,7 @@ DisabledType 28
 
 # DisabledDomain <STRING>
 # 禁止查询的域列表，每个域之间用半角逗号 (`,') 分隔，同时注意最后不要有逗号
-DisabledDomain *dnserror*.wo.com.cn,.googleadservices.com,.doubleclick.net,wqzyt.net,cpro.baidu.com,drmcmm.baidu.com,eiv.baidu.com,cnzz.com,gdt.qq.com,pgdt.gtimg.cn,ishop.baidu.com,0355114.org,netloader.cc,kd0351.com,njzzw.com,z.alimama.com
+DisabledDomain *dnserror*.wo.com.cn,.googleadservices.com,.doubleclick.net,wqzyt.net,cpro.baidu.com,drmcmm.baidu.com,eiv.baidu.com,cnzz.com,gdt.qq.com,pgdt.gtimg.cn,ishop.baidu.com,0355114.org,netloader.cc,kd0351.com,njzzw.com,z.alimama.com,exoclick.com
 
 # UseCache <BOOLEAN>
 # 是否使用缓存 (文件缓存)
@@ -135,7 +135,7 @@ ForceTTL 600
 # 当 `UseCache' 的值为 `false' 时，此选项无效
 # 当 `IgnoreTTL' 的值为 `true' 时，此选项无效
 # 当 `ForceTTL' 的值不为 -1 时，此选项无效
-MultipleTTL 3
+MultipleTTL 10
 
 ReloadCache true
 

@@ -489,7 +489,6 @@ int QueryFromServer(SOCKET				*Socket,
 		if(*Socket == INVALID_SOCKET)
 		{
 			*Socket = socket(Family, SOCK_DGRAM, IPPROTO_UDP);
-			SetSocketRecvTimeLimit(*Socket, TimeToServer);
 		}
 		if __STILL(*Socket == INVALID_SOCKET)
 		{
@@ -511,6 +510,8 @@ int QueryFromServer(SOCKET				*Socket,
 
 			return -2; /* Failed */
 		}
+
+		SetSocketRecvTimeLimit(*Socket, TimeToServer);
 	} else {
 		if(TCPSocketIsHealthy(Socket) == FALSE)
 		{
@@ -706,13 +707,15 @@ int SetSocketWait(SOCKET sock, BOOL Wait)
 
 int SetSocketSendTimeLimit(SOCKET sock, int time)
 {
-	struct timeval Time = {time, 0};
+	struct timeval Time = {0, time * 1000};
+
 	return setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&Time, sizeof(Time));
 }
 
 int SetSocketRecvTimeLimit(SOCKET sock, int time)
 {
-	struct timeval Time = {time, 0};
+	struct timeval Time = {0, time * 1000};
+
 	return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&Time, sizeof(Time));
 }
 

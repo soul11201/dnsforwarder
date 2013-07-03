@@ -238,6 +238,8 @@ int main(int argc, char *argv[])
 
     PRINT("DNSforwarder by holmium. Free for non-commercial use. Version "VERSION" .\n\n");
 
+    PRINT("Configure File : %s\n\n", ProgramArgs.ConfigFile_ptr);
+
 	if( QueryDNSInterfaceInit(ProgramArgs.ConfigFile_ptr, ProgramArgs.ShowMassages, ProgramArgs.ErrorMessages) != 0 )
 		goto JustEnd;
 
