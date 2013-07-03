@@ -130,7 +130,7 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
 	strcat(TmpStr, "cache");
 
     TmpTypeDescriptor.str = TmpStr;
-    ConfigAddOption(&ConfigInfo, "CacheFile", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "CacheFile", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, "Cache File");
 
     TmpTypeDescriptor.boolean = TRUE;
     ConfigAddOption(&ConfigInfo, "UseCache", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "Use cache");

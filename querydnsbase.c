@@ -707,14 +707,14 @@ int SetSocketWait(SOCKET sock, BOOL Wait)
 
 int SetSocketSendTimeLimit(SOCKET sock, int time)
 {
-	struct timeval Time = {0, time * 1000};
+	struct timeval Time = {time / 1000, (time % 1000) * 1000};
 
 	return setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&Time, sizeof(Time));
 }
 
 int SetSocketRecvTimeLimit(SOCKET sock, int time)
 {
-	struct timeval Time = {0, time * 1000};
+	struct timeval Time = {time / 1000, (time % 1000) * 1000};
 
 	return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&Time, sizeof(Time));
 }
