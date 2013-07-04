@@ -259,6 +259,8 @@ static int DNSQueryRawViaUDP(SOCKET				Sock,
 	int		LengthFromServer = 0;
 	int		LengthOfNewAllocated = 0;
 
+	int		ReceiveState = 0;
+
 	if(ContentLength == 0) return 0;
 	if(ContentLength < 0) return -1;
 
@@ -289,7 +291,14 @@ static int DNSQueryRawViaUDP(SOCKET				Sock,
 
 		LengthOfNewAllocated += 384;
 
-		LengthFromServer += recvfrom(Sock, NewFromServer, 384, 0, PeerAddr, (socklen_t *)&AddrLen);
+		ReceiveState = recvfrom(Sock, NewFromServer, 384, 0, PeerAddr, (socklen_t *)&AddrLen);
+		if( ReceiveState > 0 )
+		{
+			LengthFromServer += ReceiveState;
+		} else {
+			return -1;
+		}
+
 	} while( SocketIsStillReadable(Sock) );
 
 	ExtendableBuffer_Eliminate_Tail(ResultBuffer, LengthOfNewAllocated - LengthFromServer);
@@ -320,9 +329,13 @@ int DNSQueryOriginViaUDP(SOCKET				Sock,
 		}
 
 		State = DNSQueryRawViaUDP(Sock, PeerAddr, Family, ((char *)OriginDNSBody) + 2, OriginDNSBodyLength - 2, ResultBuffer);
-
-		SET_16_BIT_U_INT(TCPLength, State);
-		return State + 2;
+		if( State > 0 )
+		{
+			SET_16_BIT_U_INT(TCPLength, State);
+			return State + 2;
+		} else {
+			return -1;
+		}
 	}
 }
 
@@ -482,7 +495,6 @@ int QueryFromServer(SOCKET				*Socket,
 
 	int	StartOffset = ExtendableBuffer_GetEndOffset(Buffer);
 
-	/* Failed querying from cache, then querying from server */
 	/* Connecting to Server */
 	if( ProtocolToServer == DNS_QUARY_PROTOCOL_UDP )
 	{
@@ -563,9 +575,10 @@ int QueryFromServer(SOCKET				*Socket,
 			}
 		}
 		return State;
+	} else {
+		ExtendableBuffer_SetEndOffset(Buffer, StartOffset);
+		return -1; /* Failed */
 	}
-
-	return -1; /* Failed */
 
 }
 
@@ -644,7 +657,8 @@ int QueryBase(QueryContext		*Context,
 		);
 		printf("%d\n", ((struct sockaddr_in *)ServerAddr) -> sin_family);
 		*/
-		/* Querying */
+
+		/* Failed querying from cache, then querying from server */
 		State = QueryFromServer(SocketUsed, ServerAddr, Family, Context -> PrimaryProtocolToServer, QueryContent, QueryContentLength, Context -> ProtocolToSrc, Buffer);
 
 		if(State < 0) /* Failed */
