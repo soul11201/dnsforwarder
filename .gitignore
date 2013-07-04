@@ -1,6 +1,11 @@
 codeblocks/obj/
+codeblocks/*.depend
+codeblocks/*.layout
 codeblocks_win/obj/
+codeblocks_win/*.depend
+codeblocks_win/*.layout
 vc10/Debug/
 vc10/Release/
 codeblocks_win/bin/*/cache
 codeblocks_win/bin/*/*.txt
+codeblocks_win/bin/*/*.bak
