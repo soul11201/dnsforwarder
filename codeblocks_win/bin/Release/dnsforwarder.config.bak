@@ -37,7 +37,7 @@ TCPServer 8.8.4.4,8.8.8.8
 
 # UDPServer <IP[:POTR]>
 # 指定用 UDP 协议查询的上游服务器
-UDPServer 202.99.216.113,202.97.131.178
+UDPServer 1.1.1.1#202.99.216.113,202.97.131.178
 
 # UDPServerPort <NUM>
 # 指定用 UDP 协议查询的上游服务器端口
@@ -48,7 +48,7 @@ TimeToServer 3000
 # ExcludedDomain <STRING>
 # 排除列表，每个域之间用半角逗号 (`,') 分隔，同时注意最后不要有逗号
 # 可以有多条ExcludedDomain
-ExcludedDomain *google*,*proxy*,thawte.com,*wiki*,inoreader.com
+ExcludedDomain *google*,*proxy*,thawte.com,*wiki*,inoreader.com,1freehosting.com
 
 GfwList https://autoproxy-gfwlist.googlecode.com/svn/trunk/gfwlist.txt
 
@@ -128,7 +128,7 @@ IgnoreTTL false
 # 若 <NUM> 为 -1，则表示不进行强制
 # 当 `UseCache' 的值为 `false' 时，此选项无效
 # 当 `IgnoreTTL' 的值为 `true' 时，此选项无效
-ForceTTL 600
+ForceTTL -1
 
 # MultipleTTL <NUM>
 # 将所有缓存条目的 TTL 加倍，倍数为 <NUM>
