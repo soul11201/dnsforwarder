@@ -327,7 +327,7 @@ BOOL Cache_IsInited(void)
 	return Inited;
 }
 
-static _32BIT_INT DNSCache_GetAviliableZone(_32BIT_UINT Length, NodeHead **Out)
+static _32BIT_INT DNSCache_GetAviliableChunk(_32BIT_UINT Length, NodeHead **Out)
 {
 	_32BIT_INT	Itr = HASHTABLE_FINDUNUSEDNODE_START;
 	NodeHead	*Node;
@@ -431,35 +431,69 @@ static char *DNSCache_GenerateTextFromRawRecord(char *DNSBody, char *DataBody, c
 
 static int DNSCache_AddAItemToCache(char *DNSBody, char *RecordBody)
 {
+	/* Store generated cache, there is no bounds checking */
 	char			Buffer[512];
+
+	/* Iterator of Buffer */
 	char			*BufferItr = Buffer;
 
+	/* Set start byte of a cache */
 	Buffer[0] = CACHE_START;
+
+	/* Set the name of the cache */
 	DNSGetHostName(DNSBody, RecordBody, Buffer + 1);
+
+	/* Jump out just after name */
 	BufferItr += strlen(Buffer);
+
+	/* Set record type and class */
 	BufferItr += sprintf(BufferItr, "\1%d\1%d", (int)DNSGetRecordType(RecordBody), (int)DNSGetRecordClass(RecordBody));
 
+	/* End of class */
 	*BufferItr++ = '\0';
 
+	/* Generate data and store them */
 	BufferItr = DNSCache_GenerateTextFromRawRecord(DNSBody, DNSGetResourceDataPos(RecordBody), BufferItr, (DNSRecordType)DNSGetRecordType(RecordBody));
+
+	/* If data is generated failed, stop everything else here */
 	if(BufferItr == NULL) return -1;
 
+	/* Mark the end */
 	*BufferItr = CACHE_END;
+
+	/* One cache item generating completed */
+
+	/* Add the cache item to the main cache zone */
+
+	/* Determine whether the cache item has existed in the main cache zone */
 	if(DNSCache_FindFromCache(Buffer + 1, BufferItr - Buffer, NULL) == NULL)
 	{
+		/* If not, add it */
+
+		/* Subscript of a chunk in the main cache zone */
 		_32BIT_INT	Subscript;
-		NodeHead	*Node;
+
+		/* Chunk that has subscript `Subscript' */
+		NodeHead	*Chunk;
+
+		/* Entry position of `Chunk' */
 		struct _CacheEntry	*Entry = NULL;
 
-		Subscript = DNSCache_GetAviliableZone(BufferItr - Buffer + 1, &Node);
+		/* Get a usable chunk and its subscript */
+		Subscript = DNSCache_GetAviliableChunk(BufferItr - Buffer + 1, &Chunk);
+
+		/* If there is a usable chunk */
 		if(Subscript >= 0)
 		{
-			Entry = HashTable_GetDataByNode(Node);
 
+			/* Get the entry position */
+			Entry = HashTable_GetDataByNode(Chunk);
+
+			/* Copy the date of the cache item just generated to the entry */
 			memcpy(MapStart + Entry -> Offset, Buffer, BufferItr - Buffer + 1);
 
+			/* Assign TTL */
 			Entry -> OriginalTTL = DNSGetTTL(RecordBody);
-
 			if(ForceTTL < 0)
 			{
 				Entry -> TTL = Entry -> OriginalTTL * TTLMultiple;
@@ -467,7 +501,8 @@ static int DNSCache_AddAItemToCache(char *DNSBody, char *RecordBody)
 				Entry -> TTL = ForceTTL;
 			}
 
-			HashTable_AddByNode(CacheInfo, Buffer + 1, Subscript, Node);
+			/* Add the entry to the hash table */
+			HashTable_AddByNode(CacheInfo, Buffer + 1, Subscript, Chunk);
 		} else {
 			return -1;
 		}
