@@ -491,22 +491,6 @@ int QueryFromServerBase(SOCKET				*Socket,
 
 			if __STILL(*Socket == INVALID_SOCKET)
 			{
-
-				if( ShowMassages == TRUE )
-				{
-					int		ErrorNum = GET_LAST_ERROR();
-					char	ErrorMessage[320];
-
-					ErrorMessage[0] ='\0';
-
-					GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
-
-					printf("(Failed to connect to server : %d : %s).\n",
-						   ErrorNum,
-						   ErrorMessage
-						   );
-				}
-
 				return -2; /* Failed */
 			}
 		}
@@ -517,23 +501,6 @@ int QueryFromServerBase(SOCKET				*Socket,
 		{
 			if(ConnectToTCPServer(Socket, PeerAddr, Family, TimeToServer) == FALSE)
 			{
-				CloseTCPConnection(Socket);
-
-				if( ShowMassages == TRUE )
-				{
-					int		ErrorNum = GET_LAST_ERROR();
-					char	ErrorMessage[320];
-
-					ErrorMessage[0] ='\0';
-
-					GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
-
-					printf("(Failed to connect to server : %d : %s).\n",
-						   ErrorNum,
-						   ErrorMessage
-						   );
-				}
-
 				return -2; /* Failed */
 			} else {
 				INFO("(Connecting to server Successfully.)\n");
@@ -550,24 +517,90 @@ int QueryFromServerBase(SOCKET				*Socket,
 
 	if( State > 0 ) /* Succeed  */
 	{
-		if( ProtocolToSrc == DNS_QUARY_PROTOCOL_UDP )
+		if( Cache_IsInited() )
 		{
-			if( DNSCache_AddItemsToCache(ExtendableBuffer_GetPositionByOffset(Buffer, StartOffset)) != 0 )
+			int StateOfCacheing;
+
+			if( ProtocolToSrc == DNS_QUARY_PROTOCOL_UDP )
 			{
-				INFO("(Caching in failed. Cache size limit exceed?)\n");
+				StateOfCacheing = DNSCache_AddItemsToCache(ExtendableBuffer_GetPositionByOffset(Buffer, StartOffset));
+			} else {
+				StateOfCacheing = DNSCache_AddItemsToCache(ExtendableBuffer_GetPositionByOffset(Buffer, StartOffset) + 2);
 			}
-		} else {
-			if( DNSCache_AddItemsToCache(ExtendableBuffer_GetPositionByOffset(Buffer, StartOffset) + 2) != 0 )
+
+			if( StateOfCacheing != 0 )
 			{
-				INFO("(Caching in failed. Cache size limit exceed?)\n");
+				INFO("(Caching in failed. Cache is running out of space?)\n");
 			}
 		}
+
 		return State;
 	} else {
+		int OriginErrorCode = GET_LAST_ERROR();
+
 		ExtendableBuffer_SetEndOffset(Buffer, StartOffset);
+
+		if( ProtocolToServer == DNS_QUARY_PROTOCOL_UDP )
+		{
+			/* Close the bad socket */
+			CLOSE_SOCKET(*Socket);
+			*Socket = INVALID_SOCKET;
+
+			/* Assume the server is not avaliable now, move to the next server */
+			AddressList_Incr(&UDPAddresses);
+		} else { /* Similarly, for TCP, below */
+			CloseTCPConnection(Socket);
+			AddressList_Incr(&TCPAddresses);
+		}
+
+		/* For not to overwrite internal error code(may be done by
+		 * CLOSE_SOCKET() or CloseTCPConnection() ), write it back */
+		SET_LAST_ERROR(OriginErrorCode);
+
 		return -1; /* Failed */
 	}
+}
 
+static void SelectSocketAndProtocol(QueryContext		*Context,
+									SOCKET				**SocketUsed,
+									DNSQuaryProtocol	*ProtocolUsed,
+									BOOL				IsSecondary
+									)
+{
+	if( IsSecondary == TRUE )
+	{
+		*SocketUsed = Context -> SecondarySocket;
+		*ProtocolUsed = !(Context -> PrimaryProtocolToServer);
+	} else {
+		*SocketUsed = Context -> PrimarySocket;
+		*ProtocolUsed = Context -> PrimaryProtocolToServer;
+	}
+}
+
+static void SetAddressAndPrococolLetter(DNSQuaryProtocol	ProtocolUsed,
+										struct sockaddr		**Address,
+										sa_family_t			*Family,
+										char				*ProtocolCharacter
+										)
+{
+	if( ProtocolUsed == DNS_QUARY_PROTOCOL_UDP )
+	{
+		/* Assign ProtocolCharacter used by output message */
+		if( ProtocolCharacter != NULL )
+		{
+			*ProtocolCharacter = 'U';
+		}
+
+		/* Get a server address */
+		*Address = AddressList_GetOne(&UDPAddresses, Family);
+
+	} else { /* For TCP below */
+		if( ProtocolCharacter != NULL )
+		{
+			*ProtocolCharacter = 'T';
+		}
+		*Address = AddressList_GetOne(&TCPAddresses, Family);
+	}
 }
 
 static int QueryFromServer(QueryContext		*Context,
@@ -588,40 +621,23 @@ static int QueryFromServer(QueryContext		*Context,
 
 	sa_family_t	Family;
 
+	BOOL		UseSecondary;
+
+	/* Determine whether the secondaries are used */
 	if( Context -> SecondarySocket != NULL && IsExcludedDomain(QueryDomain) )
 	{
-		SocketUsed = Context -> SecondarySocket;
-		ProtocolUsed = !(Context -> PrimaryProtocolToServer);
+		UseSecondary = TRUE;
 	} else {
-		SocketUsed = Context -> PrimarySocket;
-		ProtocolUsed = Context -> PrimaryProtocolToServer;
+		UseSecondary = FALSE;
 	}
 
-	if( ProtocolUsed == DNS_QUARY_PROTOCOL_UDP )
-	{
-		if( ProtocolCharacter != NULL )
-		{
-			*ProtocolCharacter = 'U';
-		}
-		ServerAddr = AddressList_GetOne(&UDPAddresses, &Family);
+	SelectSocketAndProtocol(Context, &SocketUsed, &ProtocolUsed, UseSecondary);
 
-	} else {
-		if( ProtocolCharacter != NULL )
-		{
-			*ProtocolCharacter = 'T';
-		}
-		ServerAddr = AddressList_GetOne(&TCPAddresses, &Family);
-	}
-
-	/*
-	printf("--------%d.%d.%d.%d:%d\n", ((struct sockaddr_in *)ServerAddr) -> sin_addr.S_un.S_un_b.s_b1,
-									 ((struct sockaddr_in *)ServerAddr) -> sin_addr.S_un.S_un_b.s_b2,
-									 ((struct sockaddr_in *)ServerAddr) -> sin_addr.S_un.S_un_b.s_b3,
-									 ((struct sockaddr_in *)ServerAddr) -> sin_addr.S_un.S_un_b.s_b4,
-									 ntohs(((struct sockaddr_in *)ServerAddr) -> sin_port)
-	);
-	printf("%d\n", ((struct sockaddr_in *)ServerAddr) -> sin_family);
-	*/
+	SetAddressAndPrococolLetter(ProtocolUsed,
+								&ServerAddr,
+								&Family,
+								ProtocolCharacter
+								);
 
 	State = QueryFromServerBase(SocketUsed,
 								ServerAddr,
@@ -634,20 +650,48 @@ static int QueryFromServer(QueryContext		*Context,
 
 	if(State < 0) /* Failed */
 	{
-		if( ProtocolUsed == DNS_QUARY_PROTOCOL_UDP )
+		if( FallBackToSecondary == TRUE )
 		{
-			CLOSE_SOCKET(*SocketUsed);
-			*SocketUsed = INVALID_SOCKET;
-			AddressList_Incr(&UDPAddresses);
-		} else {
-			CloseTCPConnection(SocketUsed);
-			AddressList_Incr(&TCPAddresses);
-		}
+			if( ProtocolCharacter != NULL )
+			{
+				INFO("Fallback from %c for %s .\n",
+					 *ProtocolCharacter,
+					 QueryDomain
+					 );
+			} else {
+				INFO("Fallback for %s .\n", QueryDomain);
+			}
 
-		return QUERY_RESULT_ERROR;
-	} else {
-		return State;
+			SelectSocketAndProtocol(Context,
+									&SocketUsed,
+									&ProtocolUsed,
+									!UseSecondary
+									);
+			SetAddressAndPrococolLetter(ProtocolUsed,
+										&ServerAddr,
+										&Family,
+										ProtocolCharacter
+										);
+
+			State = QueryFromServerBase(SocketUsed,
+										ServerAddr,
+										Family,
+										ProtocolUsed,
+										QueryContent,
+										QueryContentLength,
+										Context -> ProtocolToSrc,
+										Buffer);
+			if( State < 0 )
+			{
+				return QUERY_RESULT_ERROR;
+			}
+		} else {
+			return QUERY_RESULT_ERROR;
+		}
 	}
+
+	return State;
+
 }
 
 int QueryBase(QueryContext		*Context,
@@ -669,6 +713,7 @@ int QueryBase(QueryContext		*Context,
 		return QUERY_RESULT_DISABLE;
 	}
 
+	/* Get the QuestionCount */
 	if( Context -> ProtocolToSrc == DNS_QUARY_PROTOCOL_UDP )
 	{
 		QuestionCount = DNSGetQuestionCount(QueryContent);
@@ -700,11 +745,6 @@ int QueryBase(QueryContext		*Context,
 			Context -> PrimarySocket = Context -> SecondarySocket;
 			Context -> SecondarySocket = NULL;
 			Context -> PrimaryProtocolToServer = !(Context -> PrimaryProtocolToServer);
-
-			if( ProtocolCharacter != NULL )
-			{
-				INFO("Fallback from %c for %s .\n", *ProtocolCharacter, QueryDomain);
-			}
 
 			State = QueryFromServer(Context,
 									QueryContent,
@@ -869,7 +909,9 @@ BOOL ConnectToTCPServer(SOCKET *sock, struct sockaddr *addr, sa_family_t Family,
 	SetSocketRecvTimeLimit(*sock, TimeToServer);
 
 	if(connect(*sock, addr, SizeOfAddr) != 0){
+		int OriginErrorCode = GET_LAST_ERROR();
 		CloseTCPConnection(sock);
+		SET_LAST_ERROR(OriginErrorCode);
 		return FALSE;
 	}
 	return TRUE;

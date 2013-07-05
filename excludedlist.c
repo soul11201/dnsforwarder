@@ -249,7 +249,7 @@ int LoadGfwList_Thread(void *Unused)
 
 	if( FlushTimeOnFailed < 0 )
 	{
-		FlushTimeOnFailed = INT_MAX;
+		FlushTimeOnFailed = 0;
 	}
 
 	while( TRUE )
@@ -356,7 +356,7 @@ int LoadGfwList(void)
 	}
 
 	RWLock_UnWLock(ExcludedListLock);
-	INFO("Loading GFW List completed. %d effective items.\n", Count);
+	INFO("Loading the existing GFW List completed. %d effective items.\n", Count);
 
 END:
 	CREATE_THREAD(LoadGfwList_Thread, NULL, gt);
