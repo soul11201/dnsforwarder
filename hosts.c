@@ -572,7 +572,7 @@ static int LoadHosts(void)
 	{
 		Status = Status || LoadAppendHosts();
 	}
-	INFO("Loading Hosts done, %d IPv4 Hosts, %d IPv6 Hosts, %d CName Hosts, %d Items denote disabled hosts, %d Hosts containing wildcards.\n",
+	INFO("Loading Hosts completed, %d IPv4 Hosts, %d IPv6 Hosts, %d CName Hosts, %d Items denote disabled hosts, %d Hosts containing wildcards.\n",
 		IPv4Count + IPv4WCount,
 		IPv6Count + IPv6WCount,
 		CNameCount + CNameWCount,

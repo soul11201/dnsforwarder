@@ -42,6 +42,11 @@ BOOL IsDisabledDomain(const char *Domain){
 	int loop;
 	int	Count;
 
+	if( Domain == NULL )
+	{
+		return FALSE;
+	}
+
 	Count = Array_GetUsed(&PositionsOfDisabled);
 
 	for(loop = 0; loop != Count; ++loop){
@@ -288,7 +293,7 @@ int LoadGfwList_Thread(void *Unused)
 			}
 
 			RWLock_UnWLock(ExcludedListLock);
-			INFO("Loading GFW List done. %d effective items.\n", Count);
+			INFO("Loading GFW List completed. %d effective items.\n", Count);
 END:
 			if( FlushTime < 0 )
 			{
@@ -319,7 +324,7 @@ int LoadGfwList(void)
 
 	if( strcmp(ProtocolStr, "udp") != 0 )
 	{
-		ERRORMSG("Cannot load GFW List when `PrimaryServer' is not udp.\n");
+		ERRORMSG("Cannot load GFW List because `PrimaryServer' is not udp.\n");
 		return -1;
 	}
 
@@ -351,7 +356,7 @@ int LoadGfwList(void)
 	}
 
 	RWLock_UnWLock(ExcludedListLock);
-	INFO("Loading GFW List done. %d effective items.\n", Count);
+	INFO("Loading GFW List completed. %d effective items.\n", Count);
 
 END:
 	CREATE_THREAD(LoadGfwList_Thread, NULL, gt);
