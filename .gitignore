@@ -8,4 +8,5 @@ vc10/Debug/
 vc10/Release/
 codeblocks_win/bin/*/cache
 codeblocks_win/bin/*/*.txt
+codeblocks_win/bin/*/*.bat
 codeblocks_win/bin/*/*.bak
