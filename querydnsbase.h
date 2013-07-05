@@ -13,6 +13,7 @@
 
 extern ConfigFileInfo	ConfigInfo;
 extern int				TimeToServer;
+extern BOOL				FallBackToSecondary;
 extern BOOL				ShowMassages;
 extern BOOL				ErrorMessages;
 extern BOOL				Debug;
@@ -63,15 +64,15 @@ int QueryFromHostsAndCache(QueryContext		*Context,
 						   char				*ProtocolCharacter
 						  );
 
-int QueryFromServer(SOCKET				*Socket,
-					struct	sockaddr	*PeerAddr,
-					sa_family_t			Family,
-					DNSQuaryProtocol	ProtocolToServer,
-					char				*QueryContent,
-					int					QueryContentLength,
-					DNSQuaryProtocol	ProtocolToSrc,
-					ExtendableBuffer	*Buffer
-					);
+int QueryFromServerBase(SOCKET				*Socket,
+						struct	sockaddr	*PeerAddr,
+						sa_family_t			Family,
+						DNSQuaryProtocol	ProtocolToServer,
+						char				*QueryContent,
+						int					QueryContentLength,
+						DNSQuaryProtocol	ProtocolToSrc,
+						ExtendableBuffer	*Buffer
+						);
 
 #define QUERY_RESULT_DISABLE	(-1)
 #define QUERY_RESULT_ERROR		(-2)

@@ -18,6 +18,7 @@
 
 ConfigFileInfo	ConfigInfo;
 int				TimeToServer;
+BOOL			FallBackToSecondary;
 BOOL			ShowMassages;
 BOOL			ErrorMessages;
 BOOL			Debug;
@@ -191,7 +192,6 @@ static int DNSQueryRawViaTCP(SOCKET				Sock,
 		return -2;
 	}
 
-
 	State = recv(Sock, NewFromServer, NewTCPLength, MSG_NOSIGNAL);
 	if( State < 2 )
 	{
@@ -229,19 +229,6 @@ int DNSQueryOriginViaTCP(SOCKET				Sock,
 			return -1;
 		}
 
-	/*
-		char TCPContent[3072];
-
-		*(unsigned short *)TCPContent = htons((unsigned short)OriginDNSBodyLength);
-
-		memcpy(((char *)TCPContent) + 2, OriginDNSBody, OriginDNSBodyLength);
-
-		State = DNSQueryRawViaTCP(Sock, TCPContent, OriginDNSBodyLength + 2, ResultBuffer, ResultBufferLength);
-
-		if(State > 2) memmove(ResultBuffer, ((char *)ResultBuffer) + 2, State - 2);
-
-		return State - 2;
-	*/
 	}else{ /* DNS_QUARY_PROTOCOL_TCP */
 		return DNSQueryRawViaTCP(Sock, OriginDNSBody, OriginDNSBodyLength, ResultBuffer, NULL);
 	}
@@ -481,15 +468,15 @@ int InitAddress(void)
 
 }
 
-int QueryFromServer(SOCKET				*Socket,
-					struct	sockaddr	*PeerAddr,
-					sa_family_t			Family,
-					DNSQuaryProtocol	ProtocolToServer,
-					char				*QueryContent,
-					int					QueryContentLength,
-					DNSQuaryProtocol	ProtocolToSrc,
-					ExtendableBuffer	*Buffer
-					)
+int QueryFromServerBase(SOCKET				*Socket,
+						struct	sockaddr	*PeerAddr,
+						sa_family_t			Family,
+						DNSQuaryProtocol	ProtocolToServer,
+						char				*QueryContent,
+						int					QueryContentLength,
+						DNSQuaryProtocol	ProtocolToSrc,
+						ExtendableBuffer	*Buffer
+						)
 {
 	int State;
 
@@ -501,26 +488,27 @@ int QueryFromServer(SOCKET				*Socket,
 		if(*Socket == INVALID_SOCKET)
 		{
 			*Socket = socket(Family, SOCK_DGRAM, IPPROTO_UDP);
-		}
-		if __STILL(*Socket == INVALID_SOCKET)
-		{
 
-			if( ShowMassages == TRUE )
+			if __STILL(*Socket == INVALID_SOCKET)
 			{
-				int		ErrorNum = GET_LAST_ERROR();
-				char	ErrorMessage[320];
 
-				ErrorMessage[0] ='\0';
+				if( ShowMassages == TRUE )
+				{
+					int		ErrorNum = GET_LAST_ERROR();
+					char	ErrorMessage[320];
 
-				GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
+					ErrorMessage[0] ='\0';
 
-				printf("(Failed to connect to server : %d : %s).\n",
-					   ErrorNum,
-					   ErrorMessage
-					   );
+					GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
+
+					printf("(Failed to connect to server : %d : %s).\n",
+						   ErrorNum,
+						   ErrorMessage
+						   );
+				}
+
+				return -2; /* Failed */
 			}
-
-			return -2; /* Failed */
 		}
 
 		SetSocketRecvTimeLimit(*Socket, TimeToServer);
@@ -582,6 +570,86 @@ int QueryFromServer(SOCKET				*Socket,
 
 }
 
+static int QueryFromServer(QueryContext		*Context,
+						   char				*QueryContent,
+						   int				QueryContentLength,
+						   ExtendableBuffer	*Buffer,
+						   const char		*QueryDomain,
+						   char				*ProtocolCharacter
+						   )
+{
+	int			State;
+
+	SOCKET		*SocketUsed;
+
+	DNSQuaryProtocol	ProtocolUsed;
+
+	struct	sockaddr	*ServerAddr;
+
+	sa_family_t	Family;
+
+	if( Context -> SecondarySocket != NULL && IsExcludedDomain(QueryDomain) )
+	{
+		SocketUsed = Context -> SecondarySocket;
+		ProtocolUsed = !(Context -> PrimaryProtocolToServer);
+	} else {
+		SocketUsed = Context -> PrimarySocket;
+		ProtocolUsed = Context -> PrimaryProtocolToServer;
+	}
+
+	if( ProtocolUsed == DNS_QUARY_PROTOCOL_UDP )
+	{
+		if( ProtocolCharacter != NULL )
+		{
+			*ProtocolCharacter = 'U';
+		}
+		ServerAddr = AddressList_GetOne(&UDPAddresses, &Family);
+
+	} else {
+		if( ProtocolCharacter != NULL )
+		{
+			*ProtocolCharacter = 'T';
+		}
+		ServerAddr = AddressList_GetOne(&TCPAddresses, &Family);
+	}
+
+	/*
+	printf("--------%d.%d.%d.%d:%d\n", ((struct sockaddr_in *)ServerAddr) -> sin_addr.S_un.S_un_b.s_b1,
+									 ((struct sockaddr_in *)ServerAddr) -> sin_addr.S_un.S_un_b.s_b2,
+									 ((struct sockaddr_in *)ServerAddr) -> sin_addr.S_un.S_un_b.s_b3,
+									 ((struct sockaddr_in *)ServerAddr) -> sin_addr.S_un.S_un_b.s_b4,
+									 ntohs(((struct sockaddr_in *)ServerAddr) -> sin_port)
+	);
+	printf("%d\n", ((struct sockaddr_in *)ServerAddr) -> sin_family);
+	*/
+
+	State = QueryFromServerBase(SocketUsed,
+								ServerAddr,
+								Family,
+								ProtocolUsed,
+								QueryContent,
+								QueryContentLength,
+								Context -> ProtocolToSrc,
+								Buffer);
+
+	if(State < 0) /* Failed */
+	{
+		if( ProtocolUsed == DNS_QUARY_PROTOCOL_UDP )
+		{
+			CLOSE_SOCKET(*SocketUsed);
+			*SocketUsed = INVALID_SOCKET;
+			AddressList_Incr(&UDPAddresses);
+		} else {
+			CloseTCPConnection(SocketUsed);
+			AddressList_Incr(&TCPAddresses);
+		}
+
+		return QUERY_RESULT_ERROR;
+	} else {
+		return State;
+	}
+}
+
 int QueryBase(QueryContext		*Context,
 			  char				*QueryContent,
 			  int				QueryContentLength,
@@ -589,9 +657,9 @@ int QueryBase(QueryContext		*Context,
 			  const char		*QueryDomain,
 			  DNSRecordType		SourceType,
 			  char				*ProtocolCharacter
-			  )
+					)
 {
-	int State;
+	int State = -1;
 
 	int	QuestionCount;
 
@@ -619,69 +687,38 @@ int QueryBase(QueryContext		*Context,
 	/* If hosts or cache has no record, then query from server */
 	if( State < 0 )
 	{
-				SOCKET		*SocketUsed;
-
-		struct	sockaddr	*ServerAddr;
-
-				sa_family_t	Family;
-
-		if( Context -> SecondarySocket != NULL && IsExcludedDomain(QueryDomain) )
+		State = QueryFromServer(Context,
+								QueryContent,
+								QueryContentLength,
+								Buffer,
+								QueryDomain,
+								ProtocolCharacter
+								);
+		if( State == QUERY_RESULT_ERROR && FallBackToSecondary == TRUE && Context -> SecondarySocket != NULL )
 		{
-			SocketUsed = Context -> SecondarySocket;
+			/* Fallback */
+			Context -> PrimarySocket = Context -> SecondarySocket;
+			Context -> SecondarySocket = NULL;
 			Context -> PrimaryProtocolToServer = !(Context -> PrimaryProtocolToServer);
-		} else {
-			SocketUsed = Context -> PrimarySocket;
-		}
 
-		if( Context -> PrimaryProtocolToServer == DNS_QUARY_PROTOCOL_UDP )
-		{
 			if( ProtocolCharacter != NULL )
 			{
-				*ProtocolCharacter = 'U';
+				INFO("Fallback from %c for %s .\n", *ProtocolCharacter, QueryDomain);
 			}
-			ServerAddr = AddressList_GetOne(&UDPAddresses, &Family);
 
-		} else {
-			if( ProtocolCharacter != NULL )
-			{
-				*ProtocolCharacter = 'T';
-			}
-			ServerAddr = AddressList_GetOne(&TCPAddresses, &Family);
+			State = QueryFromServer(Context,
+									QueryContent,
+									QueryContentLength,
+									Buffer,
+									NULL,
+									ProtocolCharacter
+									);
+
 		}
-		/*
-		printf("--------%d.%d.%d.%d:%d\n", ((struct sockaddr_in *)ServerAddr) -> sin_addr.S_un.S_un_b.s_b1,
-										 ((struct sockaddr_in *)ServerAddr) -> sin_addr.S_un.S_un_b.s_b2,
-										 ((struct sockaddr_in *)ServerAddr) -> sin_addr.S_un.S_un_b.s_b3,
-										 ((struct sockaddr_in *)ServerAddr) -> sin_addr.S_un.S_un_b.s_b4,
-										 ntohs(((struct sockaddr_in *)ServerAddr) -> sin_port)
-		);
-		printf("%d\n", ((struct sockaddr_in *)ServerAddr) -> sin_family);
-		*/
-
-		/* Failed querying from cache, then querying from server */
-		State = QueryFromServer(SocketUsed, ServerAddr, Family, Context -> PrimaryProtocolToServer, QueryContent, QueryContentLength, Context -> ProtocolToSrc, Buffer);
-
-		if(State < 0) /* Failed */
-		{
-			int ErrorNum = GET_LAST_ERROR();
-				/* Closing the bad connection */
-			if( Context -> PrimaryProtocolToServer == DNS_QUARY_PROTOCOL_UDP )
-			{
-				CLOSE_SOCKET(*SocketUsed);
-				*SocketUsed = INVALID_SOCKET;
-				AddressList_Incr(&UDPAddresses);
-			} else {
-				CloseTCPConnection(SocketUsed);
-				AddressList_Incr(&TCPAddresses);
-			}
-
-			SET_LAST_ERROR(ErrorNum);
-			return QUERY_RESULT_ERROR;
-		}
-
 	}
 
 	return State;
+
 }
 
 int	GetAnswersByName(QueryContext *Context, const char *Name, DNSRecordType Type, ExtendableBuffer	*Buffer)
@@ -721,16 +758,22 @@ int SetSocketWait(SOCKET sock, BOOL Wait)
 
 int SetSocketSendTimeLimit(SOCKET sock, int time)
 {
+#ifdef WIN32
+	return setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&time, sizeof(time));
+#else
 	struct timeval Time = {time / 1000, (time % 1000) * 1000};
-
 	return setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&Time, sizeof(Time));
+#endif
 }
 
 int SetSocketRecvTimeLimit(SOCKET sock, int time)
 {
+#ifdef WIN32
+	return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&time, sizeof(time));
+#else
 	struct timeval Time = {time / 1000, (time % 1000) * 1000};
-
 	return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&Time, sizeof(Time));
+#endif
 }
 
 int GetMaximumMessageSize(SOCKET sock)

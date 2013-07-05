@@ -97,6 +97,9 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "UDPServer", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "UDP Server");
 
+    TmpTypeDescriptor.boolean = FALSE;
+    ConfigAddOption(&ConfigInfo, "FallBackToSecondary", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
+
     TmpTypeDescriptor.INT32 = 3000;
     ConfigAddOption(&ConfigInfo, "TimeToServer", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
@@ -206,6 +209,7 @@ int QueryDNSInterfaceStart(void)
 	ExcludedList_Init();
 
 	TimeToServer = ConfigGetInt32(&ConfigInfo, "TimeToServer");
+	FallBackToSecondary = ConfigGetBoolean(&ConfigInfo, "FallBackToSecondary");
 
     if( ConfigGetBoolean(&ConfigInfo, "UseCache") == TRUE)
     {
