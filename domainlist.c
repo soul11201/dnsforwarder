@@ -65,47 +65,63 @@ int DomainList_Add(DomainList *dl, const char *Domain)
 
 }
 
-BOOL DomainList_Match(DomainList *dl, const char *Str)
+BOOL DomainList_Match_NoWildCard(DomainList *dl, const char *Str)
 {
 	EntryForDomain *FoundEntry;
 
 	const char *FoundString;
 
-	/* First try to match without wildcards */
+	FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, NULL);
+	while( FoundEntry != NULL )
 	{
-		FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, NULL);
-		while( FoundEntry != NULL )
+		FoundString = StringList_GetByOffset(&(dl -> List), FoundEntry -> Offset);
+		if( strcmp(FoundString, Str) == 0 )
 		{
-			FoundString = StringList_GetByOffset(&(dl -> List), FoundEntry -> Offset);
-			if( strcmp(FoundString, Str) == 0 )
+			return TRUE;
+		}
+
+		FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, FoundEntry);
+	}
+
+	return FALSE;
+
+}
+
+BOOL DomainList_Match_OnlyWildCard(DomainList *dl, const char *Str)
+{
+	EntryForDomain *FoundEntry;
+
+	const char *FoundString;
+
+	int loop;
+
+	for( loop = 0; loop != Array_GetUsed(&(dl -> List_W_Pos)); ++loop )
+	{
+		FoundEntry = (EntryForDomain *)Array_GetBySubscript(&(dl -> List_W_Pos), loop);
+		if( FoundEntry != NULL )
+		{
+			FoundString = StringList_GetByOffset(&(dl -> List_W), FoundEntry -> Offset);
+			if( WILDCARD_MATCH(FoundString, Str) == WILDCARD_MATCHED )
 			{
 				return TRUE;
 			}
 
-			FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, FoundEntry);
+		} else {
+			return FALSE;
 		}
-
 	}
 
-	/* Second try to match with wildcard */
+	return FALSE;
+}
+
+BOOL DomainList_Match(DomainList *dl, const char *Str)
+{
+	if( DomainList_Match_NoWildCard(dl, Str) == TRUE ||
+		DomainList_Match_OnlyWildCard(dl, Str) == TRUE
+		)
 	{
-		int loop;
-
-		for( loop = 0; loop != Array_GetUsed(&(dl -> List_W_Pos)); ++loop )
-		{
-			FoundEntry = (EntryForDomain *)Array_GetBySubscript(&(dl -> List_W_Pos), loop);
-			if( FoundEntry != NULL )
-			{
-				FoundString = StringList_GetByOffset(&(dl -> List_W), FoundEntry -> Offset);
-				if( WILDCARD_MATCH(FoundString, Str) == WILDCARD_MATCHED )
-				{
-					return TRUE;
-				}
-
-			} else {
-				return FALSE;
-			}
-		}
+		return TRUE;
+	} else {
 		return FALSE;
 	}
 }

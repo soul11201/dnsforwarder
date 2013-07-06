@@ -25,6 +25,10 @@ int DomainList_Init(DomainList *dl, int InitialCount /* For no-wildcard domain *
 
 int DomainList_Add(DomainList *dl, const char *Domain);
 
+BOOL DomainList_Match_NoWildCard(DomainList *dl, const char *Str);
+
+BOOL DomainList_Match_OnlyWildCard(DomainList *dl, const char *Str);
+
 BOOL DomainList_Match(DomainList *dl, const char *Str);
 
 void DomainList_Free(DomainList *dl);

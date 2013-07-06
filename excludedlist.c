@@ -12,8 +12,8 @@
 
 static int			*DisabledTypes	=	NULL;
 
-DomainList			DisabledDomains;
-DomainList			ExcludedDomains;
+static DomainList	DisabledDomains;
+static DomainList	ExcludedDomains;
 
 static RWLock		ExcludedListLock;
 
@@ -37,14 +37,21 @@ BOOL IsDisabledType(int Type){
 
 static BOOL MatchDomain(DomainList *List, const char *Domain)
 {
+	if( DomainList_Match(List, Domain) == TRUE )
+	{
+		return TRUE;
+	}
+
+	Domain = strchr(Domain + 1, '.');
+
 	while( Domain != NULL )
 	{
-		if( DomainList_Match(List, Domain) == TRUE )
+		if( DomainList_Match_NoWildCard(List, Domain) == TRUE )
 		{
 			return TRUE;
 		}
 
-		if( *Domain == '.' && DomainList_Match(List, Domain + 1) == TRUE )
+		if( *Domain == '.' && DomainList_Match_NoWildCard(List, Domain + 1) == TRUE )
 		{
 			return TRUE;
 		}
