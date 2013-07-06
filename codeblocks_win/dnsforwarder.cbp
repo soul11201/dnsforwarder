@@ -53,6 +53,7 @@
 				<Option object_output="./obj/Release_x64/" />
 				<Option type="1" />
 				<Option compiler="gnu_gcc_compiler_w64" />
+				<Option parameters='-f &quot;D:\My_File\VC\dnsforwarder\codeblocks_win\bin\Release\dnsforwarder.config&quot;' />
 				<Compiler>
 					<Add option="-fexpensive-optimizations" />
 					<Add option="-Os" />
@@ -101,6 +102,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../dnsrelated.h" />
+		<Unit filename="../domainlist.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../domainlist.h" />
 		<Unit filename="../downloader.c">
 			<Option compilerVar="CC" />
 		</Unit>
