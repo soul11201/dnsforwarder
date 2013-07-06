@@ -8,14 +8,12 @@
 #include "array.h"
 #include "common.h"
 #include "rwlock.h"
+#include "domainlist.h"
 
 static int			*DisabledTypes	=	NULL;
-static StringList	DisabledDomains;
-static Array		PositionsOfDisabled;
 
-static StringList	ExcludedDomains;
-static Array		PositionsOfExcluded;
-
+DomainList			DisabledDomains;
+DomainList			ExcludedDomains;
 
 static RWLock		ExcludedListLock;
 
@@ -37,73 +35,40 @@ BOOL IsDisabledType(int Type){
 	return FALSE;
 }
 
-BOOL IsDisabledDomain(const char *Domain){
-	const char *Itr;
-	int loop;
-	int	Count;
-
-	if( Domain == NULL )
+static BOOL MatchDomain(DomainList *List, const char *Domain)
+{
+	while( Domain != NULL )
 	{
-		return FALSE;
-	}
-
-	Count = Array_GetUsed(&PositionsOfDisabled);
-
-	for(loop = 0; loop != Count; ++loop){
-		Itr = *(char **)Array_GetBySubscript(&PositionsOfDisabled, loop);
-		if( Itr != NULL )
+		if( DomainList_Match(List, Domain) == TRUE )
 		{
-			if( strchr(Itr, '*') != NULL || strchr(Itr, '?') != NULL  )
-			{
-				if( WILDCARD_MATCH(Itr, Domain) == WILDCARD_MATCHED )
-				{
-					return TRUE;
-				}
-			} else {
-				if( strcmp(Itr, Domain + (strlen(Domain) - strlen(Itr))) == 0 )
-				{
-					return TRUE;
-				}
-			}
+			return TRUE;
 		}
+
+		if( *Domain == '.' && DomainList_Match(List, Domain + 1) == TRUE )
+		{
+			return TRUE;
+		}
+
+		Domain = strchr(Domain + 1, '.');
 	}
 
 	return FALSE;
 }
 
+BOOL IsDisabledDomain(const char *Domain){
+	return MatchDomain(&DisabledDomains, Domain);
+}
+
 BOOL IsExcludedDomain(const char *Domain)
 {
-	const char *Itr;
-	int loop;
-	int	Count;
+	BOOL Result;
 
 	RWLock_RdLock(ExcludedListLock);
 
-	Count = Array_GetUsed(&PositionsOfExcluded);
-
-	for(loop = 0; loop != Count; ++loop){
-		Itr = *(char **)Array_GetBySubscript(&PositionsOfExcluded, loop);
-		if( Itr != NULL )
-		{
-			if( strchr(Itr, '*') != NULL || strchr(Itr, '?') != NULL  )
-			{
-				if( WILDCARD_MATCH(Itr, Domain) == WILDCARD_MATCHED )
-				{
-					RWLock_UnRLock(ExcludedListLock);
-					return TRUE;
-				}
-			} else {
-				if( strcmp(Itr, Domain + (strlen(Domain) - strlen(Itr))) == 0 )
-				{
-					RWLock_UnRLock(ExcludedListLock);
-					return TRUE;
-				}
-			}
-		}
-	}
+	Result = MatchDomain(&ExcludedDomains, Domain);
 
 	RWLock_UnRLock(ExcludedListLock);
-	return FALSE;
+	return Result;
 }
 
 static int DisableType(void)
@@ -137,12 +102,35 @@ static int DisableType(void)
 	return 0;
 }
 
-static int LoadDomains(StringList *List, const char *Domains)
+static int LoadDomains(DomainList *List, const char *Domains, int ApproximateCount)
 {
-	if( StringList_Init(List, Domains, ',') >= 0 )
+	StringList TmpList;
+
+	const char *Str;
+
+	if( StringList_Init(&TmpList, Domains, ',') < 0 )
 		return -1;
-	else
-		return 0;
+
+	if( DomainList_Init(List, ApproximateCount) < 0 )
+	{
+		StringList_Free(&TmpList);
+		return -2;
+	}
+
+	Str = StringList_GetNext(&TmpList, NULL);
+	while( Str != NULL )
+	{
+		if( DomainList_Add(List, Str) != 0 )
+		{
+			StringList_Free(&TmpList);
+			DomainList_Free(List);
+			return -3;
+		}
+		Str = StringList_GetNext(&TmpList, Str);
+	}
+
+	StringList_Free(&TmpList);
+	return 0;
 }
 
 
@@ -163,9 +151,9 @@ static BOOL ParseGfwListItem(char *Item)
 		++Item;
 	}
 
-	if( StringList_Find(&ExcludedDomains, Item) == NULL )
+	if( DomainList_Match(&ExcludedDomains, Item) == FALSE )
 	{
-		StringList_Add(&ExcludedDomains, Item);
+		DomainList_Add(&ExcludedDomains, Item);
 		return TRUE;
 	} else {
 		return FALSE;
@@ -215,22 +203,6 @@ DONE:
 
 }
 
-static int InitPositionsArray(Array *a, StringList *s)
-{
-	const char *Ptr = NULL;
-	if( Array_Init(a, sizeof(const char *), StringList_Count(s), FALSE, NULL) != 0 )
-	{
-		return -1;
-	}
-
-	for(Ptr = StringList_GetNext(s, Ptr); Ptr != NULL; Ptr = StringList_GetNext(s, Ptr))
-	{
-		Array_PushBack(a, &Ptr, NULL);
-	}
-
-	return 0;
-}
-
 int LoadGfwList_Thread(void *Unused)
 {
 	int	FlushTime = ConfigGetInt32(&ConfigInfo, "GfwListFlushTime");
@@ -272,10 +244,9 @@ int LoadGfwList_Thread(void *Unused)
 
 			RWLock_WrLock(ExcludedListLock);
 
-			StringList_Free(&ExcludedDomains);
-			Array_Free(&PositionsOfExcluded);
+			DomainList_Free(&ExcludedDomains);
 
-			LoadDomains(&ExcludedDomains, ExcludedList);
+			LoadDomains(&ExcludedDomains, ExcludedList, 2000);
 
 			Count = LoadGfwListFile(File);
 			if( Count < 0 )
@@ -283,13 +254,6 @@ int LoadGfwList_Thread(void *Unused)
 				ERRORMSG("Loading GFW List failed, cannot open file %s.\n", File);
 				RWLock_UnWLock(ExcludedListLock);
 				goto END;
-			}
-
-			if( InitPositionsArray(&PositionsOfExcluded, &ExcludedDomains) != 0 )
-			{
-				RWLock_UnWLock(ExcludedListLock);
-				ERRORMSG("Loading GFW List failed. Waiting %d second(s) for retry.\n", FlushTimeOnFailed);
-				continue;
 			}
 
 			RWLock_UnWLock(ExcludedListLock);
@@ -337,19 +301,12 @@ int LoadGfwList(void)
 
 	RWLock_WrLock(ExcludedListLock);
 
-	StringList_Free(&ExcludedDomains);
-	Array_Free(&PositionsOfExcluded);
+	DomainList_Free(&ExcludedDomains);
 
-	LoadDomains(&ExcludedDomains, ExcludedList);
+	LoadDomains(&ExcludedDomains, ExcludedList, 2000);
 
 	Count = LoadGfwListFile(File);
 	if( Count < 0 )
-	{
-		RWLock_UnWLock(ExcludedListLock);
-		goto END;
-	}
-
-	if( InitPositionsArray(&PositionsOfExcluded, &ExcludedDomains) != 0 )
 	{
 		RWLock_UnWLock(ExcludedListLock);
 		goto END;
@@ -370,12 +327,9 @@ int ExcludedList_Init(void)
 {
 	DisabledTypes = NULL;
 
-	LoadDomains(&DisabledDomains, ConfigGetString(&ConfigInfo, "DisabledDomain"));
-	LoadDomains(&ExcludedDomains, ConfigGetString(&ConfigInfo, "ExcludedDomain"));
+	LoadDomains(&DisabledDomains, ConfigGetString(&ConfigInfo, "DisabledDomain"), 31);
+	LoadDomains(&ExcludedDomains, ConfigGetString(&ConfigInfo, "ExcludedDomain"), 31);
 	DisableType();
-
-	InitPositionsArray(&PositionsOfExcluded, &ExcludedDomains);
-	InitPositionsArray(&PositionsOfDisabled, &DisabledDomains);
 
 	RWLock_Init(ExcludedListLock);
 
