@@ -91,4 +91,6 @@ BOOL IsPrime(int n);
 
 int FindNextPrime(int Current);
 
+BOOL ContainWildCard(const char *item);
+
 #endif /* _UTILS_ */

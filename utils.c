@@ -571,3 +571,13 @@ int FindNextPrime(int Current)
 
 	} while( TRUE );
 }
+
+BOOL ContainWildCard(const char *item)
+{
+	if( strchr(item, '?') != NULL || strchr(item, '*') != NULL )
+	{
+		return TRUE;
+	} else {
+		return FALSE;
+	}
+}

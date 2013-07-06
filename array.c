@@ -51,7 +51,7 @@ void *Array_GetBySubscript(Array *a, int Subscript)
 }
 
 /* Subscribe returned */
-int Array_PushBack(Array *a, void *Data, void *Boundary /* Only used by grow down array */)
+int Array_PushBack(__in Array *a, __in_opt void *Data, __in_opt void *Boundary /* Only used by grow down array */)
 {
 	if( a -> Allocated >= 0 )
 	{

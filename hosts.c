@@ -60,16 +60,6 @@ typedef enum _HostsRecordType{
 
 }HostsRecordType;
 
-static BOOL ContainWildCard(const char *item)
-{
-	if( strchr(item, '?') != NULL || strchr(item, '*') != NULL )
-	{
-		return TRUE;
-	} else {
-		return FALSE;
-	}
-}
-
 static HostsRecordType Edition(const char *item)
 {
 	HostsRecordType WildCard;
@@ -87,7 +77,7 @@ static HostsRecordType Edition(const char *item)
 		return HOSTS_TYPE_UNKNOWN;
 	}
 
-	if( *item == '@' )
+	if( *item == '@' && *(item + 1) == '@' )
 	{
 		if( ContainWildCard(item + 1) )
 		{
@@ -105,23 +95,51 @@ static HostsRecordType Edition(const char *item)
 		WildCard = HOSTS_TYPE_UNKNOWN;
 	}
 
-	/* Check if it is IPv6 */
-	if( strchr(item, ':') != NULL )
+	if( isxdigit(*item) )
 	{
-		return HOSTS_TYPE_AAAA | WildCard;
-	}
-
-	/* Check if it is CNAME */
-	for(; !isspace(*item) ; ++item)
-	{
-		if( isalpha(*item) )
+		const char *Itr;
+		/* Check if it is IPv6 */
+		if( strchr(item, ':') != NULL )
 		{
-			return HOSTS_TYPE_CNAME | WildCard;
+			return HOSTS_TYPE_AAAA | WildCard;
 		}
-	}
 
-	/* IPv4 is left */
-	return HOSTS_TYPE_A | WildCard;
+		/* Check if it is CNAME */
+		for(Itr = item; !isspace(*Itr) ; ++Itr)
+		{
+			if( isalpha(*Itr) )
+			{
+				return HOSTS_TYPE_CNAME | WildCard;
+			}
+		}
+
+		for(Itr = item; !isspace(*Itr) ; ++Itr)
+		{
+			if( isdigit(*Itr) || *Itr == '.' )
+			{
+				return HOSTS_TYPE_A | WildCard;
+			}
+		}
+
+		return HOSTS_TYPE_UNKNOWN;
+
+	} else {
+
+		if( *item == ':' )
+		{
+			return HOSTS_TYPE_AAAA | WildCard;
+		}
+
+		for(; !isspace(*item) ; ++item)
+		{
+			if( !isalnum(*item) && *item != '.' )
+			{
+				return HOSTS_TYPE_UNKNOWN;
+			}
+		}
+
+		return HOSTS_TYPE_CNAME | WildCard;
+	}
 }
 
 static void GetCount(	FILE *fp,

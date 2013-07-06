@@ -14,7 +14,7 @@ int HashTable_CalculateAppropriateSlotCount(int ElementCount)
 	}
 }
 
-static int ELFHash(char *str)
+static int ELFHash(const char *str)
 {
 	_32BIT_UINT h = 0;
 	_32BIT_UINT x = 0;
@@ -208,7 +208,7 @@ _32BIT_INT HashTable_FetchNode(HashTable *h, NodeHead *Node)
 	return NextNode;
 }
 
-int HashTable_AddByNode(HashTable *h, char *Key, int Node_index, NodeHead *Node)
+int HashTable_AddByNode(HashTable *h, const char *Key, int Node_index, NodeHead *Node)
 {
 	int			Slot_i;
 	NodeHead	*Slot;
@@ -233,7 +233,7 @@ int HashTable_AddByNode(HashTable *h, char *Key, int Node_index, NodeHead *Node)
 	return 0;
 }
 
-int HashTable_Add(HashTable *h, char *Key, void *Data)
+int HashTable_Add(HashTable *h, const char *Key, void *Data)
 {
 	_32BIT_INT	Slot_i;
 	NodeHead	*Slot;
@@ -318,7 +318,7 @@ void HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *No
 
 }
 
-void *HashTable_Get(HashTable *h, char *Key, void *Start)
+void *HashTable_Get(HashTable *h, const char *Key, void *Start)
 {
 	int			Slot_i;
 	NodeHead	*Head;

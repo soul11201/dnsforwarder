@@ -43,15 +43,15 @@ _32BIT_INT HashTable_FindUnusedNode(HashTable *h, NodeHead **Out, _32BIT_INT Sta
 
 _32BIT_INT HashTable_FetchNode(HashTable *h, NodeHead *Node);
 
-int HashTable_AddByNode(HashTable *h, char *Key, int Node_index, NodeHead *Node);
+int HashTable_AddByNode(HashTable *h, const char *Key, int Node_index, NodeHead *Node);
 
-int HashTable_Add(HashTable *h, char *Key, void *Data);
+int HashTable_Add(HashTable *h, const char *Key, void *Data);
 
 #define	HashTable_GetDataByNode(Node_ptr)	((void *)((NodeHead *)(Node_ptr) + 1))
 
 #define	HashTable_GetNodeBySubscript(h_ptr, Subscript)	((NodeHead *)Array_GetBySubscript(&((h_ptr) -> NodeChunk), (Subscript)))
 
-void *HashTable_Get(HashTable *h, char *Key, void *Start);
+void *HashTable_Get(HashTable *h, const char *Key, void *Start);
 
 void HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *Node);
 

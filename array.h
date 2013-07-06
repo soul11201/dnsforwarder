@@ -83,7 +83,7 @@ int Array_PushBack(__in Array *a, __in_opt void *Data, __in_opt void *Boundary);
  *  Boundary : For growing down array, the upper boundary of the array. If there
  *             is no enough space inside the boundary, no new element will be
  *             added, and the function will return failure. If this parameter is
- *             NULL, no boundary checking will be done.
+ *             NULL, no bounds checking will be done.
  *               This parameter will be ignored for growing up array.
  * Return value:
  *  The subscript of the newly added element. Or a negative value on failure.
