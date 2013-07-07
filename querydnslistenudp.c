@@ -11,8 +11,6 @@
 #include "stringlist.h"
 #include "excludedlist.h"
 
-#define _SendTo(...)	GET_MUTEX(SendToMutex); sendto(__VA_ARGS__); RELEASE_MUTEX(SendToMutex);
-
 /* Variables */
 static BOOL			Inited = FALSE;
 
@@ -24,9 +22,12 @@ static SOCKET		ListenSocketUDP;
 static sa_family_t	Family;
 
 static ThreadHandle	*Threads;
-static int			ThreadCount;
 
 static int			MaximumMessageSize;
+
+#define _SendTo(...)	GET_MUTEX(SendToMutex); \
+						sendto(__VA_ARGS__); \
+						RELEASE_MUTEX(SendToMutex);
 
 /* Functions */
 int QueryDNSListenUDPInit(void)
@@ -51,7 +52,10 @@ int QueryDNSListenUDPInit(void)
 
 		GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
 
-		ERRORMSG("Creating UDP socket failed. %d : %s\n", ErrorNum, ErrorMessage);
+		ERRORMSG("Creating UDP socket failed. %d : %s\n",
+				 ErrorNum,
+				 ErrorMessage
+				 );
 		return -1;
 	}
 
@@ -84,7 +88,10 @@ int QueryDNSListenUDPInit(void)
 
 		GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
 
-		ERRORMSG("Opening UDP socket failed. %d : %s\n", ErrorNum, ErrorMessage);
+		ERRORMSG("Opening UDP socket failed. %d : %s\n",
+				 ErrorNum,
+				 ErrorMessage
+				 );
 		return -2;
 	}
 
@@ -153,15 +160,40 @@ static int Query(	SOCKET				*PrimarySocket,
 			((DNSHeader *)(QueryContent)) -> Flags.ResponseCode = 5;
 			if( Family == AF_INET )
 			{
-				_SendTo(ListenSocketUDP, QueryContent, QueryContentLength, 0, (struct sockaddr *)&(ClientAddr -> Addr4), sizeof(struct sockaddr));
-				PRINT("%s[R][%s:%d][%s][%s] Refused.\n", DateAndTime, inet_ntoa(ClientAddr -> Addr4.sin_addr), ClientAddr -> Addr4.sin_port, DNSGetTypeName(SourceType), QueryDomain);
+				_SendTo(ListenSocketUDP,
+						QueryContent,
+						QueryContentLength,
+						0,
+						(struct sockaddr *)&(ClientAddr -> Addr4),
+						sizeof(struct sockaddr)
+						);
+
+				PRINT("%s[R][%s:%d][%s][%s] Refused.\n",
+					  DateAndTime,
+					  inet_ntoa(ClientAddr -> Addr4.sin_addr),
+					  ClientAddr -> Addr4.sin_port,
+					  DNSGetTypeName(SourceType),
+					  QueryDomain
+					  );
 			} else {
 				char Addr[LENGTH_OF_IPV6_ADDRESS_ASCII] = {0};
 
 				IPv6AddressToAsc(&(ClientAddr -> Addr6.sin6_addr), Addr);
 
-				_SendTo(ListenSocketUDP, QueryContent, QueryContentLength, 0, (struct sockaddr *)&(ClientAddr -> Addr6), sizeof(struct sockaddr_in6));
-				PRINT("%s[R][%s:%d][%s][%s] Refused.\n", DateAndTime, Addr, ClientAddr -> Addr6.sin6_port, DNSGetTypeName(SourceType), QueryDomain);
+				_SendTo(ListenSocketUDP,
+						QueryContent,
+						QueryContentLength,
+						0,
+						(struct sockaddr *)&(ClientAddr -> Addr6),
+						sizeof(struct sockaddr_in6)
+						);
+				PRINT("%s[R][%s:%d][%s][%s] Refused.\n",
+					  DateAndTime,
+					  Addr,
+					  ClientAddr -> Addr6.sin6_port,
+					  DNSGetTypeName(SourceType),
+					  QueryDomain
+					  );
 			}
 			return -1;
 			break;
@@ -212,9 +244,21 @@ static int Query(	SOCKET				*PrimarySocket,
 
 			if( Family == AF_INET )
 			{
-				_SendTo(ListenSocketUDP, ExtendableBuffer_GetData(Buffer), State, 0, (struct sockaddr *)&(ClientAddr -> Addr4), sizeof(struct sockaddr));
+				_SendTo(ListenSocketUDP,
+						ExtendableBuffer_GetData(Buffer),
+						State,
+						0,
+						(struct sockaddr *)&(ClientAddr -> Addr4),
+						sizeof(struct sockaddr)
+						);
 			} else {
-				_SendTo(ListenSocketUDP, ExtendableBuffer_GetData(Buffer), State, 0, (struct sockaddr *)&(ClientAddr -> Addr6), sizeof(struct sockaddr_in6));
+				_SendTo(ListenSocketUDP,
+						ExtendableBuffer_GetData(Buffer),
+						State,
+						0,
+						(struct sockaddr *)&(ClientAddr -> Addr6),
+						sizeof(struct sockaddr_in6)
+						);
 			}
 
 			if( ShowMassages == TRUE )
@@ -225,13 +269,27 @@ static int Query(	SOCKET				*PrimarySocket,
 
 				if( Family == AF_INET )
 				{
-					PRINT("%s[%c][%s][%s][%s] :\n%s", DateAndTime, ProtocolCharacter, inet_ntoa(ClientAddr -> Addr4.sin_addr), DNSGetTypeName(SourceType), QueryDomain, InfoBuffer);
+					PRINT("%s[%c][%s][%s][%s] :\n%s",
+						  DateAndTime,
+						  ProtocolCharacter,
+						  inet_ntoa(ClientAddr -> Addr4.sin_addr),
+						  DNSGetTypeName(SourceType),
+						  QueryDomain,
+						  InfoBuffer
+						  );
 				} else {
 					char Addr[LENGTH_OF_IPV6_ADDRESS_ASCII] = {0};
 
 					IPv6AddressToAsc(&(ClientAddr -> Addr6.sin6_addr), Addr);
 
-					PRINT("%s[%c][%s][%s][%s] :\n%s", DateAndTime, ProtocolCharacter, Addr, DNSGetTypeName(SourceType), QueryDomain, InfoBuffer);
+					PRINT("%s[%c][%s][%s][%s] :\n%s",
+						  DateAndTime,
+						  ProtocolCharacter,
+						  Addr,
+						  DNSGetTypeName(SourceType),
+						  QueryDomain,
+						  InfoBuffer
+						  );
 				}
 			}
 
@@ -239,7 +297,7 @@ static int Query(	SOCKET				*PrimarySocket,
 	}
 }
 
-static int QueryDNSListenUDP(void *Unused){
+static int QueryDNSListenUDP(void *ID){
 	socklen_t			AddrLen;
 
 	CompatibleAddr		ClientAddr;
@@ -283,7 +341,6 @@ static int QueryDNSListenUDP(void *Unused){
 
 	ExtendableBuffer_Init(&Buffer, 512, 1024);
 
-	++ThreadCount;
 	while(TRUE)
 	{
 		memset(&ClientAddr, 0, sizeof(ClientAddr));
@@ -291,15 +348,27 @@ static int QueryDNSListenUDP(void *Unused){
 		if( Family == AF_INET )
 		{
 			AddrLen = sizeof(struct sockaddr);
-			State = recvfrom(ListenSocketUDP, ResultBuffer, sizeof(ResultBuffer), 0, (struct sockaddr *)&(ClientAddr.Addr4), &AddrLen);
+			State = recvfrom(ListenSocketUDP,
+							 ResultBuffer,
+							 sizeof(ResultBuffer),
+							 0,
+							 (struct sockaddr *)&(ClientAddr.Addr4),
+							 &AddrLen
+							 );
 
 		} else {
 			AddrLen = sizeof(struct sockaddr_in6);
-			State = recvfrom(ListenSocketUDP, ResultBuffer, sizeof(ResultBuffer), 0, (struct sockaddr *)&(ClientAddr.Addr6), &AddrLen);
+			State = recvfrom(ListenSocketUDP,
+							 ResultBuffer,
+							 sizeof(ResultBuffer),
+							 0,
+							 (struct sockaddr *)&(ClientAddr.Addr6),
+							 &AddrLen
+							 );
 
 		}
-
 		RELEASE_MUTEX(ListenMutex);
+		DEBUG("Thread %d got a question.\n", ID);
 		if(State < 1)
 		{
 			if( ErrorMessages == TRUE )
@@ -333,11 +402,18 @@ static int QueryDNSListenUDP(void *Unused){
 			continue;
 		}
 
-		Query(PrimarySocketPtr, SecondarySocketPtr, PrimaryProtocol, ResultBuffer, State, &ClientAddr, &Buffer);
+		Query(PrimarySocketPtr,
+			  SecondarySocketPtr,
+			  PrimaryProtocol,
+			  ResultBuffer,
+			  State,
+			  &ClientAddr,
+			  &Buffer
+			  );
 		ExtendableBuffer_Reset(&Buffer);
 
 	}
-	--ThreadCount;
+
 	return 0;
 }
 
@@ -346,12 +422,16 @@ void QueryDNSListenUDPStart(int _ThreadCount)
 	if(Inited == FALSE) return;
 	if(_ThreadCount < 1) return;
 	Threads = SafeMalloc(_ThreadCount * sizeof(ThreadHandle));
-	ThreadCount = 0;
+
 	for(; _ThreadCount != 0; --_ThreadCount)
 	{
-		CREATE_THREAD(QueryDNSListenUDP, NULL, Threads[_ThreadCount - 1]);
+		CREATE_THREAD(QueryDNSListenUDP,
+					  (void *)_ThreadCount,
+					  Threads[_ThreadCount - 1]
+					  );
 	}
-	INFO("Starting UDP socket %s:%d successfully.\n", ConfigGetString(&ConfigInfo, "LocalInterface"),
-													   ConfigGetInt32(&ConfigInfo, "LocalPort")
-														);
+	INFO("Starting UDP socket %s:%d successfully.\n",
+		 ConfigGetString(&ConfigInfo, "LocalInterface"),
+		 ConfigGetInt32(&ConfigInfo, "LocalPort")
+		 );
 }

@@ -46,12 +46,9 @@ static BOOL MatchDomain(DomainList *List, const char *Domain)
 
 	while( Domain != NULL )
 	{
-		if( DomainList_Match_NoWildCard(List, Domain) == TRUE )
-		{
-			return TRUE;
-		}
-
-		if( *Domain == '.' && DomainList_Match_NoWildCard(List, Domain + 1) == TRUE )
+		if( DomainList_Match_NoWildCard(List, Domain) == TRUE ||
+			DomainList_Match_NoWildCard(List, Domain + 1) == TRUE
+			)
 		{
 			return TRUE;
 		}
@@ -158,7 +155,7 @@ static BOOL ParseGfwListItem(char *Item)
 		++Item;
 	}
 
-	if( DomainList_Match(&ExcludedDomains, Item) == FALSE )
+	if( MatchDomain(&ExcludedDomains, Item) == FALSE )
 	{
 		DomainList_Add(&ExcludedDomains, Item);
 		return TRUE;

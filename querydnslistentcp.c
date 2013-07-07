@@ -154,13 +154,25 @@ static int Query(	SOCKET				*PrimarySocket,
 			send(*ClientSocket, QueryContent, QueryContentLength, 0);
 			if( Family == AF_INET )
 			{
-				PRINT("%s[R][%s:%d][%s][%s] Refused.\n", DateAndTime, inet_ntoa(ClientAddr -> Addr4.sin_addr), ClientAddr -> Addr4.sin_port, DNSGetTypeName(SourceType), QueryDomain);
+				PRINT("%s[R][%s:%d][%s][%s] Refused.\n",
+					  DateAndTime,
+					  inet_ntoa(ClientAddr -> Addr4.sin_addr),
+					  ClientAddr -> Addr4.sin_port,
+					  DNSGetTypeName(SourceType),
+					  QueryDomain
+					  );
 			} else {
 				char Addr[LENGTH_OF_IPV6_ADDRESS_ASCII] = {0};
 
 				IPv6AddressToAsc(&(ClientAddr -> Addr6.sin6_addr), Addr);
 
-				PRINT("%s[R][%s:%d][%s][%s] Refused.\n", DateAndTime, Addr, ClientAddr -> Addr6.sin6_port, DNSGetTypeName(SourceType), QueryDomain);
+				PRINT("%s[R][%s:%d][%s][%s] Refused.\n",
+					  DateAndTime,
+					  Addr,
+					  ClientAddr -> Addr6.sin6_port,
+					  DNSGetTypeName(SourceType),
+					  QueryDomain
+					  );
 
 			}
 			return -1;
@@ -212,17 +224,32 @@ static int Query(	SOCKET				*PrimarySocket,
 			{
 				char InfoBuffer[3072];
 				InfoBuffer[0] = '\0';
-				GetAllAnswers(DNSGetDNSBody(ExtendableBuffer_GetData(Buffer)), InfoBuffer);
+				GetAllAnswers(DNSGetDNSBody(ExtendableBuffer_GetData(Buffer)),
+							  InfoBuffer);
 
 				if( Family == AF_INET )
 				{
-					PRINT("%s[%c][%s][%s][%s] :\n%s", DateAndTime, ProtocolCharacter, inet_ntoa(ClientAddr ->Addr4.sin_addr), DNSGetTypeName(SourceType), QueryDomain, InfoBuffer);
+					PRINT("%s[%c][%s][%s][%s] :\n%s",
+						  DateAndTime,
+						  ProtocolCharacter,
+						  inet_ntoa(ClientAddr ->Addr4.sin_addr),
+						  DNSGetTypeName(SourceType),
+						  QueryDomain,
+						  InfoBuffer
+						  );
 				} else {
 					char Addr[LENGTH_OF_IPV6_ADDRESS_ASCII] = {0};
 
 					IPv6AddressToAsc(&(ClientAddr -> Addr6.sin6_addr), Addr);
 
-					PRINT("%s[%c][%s][%s][%s] :\n%s", DateAndTime, ProtocolCharacter, Addr, DNSGetTypeName(SourceType), QueryDomain, InfoBuffer);
+					PRINT("%s[%c][%s][%s][%s] :\n%s",
+						  DateAndTime,
+						  ProtocolCharacter,
+						  Addr,
+						  DNSGetTypeName(SourceType),
+						  QueryDomain,
+						  InfoBuffer
+						  );
 				}
 			}
 			return 0;
@@ -285,7 +312,15 @@ static int TCPRecv(RecvInfo *Info)
 			break;
 		}
 
-		Query(PrimarySocketPtr, SecondarySocketPtr, PrimaryProtocol, ResultBuffer, state, &Socket, &Peer, &Buffer);
+		Query(PrimarySocketPtr,
+			  SecondarySocketPtr,
+			  PrimaryProtocol,
+			  ResultBuffer,
+			  state,
+			  &Socket,
+			  &Peer,
+			  &Buffer
+			  );
 		ExtendableBuffer_Reset(&Buffer);
 
 	}
@@ -297,7 +332,10 @@ static int TCPRecv(RecvInfo *Info)
 
 	if( Family == AF_INET )
 	{
-		INFO("Closed TCP connection to %s:%d\n", inet_ntoa(Peer.Addr4.sin_addr), Peer.Addr4.sin_port);
+		INFO("Closed TCP connection to %s:%d\n",
+			 inet_ntoa(Peer.Addr4.sin_addr),
+			 Peer.Addr4.sin_port
+			 );
 	} else {
 		char Addr[LENGTH_OF_IPV6_ADDRESS_ASCII] = {0};
 
@@ -328,10 +366,16 @@ static int QueryDNSListenTCP(void *Unused)
 		if( Family == AF_INET )
 		{
 			AddrLen = sizeof(struct sockaddr);
-			Info -> Socket = accept(ListenSocketTCP, (struct sockaddr *)&(Peer -> Addr4), (socklen_t *)&AddrLen);
+			Info -> Socket = accept(ListenSocketTCP,
+									(struct sockaddr *)&(Peer -> Addr4),
+									(socklen_t *)&AddrLen
+									);
 		} else {
 			AddrLen = sizeof(struct sockaddr_in6);
-			Info -> Socket = accept(ListenSocketTCP, (struct sockaddr *)&(Peer -> Addr6), (socklen_t *)&AddrLen);
+			Info -> Socket = accept(ListenSocketTCP,
+									(struct sockaddr *)&(Peer -> Addr6),
+									(socklen_t *)&AddrLen
+									);
 		}
 
 		if(Info -> Socket == INVALID_SOCKET)
@@ -345,13 +389,19 @@ static int QueryDNSListenTCP(void *Unused)
 
 		if( Family == AF_INET )
 		{
-			INFO("Established TCP connection to %s:%d\n", inet_ntoa(Peer -> Addr4.sin_addr), Peer -> Addr4.sin_port);
+			INFO("Established TCP connection to %s:%d\n",
+				 inet_ntoa(Peer -> Addr4.sin_addr),
+				 Peer -> Addr4.sin_port
+				 );
 		} else {
 			char Addr[LENGTH_OF_IPV6_ADDRESS_ASCII] = {0};
 
 			IPv6AddressToAsc(&(Peer -> Addr6.sin6_addr), Addr);
 
-			INFO("Established TCP connection to %s:%d\n", Addr, Peer -> Addr6.sin6_port);
+			INFO("Established TCP connection to %s:%d\n",
+				 Addr,
+				 Peer -> Addr6.sin6_port
+				 );
 		}
 
 		CREATE_THREAD(TCPRecv, (void *)Info, Unused2);
@@ -370,11 +420,12 @@ void QueryDNSListenTCPStart(void)
 	if(Inited == FALSE)
 		return;
 
-	INFO("Starting TCP socket %s:%d successfully.\n", ConfigGetString(&ConfigInfo, "LocalInterface"),
-													   ConfigGetInt32(&ConfigInfo, "LocalPort")
-													   );
+	INFO("Starting TCP socket %s:%d successfully.\n",
+		 ConfigGetString(&ConfigInfo, "LocalInterface"),
+		 ConfigGetInt32(&ConfigInfo, "LocalPort")
+		 );
 	CREATE_THREAD(QueryDNSListenTCP, NULL, Unused);
-#ifdef WIN32
-	CloseHandle(Unused);
-#endif /* WIN32 */
+
+	DETACH_THREAD(Unused);
+
 }
