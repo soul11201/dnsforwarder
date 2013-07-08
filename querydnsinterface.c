@@ -70,9 +70,6 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
 
 	ConfigInitInfo(&ConfigInfo);
 
-    TmpTypeDescriptor.boolean = FALSE;
-    ConfigAddOption(&ConfigInfo, "Debug", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
-
     TmpTypeDescriptor.str = "127.0.0.1";
     ConfigAddOption(&ConfigInfo, "LocalInterface", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Local working interface");
 
@@ -199,11 +196,30 @@ int QueryDNSInterfaceStart(void)
 		putchar('\n');
 	}
 
-	Debug = ConfigGetBoolean(&ConfigInfo, "Debug");
-	if( Debug == TRUE )
+#ifdef INTERNAL_DEBUG
 	{
-		DEBUG("Debug mode.\n");
+		char	FilePath[1024];
+
+		GetFileDirectory(FilePath);
+		strcat(FilePath, PATH_SLASH_STR);
+		strcat(FilePath, "Debug.log");
+
+
+		Debug_File = fopen(FilePath, "a");
+		if( Debug_File == NULL )
+		{
+			ERRORMSG("Cannot open debug file : %s\n", FilePath);
+			return -1;
+		}
+
+		EFFECTIVE_LOCK_INIT(Debug_Mutex);
+
+		DEBUG_FILE("\n\n\n\n\nNew session\n");
+		INFO("Debug mode.\n");
 	}
+#else
+	Debug = FALSE;
+#endif
 
 	InitAddress();
 	ExcludedList_Init();

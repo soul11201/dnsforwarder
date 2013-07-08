@@ -136,6 +136,8 @@ static int Query(	SOCKET				*PrimarySocket,
 
 	SourceType = (DNSRecordType)DNSGetRecordType(DNSJumpHeader(QueryContent));
 
+	DEBUG("Get QueryDomain : %s and type : %d\n", QueryDomain, SourceType);
+
 	Context.PrimarySocket = PrimarySocket;
 	Context.SecondarySocket = SecondarySocket;
 	Context.PrimaryProtocolToServer = PrimaryProtocol;

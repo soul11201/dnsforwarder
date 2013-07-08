@@ -6,17 +6,37 @@
 #include "readconfig.h"
 #include "extendablebuffer.h"
 
-#define	PRINT(...)		if(ShowMassages == TRUE) printf(__VA_ARGS__);
-#define	INFO(...)		if(ShowMassages == TRUE) printf("[INFO] "__VA_ARGS__);
-#define	ERRORMSG(...)	if(ErrorMessages == TRUE) fprintf(stderr, "[ERROR] "__VA_ARGS__);
-#define	DEBUG(...)		if(Debug == TRUE) fprintf(stderr, "[DEBUG] "__VA_ARGS__);
+#ifdef INTERNAL_DEBUG
+#define	DEBUG_FILE(...)	EFFECTIVE_LOCK_GET(Debug_Mutex); \
+						fprintf(Debug_File, "THREAD : %d : ", GET_THREAD_ID()); \
+						fprintf(Debug_File, __VA_ARGS__); \
+						fflush(Debug_File); \
+						EFFECTIVE_LOCK_RELEASE(Debug_Mutex);
+
+
+#define	DEBUG(...)		fprintf(stderr, "[DEBUG] "__VA_ARGS__); \
+						DEBUG_FILE(__VA_ARGS__);
+
+
+#else
+#define	DEBUG_FILE(...)
+#define	DEBUG(...)
+#endif
+
+#define	PRINT(...)		if(ShowMassages == TRUE){ printf(__VA_ARGS__); DEBUG_FILE(__VA_ARGS__); }
+#define	INFO(...)		if(ShowMassages == TRUE){ printf("[INFO] "__VA_ARGS__); DEBUG_FILE(__VA_ARGS__); }
+#define	ERRORMSG(...)	if(ErrorMessages == TRUE){ fprintf(stderr, "[ERROR] "__VA_ARGS__); DEBUG_FILE(__VA_ARGS__); }
+
 
 extern ConfigFileInfo	ConfigInfo;
 extern int				TimeToServer;
 extern BOOL				FallBackToSecondary;
 extern BOOL				ShowMassages;
 extern BOOL				ErrorMessages;
-extern BOOL				Debug;
+#ifdef INTERNAL_DEBUG
+extern EFFECTIVE_LOCK	Debug_Mutex;
+extern FILE				*Debug_File;
+#endif
 
 typedef enum _dns_quary_protocol{
 	DNS_QUARY_PROTOCOL_UDP = 0,

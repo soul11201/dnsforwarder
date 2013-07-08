@@ -21,7 +21,10 @@ int				TimeToServer;
 BOOL			FallBackToSecondary;
 BOOL			ShowMassages;
 BOOL			ErrorMessages;
-BOOL			Debug;
+#ifdef INTERNAL_DEBUG
+EFFECTIVE_LOCK	Debug_Mutex;
+FILE			*Debug_File;
+#endif
 
 static AddressList	TCPAddresses;
 static AddressList	UDPAddresses;
@@ -450,6 +453,7 @@ int InitAddress(void)
 	Itr = StringList_GetNext(&tcps, NULL);
 	while( Itr != NULL )
 	{
+		DEBUG_FILE("Add address %s to TCPAddresses\n", Itr);
 		AddressList_Add_From_String(&TCPAddresses, Itr);
 		Itr = StringList_GetNext(&tcps, Itr);
 	}
@@ -457,6 +461,7 @@ int InitAddress(void)
 	Itr = StringList_GetNext(&udps, NULL);
 	while( Itr != NULL )
 	{
+		DEBUG_FILE("Add address %s to UDPAddresses\n", Itr)
 		AddressList_Add_From_String(&UDPAddresses, Itr);
 		Itr = StringList_GetNext(&udps, Itr);
 	}
@@ -623,6 +628,15 @@ static int QueryFromServer(QueryContext		*Context,
 
 	BOOL		UseSecondary;
 
+	DEBUG_FILE("1 : Context : %x, QueryContent : %x, QueryContentLength : %d, Buffer : %x, QueryDomain : %x, ProtocolCharacter : %x\n",
+			   Context,
+			   QueryContent,
+			   QueryContentLength,
+			   Buffer,
+			   QueryDomain,
+			   ProtocolCharacter
+			   );
+
 	/* Determine whether the secondaries are used */
 	if( Context -> SecondarySocket != NULL && IsExcludedDomain(QueryDomain) )
 	{
@@ -633,11 +647,21 @@ static int QueryFromServer(QueryContext		*Context,
 
 	SelectSocketAndProtocol(Context, &SocketUsed, &ProtocolUsed, UseSecondary);
 
+
 	SetAddressAndPrococolLetter(ProtocolUsed,
 								&ServerAddr,
 								&Family,
 								ProtocolCharacter
 								);
+	DEBUG_FILE("2 : Context : %x, QueryContent : %x, QueryContentLength : %d, Buffer : %x, QueryDomain : %x, ProtocolCharacter : %x\n",
+			   Context,
+			   QueryContent,
+			   QueryContentLength,
+			   Buffer,
+			   QueryDomain,
+			   ProtocolCharacter
+			   );
+	DEBUG("Setted protocol %c for %s\n", *ProtocolCharacter, QueryDomain);
 
 	State = QueryFromServerBase(SocketUsed,
 								ServerAddr,
@@ -647,6 +671,15 @@ static int QueryFromServer(QueryContext		*Context,
 								QueryContentLength,
 								Context -> ProtocolToSrc,
 								Buffer);
+
+	DEBUG_FILE("3 : Context : %x, QueryContent : %x, QueryContentLength : %d, Buffer : %x, QueryDomain : %x, ProtocolCharacter : %x\n",
+			   Context,
+			   QueryContent,
+			   QueryContentLength,
+			   Buffer,
+			   QueryDomain,
+			   ProtocolCharacter
+			   );
 
 	if(State < 0) /* Failed */
 	{
@@ -667,11 +700,23 @@ static int QueryFromServer(QueryContext		*Context,
 									&ProtocolUsed,
 									!UseSecondary
 									);
+
 			SetAddressAndPrococolLetter(ProtocolUsed,
 										&ServerAddr,
 										&Family,
 										ProtocolCharacter
 										);
+
+			DEBUG_FILE("4 : Context : %x, QueryContent : %x, QueryContentLength : %d, Buffer : %x, QueryDomain : %x, ProtocolCharacter : %x\n",
+					   Context,
+					   QueryContent,
+					   QueryContentLength,
+					   Buffer,
+					   QueryDomain,
+					   ProtocolCharacter
+					   );
+
+			DEBUG("(Fallback)Setted protocol %c for %s\n", *ProtocolCharacter, QueryDomain);
 
 			State = QueryFromServerBase(SocketUsed,
 										ServerAddr,
@@ -681,6 +726,16 @@ static int QueryFromServer(QueryContext		*Context,
 										QueryContentLength,
 										Context -> ProtocolToSrc,
 										Buffer);
+
+			DEBUG_FILE("5 : Context : %x, QueryContent : %x, QueryContentLength : %d, Buffer : %x, QueryDomain : %x, ProtocolCharacter : %x\n",
+					   Context,
+					   QueryContent,
+					   QueryContentLength,
+					   Buffer,
+					   QueryDomain,
+					   ProtocolCharacter
+					   );
+
 			if( State < 0 )
 			{
 				return QUERY_RESULT_ERROR;
