@@ -120,10 +120,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../dnsrelated.h" />
-		<Unit filename="../domainlist.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="../domainlist.h" />
 		<Unit filename="../downloader.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -172,6 +168,10 @@
 		</Unit>
 		<Unit filename="../readline.h" />
 		<Unit filename="../rwlock.h" />
+		<Unit filename="../stringchunk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../stringchunk.h" />
 		<Unit filename="../stringlist.c">
 			<Option compilerVar="CC" />
 		</Unit>
