@@ -217,8 +217,6 @@ int QueryDNSInterfaceStart(void)
 		DEBUG_FILE("\n\n\n\n\nNew session\n");
 		INFO("Debug mode.\n");
 	}
-#else
-	Debug = FALSE;
 #endif
 
 	InitAddress();

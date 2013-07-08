@@ -15,7 +15,7 @@
 static BOOL			Inited = FALSE;
 
 static MutexHandle	ListenMutex;
-static MutexHandle	SendToMutex;
+static EFFECTIVE_LOCK	LockOfSendBack;
 
 static SOCKET		ListenSocketUDP;
 
@@ -25,9 +25,9 @@ static ThreadHandle	*Threads;
 
 static int			MaximumMessageSize;
 
-#define _SendTo(...)	GET_MUTEX(SendToMutex); \
+#define _SendTo(...)	EFFECTIVE_LOCK_GET(LockOfSendBack); \
 						sendto(__VA_ARGS__); \
-						RELEASE_MUTEX(SendToMutex);
+						EFFECTIVE_LOCK_RELEASE(LockOfSendBack);
 
 /* Functions */
 int QueryDNSListenUDPInit(void)
@@ -96,7 +96,7 @@ int QueryDNSListenUDPInit(void)
 	}
 
 	CREATE_MUTEX(ListenMutex);
-	CREATE_MUTEX(SendToMutex);
+	EFFECTIVE_LOCK_INIT(LockOfSendBack);
 
 	MaximumMessageSize = GetMaximumMessageSize(ListenSocketUDP);
 	if(MaximumMessageSize < 0)
