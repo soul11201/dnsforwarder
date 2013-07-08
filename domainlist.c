@@ -1,11 +1,11 @@
-#include "domainlist.h"
+#include "StringChunk.h"
 #include "utils.h"
 
 typedef struct _EntryForDomain{
 	_32BIT_INT	Offset;
 } EntryForDomain;
 
-int DomainList_Init(DomainList *dl, int InitialCount /* For no-wildcard domain */)
+int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain */)
 {
 	if( StringList_Init(&(dl -> List), NULL, 0) != 0 )
 	{
@@ -36,7 +36,7 @@ int DomainList_Init(DomainList *dl, int InitialCount /* For no-wildcard domain *
 	return 0;
 }
 
-int DomainList_Add(DomainList *dl, const char *Domain)
+int StringChunk_Add(StringChunk *dl, const char *Domain)
 {
 	EntryForDomain NewEntry;
 
@@ -65,7 +65,7 @@ int DomainList_Add(DomainList *dl, const char *Domain)
 
 }
 
-BOOL DomainList_Match_NoWildCard(DomainList *dl, const char *Str)
+BOOL StringChunk_Match_NoWildCard(StringChunk *dl, const char *Str)
 {
 	EntryForDomain *FoundEntry;
 
@@ -87,7 +87,7 @@ BOOL DomainList_Match_NoWildCard(DomainList *dl, const char *Str)
 
 }
 
-BOOL DomainList_Match_OnlyWildCard(DomainList *dl, const char *Str)
+BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl, const char *Str)
 {
 	EntryForDomain *FoundEntry;
 
@@ -114,10 +114,10 @@ BOOL DomainList_Match_OnlyWildCard(DomainList *dl, const char *Str)
 	return FALSE;
 }
 
-BOOL DomainList_Match(DomainList *dl, const char *Str)
+BOOL StringChunk_Match(StringChunk *dl, const char *Str)
 {
-	if( DomainList_Match_NoWildCard(dl, Str) == TRUE ||
-		DomainList_Match_OnlyWildCard(dl, Str) == TRUE
+	if( StringChunk_Match_NoWildCard(dl, Str) == TRUE ||
+		StringChunk_Match_OnlyWildCard(dl, Str) == TRUE
 		)
 	{
 		return TRUE;
@@ -126,7 +126,7 @@ BOOL DomainList_Match(DomainList *dl, const char *Str)
 	}
 }
 
-void DomainList_Free(DomainList *dl)
+void StringChunk_Free(StringChunk *dl)
 {
 	StringList_Free(&(dl -> List));
 	HashTable_Free(&(dl -> List_Pos));

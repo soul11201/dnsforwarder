@@ -8,12 +8,12 @@
 #include "array.h"
 #include "common.h"
 #include "rwlock.h"
-#include "domainlist.h"
+#include "StringChunk.h"
 
 static int			*DisabledTypes	=	NULL;
 
-static DomainList	DisabledDomains;
-static DomainList	ExcludedDomains;
+static StringChunk	DisabledDomains;
+static StringChunk	ExcludedDomains;
 
 static RWLock		ExcludedListLock;
 
@@ -35,9 +35,9 @@ BOOL IsDisabledType(int Type){
 	return FALSE;
 }
 
-static BOOL MatchDomain(DomainList *List, const char *Domain)
+static BOOL MatchDomain(StringChunk *List, const char *Domain)
 {
-	if( DomainList_Match(List, Domain) == TRUE )
+	if( StringChunk_Match(List, Domain) == TRUE )
 	{
 		return TRUE;
 	}
@@ -46,8 +46,8 @@ static BOOL MatchDomain(DomainList *List, const char *Domain)
 
 	while( Domain != NULL )
 	{
-		if( DomainList_Match_NoWildCard(List, Domain) == TRUE ||
-			DomainList_Match_NoWildCard(List, Domain + 1) == TRUE
+		if( StringChunk_Match_NoWildCard(List, Domain) == TRUE ||
+			StringChunk_Match_NoWildCard(List, Domain + 1) == TRUE
 			)
 		{
 			return TRUE;
@@ -106,7 +106,7 @@ static int DisableType(void)
 	return 0;
 }
 
-static int LoadDomains(DomainList *List, const char *Domains, int ApproximateCount)
+static int LoadDomains(StringChunk *List, const char *Domains, int ApproximateCount)
 {
 	StringList TmpList;
 
@@ -115,7 +115,7 @@ static int LoadDomains(DomainList *List, const char *Domains, int ApproximateCou
 	if( StringList_Init(&TmpList, Domains, ',') < 0 )
 		return -1;
 
-	if( DomainList_Init(List, ApproximateCount) < 0 )
+	if( StringChunk_Init(List, ApproximateCount) < 0 )
 	{
 		StringList_Free(&TmpList);
 		return -2;
@@ -124,10 +124,10 @@ static int LoadDomains(DomainList *List, const char *Domains, int ApproximateCou
 	Str = StringList_GetNext(&TmpList, NULL);
 	while( Str != NULL )
 	{
-		if( DomainList_Add(List, Str) != 0 )
+		if( StringChunk_Add(List, Str) != 0 )
 		{
 			StringList_Free(&TmpList);
-			DomainList_Free(List);
+			StringChunk_Free(List);
 			return -3;
 		}
 		Str = StringList_GetNext(&TmpList, Str);
@@ -157,7 +157,7 @@ static BOOL ParseGfwListItem(char *Item)
 
 	if( MatchDomain(&ExcludedDomains, Item) == FALSE )
 	{
-		DomainList_Add(&ExcludedDomains, Item);
+		StringChunk_Add(&ExcludedDomains, Item);
 		return TRUE;
 	} else {
 		return FALSE;
@@ -248,7 +248,7 @@ int LoadGfwList_Thread(void *Unused)
 
 			RWLock_WrLock(ExcludedListLock);
 
-			DomainList_Free(&ExcludedDomains);
+			StringChunk_Free(&ExcludedDomains);
 
 			LoadDomains(&ExcludedDomains, ExcludedList, 2000);
 
@@ -305,7 +305,7 @@ int LoadGfwList(void)
 
 	RWLock_WrLock(ExcludedListLock);
 
-	DomainList_Free(&ExcludedDomains);
+	StringChunk_Free(&ExcludedDomains);
 
 	LoadDomains(&ExcludedDomains, ExcludedList, 2000);
 

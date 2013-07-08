@@ -1,11 +1,11 @@
-#ifndef DOMAINLIST_H_INCLUDED
-#define DOMAINLIST_H_INCLUDED
+#ifndef STRINGCHUNK_H_INCLUDED
+#define STRINGCHUNK_H_INCLUDED
 
 #include "hashtable.h"
 #include "stringlist.h"
 #include "array.h"
 
-typedef struct _DomainList{
+typedef struct _StringChunk{
 	/* Domains without wildcards */
 	StringList	List;
 
@@ -19,18 +19,18 @@ typedef struct _DomainList{
 	/* Positions of every domain in `List_W', offsets */
 	Array		List_W_Pos;
 
-} DomainList;
+} StringChunk;
 
-int DomainList_Init(DomainList *dl, int InitialCount /* For no-wildcard domain */);
+int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain */);
 
-int DomainList_Add(DomainList *dl, const char *Domain);
+int StringChunk_Add(StringChunk *dl, const char *Domain);
 
-BOOL DomainList_Match_NoWildCard(DomainList *dl, const char *Str);
+BOOL StringChunk_Match_NoWildCard(StringChunk *dl, const char *Str);
 
-BOOL DomainList_Match_OnlyWildCard(DomainList *dl, const char *Str);
+BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl, const char *Str);
 
-BOOL DomainList_Match(DomainList *dl, const char *Str);
+BOOL StringChunk_Match(StringChunk *dl, const char *Str);
 
-void DomainList_Free(DomainList *dl);
+void StringChunk_Free(StringChunk *dl);
 
-#endif // DOMAINLIST_H_INCLUDED
+#endif // STRINGCHUNK_H_INCLUDED
