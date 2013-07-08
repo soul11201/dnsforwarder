@@ -10,3 +10,4 @@ codeblocks_win/bin/*/cache
 codeblocks_win/bin/*/*.txt
 codeblocks_win/bin/*/*.bat
 codeblocks_win/bin/*/*.bak
+codeblocks_win/bin/*/*.log
