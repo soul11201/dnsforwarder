@@ -28,6 +28,20 @@
 					<Add option="-s" />
 				</Linker>
 			</Target>
+			<Target title="Release_InternalDebug">
+				<Option output="./bin/Release/dnsforwarder" prefix_auto="1" extension_auto="1" />
+				<Option object_output="./obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option parameters='-f &quot;/home/ho121/.dnsforwarder&quot;' />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-DINTERNAL_DEBUG" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
@@ -61,6 +75,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../dnsrelated.h" />
+		<Unit filename="../domainlist.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../domainlist.h" />
 		<Unit filename="../downloader.c">
 			<Option compilerVar="CC" />
 		</Unit>
