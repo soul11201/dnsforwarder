@@ -8,7 +8,7 @@
 #include "array.h"
 #include "common.h"
 #include "rwlock.h"
-#include "StringChunk.h"
+#include "stringchunk.h"
 
 static int			*DisabledTypes	=	NULL;
 

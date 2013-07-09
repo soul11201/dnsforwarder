@@ -1,4 +1,4 @@
-#include "StringChunk.h"
+#include "stringchunk.h"
 #include "utils.h"
 
 typedef struct _EntryForDomain{
