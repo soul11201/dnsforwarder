@@ -3,6 +3,7 @@ codeblocks/obj/
 codeblocks/*.depend
 codeblocks/*.layout
 codeblocks_win/obj/
+codeblocks_win/bin/Debug/
 codeblocks_win/*.depend
 codeblocks_win/*.layout
 vc10/Debug/
