@@ -794,22 +794,6 @@ int QueryBase(QueryContext		*Context,
 								QueryDomain,
 								ProtocolCharacter
 								);
-		if( State == QUERY_RESULT_ERROR && FallBackToSecondary == TRUE && Context -> SecondarySocket != NULL )
-		{
-			/* Fallback */
-			Context -> PrimarySocket = Context -> SecondarySocket;
-			Context -> SecondarySocket = NULL;
-			Context -> PrimaryProtocolToServer = !(Context -> PrimaryProtocolToServer);
-
-			State = QueryFromServer(Context,
-									QueryContent,
-									QueryContentLength,
-									Buffer,
-									NULL,
-									ProtocolCharacter
-									);
-
-		}
 	}
 
 	return State;
