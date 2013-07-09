@@ -37,7 +37,7 @@ BOOL IsDisabledType(int Type){
 
 static BOOL MatchDomain(StringChunk *List, const char *Domain)
 {
-	if( StringChunk_Match(List, Domain) == TRUE )
+	if( StringChunk_Match(List, Domain, NULL) == TRUE )
 	{
 		return TRUE;
 	}
@@ -46,8 +46,8 @@ static BOOL MatchDomain(StringChunk *List, const char *Domain)
 
 	while( Domain != NULL )
 	{
-		if( StringChunk_Match_NoWildCard(List, Domain) == TRUE ||
-			StringChunk_Match_NoWildCard(List, Domain + 1) == TRUE
+		if( StringChunk_Match_NoWildCard(List, Domain, NULL) == TRUE ||
+			StringChunk_Match_NoWildCard(List, Domain + 1, NULL) == TRUE
 			)
 		{
 			return TRUE;
@@ -124,7 +124,7 @@ static int LoadDomains(StringChunk *List, const char *Domains, int ApproximateCo
 	Str = StringList_GetNext(&TmpList, NULL);
 	while( Str != NULL )
 	{
-		if( StringChunk_Add(List, Str) != 0 )
+		if( StringChunk_Add(List, Str, NULL, 0) != 0 )
 		{
 			StringList_Free(&TmpList);
 			StringChunk_Free(List);
@@ -157,7 +157,7 @@ static BOOL ParseGfwListItem(char *Item)
 
 	if( MatchDomain(&ExcludedDomains, Item) == FALSE )
 	{
-		StringChunk_Add(&ExcludedDomains, Item);
+		StringChunk_Add(&ExcludedDomains, Item, NULL, 0);
 		return TRUE;
 	} else {
 		return FALSE;

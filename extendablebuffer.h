@@ -82,7 +82,9 @@ BOOL ExtendableBuffer_GuarantyLeft(	__in ExtendableBuffer	*eb,
  */
 
 char *ExtendableBuffer_Expand(	__in ExtendableBuffer	*eb,
-								__in _32BIT_UINT		ExpandedSize);
+								__in _32BIT_UINT		ExpandedSize,
+								__out_opt _32BIT_INT	*Offset
+								);
 /* Description:
  *  Increase the number of used bytes by `ExpandedSize'. There is a call to
  *  `ExtendableBuffer_GuarantyLeft' in this function, to make sure there is
@@ -90,6 +92,8 @@ char *ExtendableBuffer_Expand(	__in ExtendableBuffer	*eb,
  * Parameters:
  *  eb           : The ExtendableBuffer to expand.
  *  ExpandedSize : Expanded size.
+ *  Offset       : The offset of the newly expanded space. This parameter can be
+ *                 NULL if no offset is needed.
  * Return value:
  *  The head address of the newly expanded space.
  */

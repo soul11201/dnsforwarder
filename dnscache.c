@@ -548,7 +548,7 @@ static int DNSCache_GenerateDatasFromCache(	__in			char				*Datas,
 	{
 		SingleLength = DNSGenerateData(Datas, NULL, 0, Descriptor + loop);
 
-		HereSaved = ExtendableBuffer_Expand(Buffer, SingleLength);
+		HereSaved = ExtendableBuffer_Expand(Buffer, SingleLength, NULL);
 		if( HereSaved == NULL )
 		{
 			return 0;
@@ -610,7 +610,7 @@ static int DNSCache_GetRawRecordsFromCache(	__in	char				*Name,
 
 				SingleLength = DNSGenResourceRecord(NULL, 0, Name, Type, Class, 0, NULL, 0, FALSE);
 
-				HereSaved = ExtendableBuffer_Expand((ExtendableBuffer *)Buffer, SingleLength);
+				HereSaved = ExtendableBuffer_Expand((ExtendableBuffer *)Buffer, SingleLength, NULL);
 
 				if(ForceTTL < 0)
 					DNSGenResourceRecord(HereSaved, SingleLength, Name, Type, Class, Entry -> TTL / TTLMultiple, NULL, 0, FALSE);
@@ -695,7 +695,7 @@ int DNSCache_GetByQuestion(__in char *Question, __inout ExtendableBuffer *Buffer
 			SingleLength = DNSGenResourceRecord(NULL, 0, Name, DNS_TYPE_CNAME, 1, 0, CName, strlen(CName) + 1, TRUE);
 			(*RecordsLength) += SingleLength;
 
-			HereSaved = ExtendableBuffer_Expand(Buffer, SingleLength);
+			HereSaved = ExtendableBuffer_Expand(Buffer, SingleLength, NULL);
 
 			DNSGenResourceRecord(HereSaved, SingleLength, Name, DNS_TYPE_CNAME, 1, Entry -> TTL, CName, strlen(CName) + 1, TRUE);
 

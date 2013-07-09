@@ -65,7 +65,7 @@ int DNSQueryFromHosts(	__in	QueryContext		*Context,
 
 	HeaderOffset = ExtendableBuffer_GetEndOffset(Buffer);
 
-	Header = ExtendableBuffer_Expand(Buffer, QueryingLength);
+	Header = ExtendableBuffer_Expand(Buffer, QueryingLength, NULL);
 	if( Header == NULL )
 	{
 		return -1;
@@ -112,7 +112,7 @@ int DNSQueryFromCache(	__in	QueryContext		*Context,
 
 	HeaderOffset = ExtendableBuffer_GetEndOffset(Buffer);
 
-	Header = ExtendableBuffer_Expand(Buffer, QueryingLength);
+	Header = ExtendableBuffer_Expand(Buffer, QueryingLength, NULL);
 	if( Header == NULL )
 	{
 		return -1;
@@ -174,7 +174,7 @@ static int DNSQueryRawViaTCP(SOCKET				Sock,
 	if( State < 1) return -2;
 
 	/* Get TCPLength */
-	NewFromServer = ExtendableBuffer_Expand(ResultBuffer, 2);
+	NewFromServer = ExtendableBuffer_Expand(ResultBuffer, 2, NULL);
 	if( NewFromServer == NULL )
 	{
 		return -2;
@@ -189,7 +189,7 @@ static int DNSQueryRawViaTCP(SOCKET				Sock,
 	NewTCPLength = GET_16_BIT_U_INT(NewFromServer);
 
 	/* Get DNSBody */
-	NewFromServer = ExtendableBuffer_Expand(ResultBuffer, NewTCPLength);
+	NewFromServer = ExtendableBuffer_Expand(ResultBuffer, NewTCPLength, NULL);
 	if( NewFromServer == NULL )
 	{
 		return -2;
@@ -272,7 +272,7 @@ static int DNSQueryRawViaUDP(SOCKET				Sock,
 			AddrLen = sizeof(struct sockaddr_in6);
 		}
 
-		NewFromServer = ExtendableBuffer_Expand(ResultBuffer, 384);
+		NewFromServer = ExtendableBuffer_Expand(ResultBuffer, 384, NULL);
 
 		if( NewFromServer == NULL )
 		{
@@ -311,7 +311,7 @@ int DNSQueryOriginViaUDP(SOCKET				Sock,
 	} else { /* DNS_QUARY_PROTOCOL_TCP */
 		int State;
 
-		char *TCPLength = ExtendableBuffer_Expand(ResultBuffer, 2);
+		char *TCPLength = ExtendableBuffer_Expand(ResultBuffer, 2, NULL);
 
 		if( TCPLength == NULL )
 		{
@@ -347,7 +347,7 @@ int QueryFromHostsAndCache(QueryContext		*Context,
 			State = DNSQueryFromHosts(Context, QueryContent, QueryContentLength, Buffer);
 		else
 		{
-			TCPLength = ExtendableBuffer_Expand(Buffer, 2);
+			TCPLength = ExtendableBuffer_Expand(Buffer, 2, NULL);
 			if( TCPLength == NULL )
 			{
 				State = -1;
@@ -386,7 +386,7 @@ int QueryFromHostsAndCache(QueryContext		*Context,
 			State = DNSQueryFromCache(Context, QueryContent, QueryContentLength, Buffer);
 		} else { /* DNS_QUARY_PROTOCOL_TCP */
 			TCPLengthStart = ExtendableBuffer_GetEndOffset(Buffer);
-			ExtendableBuffer_Expand(Buffer, 2);
+			ExtendableBuffer_Expand(Buffer, 2, NULL);
 			Start = ExtendableBuffer_GetEndOffset(Buffer);
 			State = DNSQueryFromCache(Context, QueryContent + 2, QueryContentLength - 2, Buffer);
 		}

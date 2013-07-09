@@ -4,6 +4,7 @@
 #include "hashtable.h"
 #include "stringlist.h"
 #include "array.h"
+#include "extendablebuffer.h"
 
 typedef struct _StringChunk{
 	/* Domains without wildcards */
@@ -19,17 +20,31 @@ typedef struct _StringChunk{
 	/* Positions of every domain in `List_W', offsets */
 	Array		List_W_Pos;
 
+
+	/* Chunk of all additional datas */
+	ExtendableBuffer	AdditionalDataChunk;
+
 } StringChunk;
 
 int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain */);
 
-int StringChunk_Add(StringChunk *dl, const char *Domain);
+int StringChunk_Add(StringChunk *dl,
+					const char *Str,
+					const char *AdditionalData,
+					int LengthOfAdditionalData
+					);
 
-BOOL StringChunk_Match_NoWildCard(StringChunk *dl, const char *Str);
+BOOL StringChunk_Match_NoWildCard(StringChunk *dl,
+								  const char *Str,
+								  char **Data
+								  );
 
-BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl, const char *Str);
+BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl,
+									const char *Str,
+									char **Data
+									);
 
-BOOL StringChunk_Match(StringChunk *dl, const char *Str);
+BOOL StringChunk_Match(StringChunk *dl, const char *Str, char **Data);
 
 void StringChunk_Free(StringChunk *dl);
 

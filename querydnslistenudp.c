@@ -428,7 +428,7 @@ void QueryDNSListenUDPStart(int _ThreadCount)
 	for(; _ThreadCount != 0; --_ThreadCount)
 	{
 		CREATE_THREAD(QueryDNSListenUDP,
-					  (void *)_ThreadCount,
+					  (void *)(long)_ThreadCount,
 					  Threads[_ThreadCount - 1]
 					  );
 	}

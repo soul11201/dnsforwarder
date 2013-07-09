@@ -1,9 +1,10 @@
 #include "stringchunk.h"
 #include "utils.h"
 
-typedef struct _EntryForDomain{
-	_32BIT_INT	Offset;
-} EntryForDomain;
+typedef struct _EntryForString{
+	_32BIT_INT	OffsetOfString;
+	_32BIT_INT	OffsetOfData;
+} EntryForString;
 
 int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain */)
 {
@@ -12,7 +13,7 @@ int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain
 		return -1;
 	}
 
-	if( HashTable_Init(&(dl -> List_Pos), sizeof(EntryForDomain), InitialCount) != 0 )
+	if( HashTable_Init(&(dl -> List_Pos), sizeof(EntryForString), InitialCount) != 0 )
 	{
 		StringList_Free(&(dl -> List));
 		return -2;
@@ -25,7 +26,7 @@ int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain
 		return -3;
 	}
 
-	if( Array_Init(&(dl -> List_W_Pos), sizeof(EntryForDomain), 0, FALSE, NULL) != 0 )
+	if( Array_Init(&(dl -> List_W_Pos), sizeof(EntryForString), 0, FALSE, NULL) != 0 )
 	{
 		StringList_Free(&(dl -> List));
 		HashTable_Free(&(dl -> List_Pos));
@@ -33,50 +34,99 @@ int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain
 		return -4;
 	}
 
+	if( ExtendableBuffer_Init(&(dl -> AdditionalDataChunk), 0, -1) != 0 )
+	{
+		StringList_Free(&(dl -> List));
+		HashTable_Free(&(dl -> List_Pos));
+		StringList_Free(&(dl -> List_W));
+		Array_Free(&(dl -> List_W_Pos));
+		return -5;
+	}
+
 	return 0;
 }
 
-int StringChunk_Add(StringChunk *dl, const char *Domain)
+int StringChunk_Add(StringChunk *dl,
+					const char *Str,
+					const char *AdditionalData,
+					int LengthOfAdditionalData /* The length will not be stored. */
+					)
 {
-	EntryForDomain NewEntry;
+	EntryForString NewEntry;
 
-	if( ContainWildCard(Domain) )
+	if( AdditionalData != NULL && LengthOfAdditionalData > 0 )
 	{
-		NewEntry.Offset = StringList_Add(&(dl -> List_W), Domain);
+		_32BIT_INT OffsetOfStoredTo;
 
-		if( NewEntry.Offset >= 0 )
+		char *DataStoredTo =
+						ExtendableBuffer_Expand(&(dl -> AdditionalDataChunk),
+						LengthOfAdditionalData,
+						&OffsetOfStoredTo
+						);
+
+		if( DataStoredTo == NULL )
+		{
+			return -1;
+		}
+
+		NewEntry.OffsetOfData = OffsetOfStoredTo;
+
+		memcpy(DataStoredTo, AdditionalData, LengthOfAdditionalData);
+
+	} else {
+		NewEntry.OffsetOfData = -1;
+	}
+
+	if( ContainWildCard(Str) )
+	{
+		NewEntry.OffsetOfString = StringList_Add(&(dl -> List_W), Str);
+
+		if( NewEntry.OffsetOfString >= 0 )
 		{
 			Array_PushBack(&(dl -> List_W_Pos), &NewEntry, NULL);
-			return 0;
 		} else {
 			return -1;
 		}
 	} else {
-		NewEntry.Offset = StringList_Add(&(dl -> List), Domain);
+		NewEntry.OffsetOfString = StringList_Add(&(dl -> List), Str);
 
-		if( NewEntry.Offset >= 0 )
+		if( NewEntry.OffsetOfString >= 0 )
 		{
-			HashTable_Add(&(dl -> List_Pos), Domain, &NewEntry);
-			return 0;
+			HashTable_Add(&(dl -> List_Pos), Str, &NewEntry);
 		} else {
 			return -2;
 		}
 	}
 
+	return 0;
+
 }
 
-BOOL StringChunk_Match_NoWildCard(StringChunk *dl, const char *Str)
+BOOL StringChunk_Match_NoWildCard(StringChunk *dl,
+								  const char *Str,
+								  char **Data
+								  )
 {
-	EntryForDomain *FoundEntry;
+	EntryForString *FoundEntry;
 
 	const char *FoundString;
 
 	FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, NULL);
 	while( FoundEntry != NULL )
 	{
-		FoundString = StringList_GetByOffset(&(dl -> List), FoundEntry -> Offset);
+		FoundString = StringList_GetByOffset(&(dl -> List),
+											 FoundEntry -> OffsetOfString
+											 );
 		if( strcmp(FoundString, Str) == 0 )
 		{
+			if( FoundEntry -> OffsetOfData >=0 && Data != NULL )
+			{
+				*Data = ExtendableBuffer_GetPositionByOffset(
+												&(dl -> AdditionalDataChunk),
+												FoundEntry -> OffsetOfData
+												);
+			}
+
 			return TRUE;
 		}
 
@@ -87,9 +137,12 @@ BOOL StringChunk_Match_NoWildCard(StringChunk *dl, const char *Str)
 
 }
 
-BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl, const char *Str)
+BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl,
+									const char *Str,
+									char **Data
+									)
 {
-	EntryForDomain *FoundEntry;
+	EntryForString *FoundEntry;
 
 	const char *FoundString;
 
@@ -97,12 +150,19 @@ BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl, const char *Str)
 
 	for( loop = 0; loop != Array_GetUsed(&(dl -> List_W_Pos)); ++loop )
 	{
-		FoundEntry = (EntryForDomain *)Array_GetBySubscript(&(dl -> List_W_Pos), loop);
+		FoundEntry = (EntryForString *)Array_GetBySubscript(&(dl -> List_W_Pos), loop);
 		if( FoundEntry != NULL )
 		{
-			FoundString = StringList_GetByOffset(&(dl -> List_W), FoundEntry -> Offset);
+			FoundString = StringList_GetByOffset(&(dl -> List_W), FoundEntry -> OffsetOfString);
 			if( WILDCARD_MATCH(FoundString, Str) == WILDCARD_MATCHED )
 			{
+				if( FoundEntry -> OffsetOfData >=0 && Data != NULL )
+				{
+					*Data = ExtendableBuffer_GetPositionByOffset(
+													&(dl -> AdditionalDataChunk),
+													FoundEntry -> OffsetOfData
+													);
+				}
 				return TRUE;
 			}
 
@@ -114,10 +174,10 @@ BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl, const char *Str)
 	return FALSE;
 }
 
-BOOL StringChunk_Match(StringChunk *dl, const char *Str)
+BOOL StringChunk_Match(StringChunk *dl, const char *Str, char **Data)
 {
-	if( StringChunk_Match_NoWildCard(dl, Str) == TRUE ||
-		StringChunk_Match_OnlyWildCard(dl, Str) == TRUE
+	if( StringChunk_Match_NoWildCard(dl, Str, Data) == TRUE ||
+		StringChunk_Match_OnlyWildCard(dl, Str, Data) == TRUE
 		)
 	{
 		return TRUE;
@@ -132,4 +192,5 @@ void StringChunk_Free(StringChunk *dl)
 	HashTable_Free(&(dl -> List_Pos));
 	StringList_Free(&(dl -> List_W));
 	Array_Free(&(dl -> List_W_Pos));
+	ExtendableBuffer_Free(&(dl -> AdditionalDataChunk));
 }

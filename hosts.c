@@ -37,8 +37,9 @@ static Array		AAAAW;
 static Array		CNameW;
 static Array		DisabledW;
 
-static StringList	StringChunk;
+static StringList	ListOfDomains;
 
+/* These two below once inited, never changed */
 static StringList	AppendedHosts;
 static int			AppendedNum = 0;
 
@@ -297,7 +298,7 @@ static int InitHostsContainer(	int IPv4Count,
 		return 7;
 	}
 
-	if( StringList_Init(&StringChunk, NULL, ',') != 0 )
+	if( StringList_Init(&ListOfDomains, NULL, ',') != 0 )
 	{
 		return 8;
 	}
@@ -314,7 +315,7 @@ static void FreeHostsContainer(void)
 	Array_Free(&AAAAW);
 	Array_Free(&CNameW);
 	Array_Free(&DisabledW);
-	StringList_Free(&StringChunk);
+	StringList_Free(&ListOfDomains);
 }
 
 static int AddHosts(char *src)
@@ -342,7 +343,7 @@ static int AddHosts(char *src)
 			{
 				return -1;
 			}
-			tmp6.Domain = StringList_Add(&StringChunk, itr);
+			tmp6.Domain = StringList_Add(&ListOfDomains, itr);
 
 			IPv6AddressToNum(src, tmp6.IP);
 
@@ -360,7 +361,7 @@ static int AddHosts(char *src)
 			{
 				return -1;
 			}
-			tmp6.Domain = StringList_Add(&StringChunk, itr);
+			tmp6.Domain = StringList_Add(&ListOfDomains, itr);
 
 			IPv6AddressToNum(src, tmp6.IP);
 
@@ -380,7 +381,7 @@ static int AddHosts(char *src)
 				{
 					return -1;
 				}
-				tmp4.Domain = StringList_Add(&StringChunk, itr);
+				tmp4.Domain = StringList_Add(&ListOfDomains, itr);
 				addr = inet_addr(src);
 				memcpy(tmp4.IP, &addr, 4);
 
@@ -401,7 +402,7 @@ static int AddHosts(char *src)
 				{
 					return -1;
 				}
-				tmp4.Domain = StringList_Add(&StringChunk, itr);
+				tmp4.Domain = StringList_Add(&ListOfDomains, itr);
 				addr = inet_addr(src);
 				memcpy(tmp4.IP, &addr, 4);
 
@@ -423,8 +424,8 @@ static int AddHosts(char *src)
 			{
 				return -1;
 			}
-			tmpC.CName = StringList_Add(&StringChunk, src);
-			tmpC.Domain = StringList_Add(&StringChunk, itr);
+			tmpC.CName = StringList_Add(&ListOfDomains, src);
+			tmpC.Domain = StringList_Add(&ListOfDomains, itr);
 
 			HashTable_Add(&CName, itr, &tmpC);
 
@@ -443,8 +444,8 @@ static int AddHosts(char *src)
 			{
 				return -1;
 			}
-			tmpC.CName = StringList_Add(&StringChunk, src);
-			tmpC.Domain = StringList_Add(&StringChunk, itr);
+			tmpC.CName = StringList_Add(&ListOfDomains, src);
+			tmpC.Domain = StringList_Add(&ListOfDomains, itr);
 
 			Array_PushBack(&CNameW, &tmpC, NULL);
 			break;
@@ -458,7 +459,7 @@ static int AddHosts(char *src)
 			{
 				return -1;
 			}
-			tmpD.Domain = StringList_Add(&StringChunk, itr);
+			tmpD.Domain = StringList_Add(&ListOfDomains, itr);
 
 			HashTable_Add(&Disabled, itr, &tmpD);
 
@@ -473,7 +474,7 @@ static int AddHosts(char *src)
 			{
 				return -1;
 			}
-			tmpD.Domain = StringList_Add(&StringChunk, itr);
+			tmpD.Domain = StringList_Add(&ListOfDomains, itr);
 			Array_PushBack(&DisabledW, &tmpD, NULL);
 
 			break;
@@ -805,7 +806,7 @@ static Host4 *FindFromA(char *Name)
 		{
 			return NULL;
 		}
-		if( strcmp(Name, StringList_GetByOffset(&StringChunk, h -> Domain)) == 0 )
+		if( strcmp(Name, StringList_GetByOffset(&ListOfDomains, h -> Domain)) == 0 )
 		{
 			return h;
 		}
@@ -823,7 +824,7 @@ static Host6 *FindFromAAAA(char *Name)
 			return NULL;
 		}
 
-		if( strcmp(Name, StringList_GetByOffset(&StringChunk, h -> Domain)) == 0 )
+		if( strcmp(Name, StringList_GetByOffset(&ListOfDomains, h -> Domain)) == 0 )
 		{
 			return h;
 		}
@@ -838,7 +839,7 @@ static Host4 *FindFromAW(char *Name)
 	h = Array_GetBySubscript(&AW, i);
 	while( h != NULL )
 	{
-		if( WILDCARD_MATCH(StringList_GetByOffset(&StringChunk, h -> Domain), Name) == WILDCARD_MATCHED )
+		if( WILDCARD_MATCH(StringList_GetByOffset(&ListOfDomains, h -> Domain), Name) == WILDCARD_MATCHED )
 			return h;
 
 		h = Array_GetBySubscript(&AW, ++i);
@@ -854,7 +855,7 @@ static Host6 *FindFromAAAAW(char *Name)
 	h = Array_GetBySubscript(&AAAAW, i);
 	while( h != NULL )
 	{
-		if( WILDCARD_MATCH(StringList_GetByOffset(&StringChunk, h -> Domain), Name) == WILDCARD_MATCHED )
+		if( WILDCARD_MATCH(StringList_GetByOffset(&ListOfDomains, h -> Domain), Name) == WILDCARD_MATCHED )
 			return h;
 
 		h = Array_GetBySubscript(&AAAAW, ++i);
@@ -874,7 +875,7 @@ static HostCName *FindFromCName(char *Name)
 			return NULL;
 		}
 
-		if( strcmp(Name, StringList_GetByOffset(&StringChunk, h -> Domain)) == 0 )
+		if( strcmp(Name, StringList_GetByOffset(&ListOfDomains, h -> Domain)) == 0 )
 		{
 			return h;
 		}
@@ -894,7 +895,7 @@ static HostDisabled *FindFromDisabled(char *Name)
 			return NULL;
 		}
 
-		if( strcmp(Name, StringList_GetByOffset(&StringChunk, h -> Domain)) == 0 )
+		if( strcmp(Name, StringList_GetByOffset(&ListOfDomains, h -> Domain)) == 0 )
 		{
 			return h;
 		}
@@ -910,7 +911,7 @@ static HostDisabled *FindFromDisabledW(char *Name)
 	h = Array_GetBySubscript(&DisabledW, i);
 	while( h != NULL )
 	{
-		if( WILDCARD_MATCH(StringList_GetByOffset(&StringChunk, h -> Domain), Name) == WILDCARD_MATCHED )
+		if( WILDCARD_MATCH(StringList_GetByOffset(&ListOfDomains, h -> Domain), Name) == WILDCARD_MATCHED )
 			return h;
 
 		h = Array_GetBySubscript(&DisabledW, ++i);
@@ -926,7 +927,7 @@ static HostCName *FindFromCNameW(char *Name)
 	h = Array_GetBySubscript(&CNameW, i);
 	while( h != NULL )
 	{
-		if( WILDCARD_MATCH(StringList_GetByOffset(&StringChunk, h -> Domain), Name) == WILDCARD_MATCHED )
+		if( WILDCARD_MATCH(StringList_GetByOffset(&ListOfDomains, h -> Domain), Name) == WILDCARD_MATCHED )
 			return h;
 
 		h = Array_GetBySubscript(&CNameW, ++i);
@@ -998,7 +999,7 @@ static int Hosts_Match(char *Name, DNSRecordType Type, void *OutBuffer)
 				return MATCH_STATE_NONE;
 			}
 
-			strcpy(OutBuffer, StringList_GetByOffset(&StringChunk, ((HostCName *)Result) -> CName));
+			strcpy(OutBuffer, StringList_GetByOffset(&ListOfDomains, ((HostCName *)Result) -> CName));
 			return MATCH_STATE_PERFECT;
 			break;
 
@@ -1019,7 +1020,7 @@ static int Hosts_Match(char *Name, DNSRecordType Type, void *OutBuffer)
 			return MATCH_STATE_NONE;
 		}
 
-		strcpy(OutBuffer, StringList_GetByOffset(&StringChunk, ((HostCName *)Result) -> CName));
+		strcpy(OutBuffer, StringList_GetByOffset(&ListOfDomains, ((HostCName *)Result) -> CName));
 		return MATCH_STATE_ONLY_CNAME;
 	} else {
 		return MATCH_STATE_NONE;
@@ -1035,7 +1036,7 @@ static int GenerateSingleRecord(DNSRecordType Type, void *HostsItem, ExtendableB
 				char	*h = (char *)HostsItem;
 				char	*HereSaved;
 
-				HereSaved = ExtendableBuffer_Expand(Buffer, 2 + 2 + 2 + 4 + 2 + 4);
+				HereSaved = ExtendableBuffer_Expand(Buffer, 2 + 2 + 2 + 4 + 2 + 4, NULL);
 
 				if( HereSaved == NULL )
 				{
@@ -1064,7 +1065,7 @@ static int GenerateSingleRecord(DNSRecordType Type, void *HostsItem, ExtendableB
 				char	*h = (char *)HostsItem;
 				char	*HereSaved;
 
-				HereSaved = ExtendableBuffer_Expand(Buffer, 2 + 2 + 2 + 4 + 2 + 16);
+				HereSaved = ExtendableBuffer_Expand(Buffer, 2 + 2 + 2 + 4 + 2 + 16, NULL);
 				if( HereSaved == NULL )
 				{
 					return -1;
@@ -1090,7 +1091,7 @@ static int GenerateSingleRecord(DNSRecordType Type, void *HostsItem, ExtendableB
 				char		*h = (char *)HostsItem;
 				char		*HereSaved;
 
-				HereSaved = ExtendableBuffer_Expand(Buffer, 2 + 2 + 2 + 4 + 2 + strlen(h) + 2);
+				HereSaved = ExtendableBuffer_Expand(Buffer, 2 + 2 + 2 + 4 + 2 + strlen(h) + 2, NULL);
 				if( HereSaved == NULL )
 				{
 					return -1;
@@ -1127,7 +1128,7 @@ static int RecursivelyQuery(DNSRecordType Type, void *HostsItem, ExtendableBuffe
 
 	char	*HereSaved;
 
-	HereSaved = ExtendableBuffer_Expand(Buffer, 2 + 2 + 2 + 4 + 2 + strlen(h) + 2);
+	HereSaved = ExtendableBuffer_Expand(Buffer, 2 + 2 + 2 + 4 + 2 + strlen(h) + 2, NULL);
 	if( HereSaved == NULL )
 	{
 		return -1;
@@ -1160,7 +1161,7 @@ static int RecursivelyQuery(DNSRecordType Type, void *HostsItem, ExtendableBuffe
 	ExtendableBuffer_Eliminate(Buffer, EndOffset, StartOffset + State - EndOffset);
 
 	MoreSpaceNeeded = DNSExpandCName_MoreSpaceNeeded(StartPos);
-	if( ExtendableBuffer_Expand(Buffer, MoreSpaceNeeded) == NULL )
+	if( ExtendableBuffer_Expand(Buffer, MoreSpaceNeeded, NULL) == NULL )
 	{
 		Context -> Compress = OriCompress;
 		return -1;

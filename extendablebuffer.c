@@ -55,11 +55,19 @@ BOOL ExtendableBuffer_GuarantyLeft(ExtendableBuffer *eb, _32BIT_UINT GuarantiedS
 	}
 }
 
-char *ExtendableBuffer_Expand(ExtendableBuffer *eb, _32BIT_UINT ExpandedSize)
+char *ExtendableBuffer_Expand(ExtendableBuffer *eb,
+							  _32BIT_UINT ExpandedSize,
+							  _32BIT_INT *Offset
+							  )
 {
 	if( ExtendableBuffer_GuarantyLeft(eb, ExpandedSize) == TRUE )
 	{
 		int OldUsed = eb -> Used;
+		if( Offset != NULL )
+		{
+			*Offset = OldUsed;
+		}
+
 		eb -> Used += ExpandedSize;
 		return (char *)(eb -> Data + OldUsed);
 	} else {
@@ -77,7 +85,7 @@ _32BIT_INT ExtendableBuffer_Add(ExtendableBuffer *eb, const char *Data, _32BIT_U
 		return -1;
 	}
 
-	Here = ExtendableBuffer_Expand(eb, DataLength);
+	Here = ExtendableBuffer_Expand(eb, DataLength, NULL);
 	if( Here == NULL )
 	{
 		return -1;
