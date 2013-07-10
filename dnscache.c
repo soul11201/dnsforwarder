@@ -107,8 +107,6 @@ static void DNSCacheTTLMinusOne_Thread(void)
 				(*CacheEnd) = Entry -> Offset + Entry -> Length;
 			}
 
-			DEBUG("Number of cache items : %d\n", (*CacheCount));
-
 			RWLock_UnWLock(CacheLock);
 			GotMutex = FALSE;
 		}

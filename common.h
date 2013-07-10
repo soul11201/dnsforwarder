@@ -87,7 +87,7 @@
 
 	#define GET_TEMP_DIR()	getenv("TEMP")
 
-	#define GET_THREAD_ID()	(GetCurrentThreadId())
+	#define GET_THREAD_ID()	((int)GetCurrentThreadId())
 
 	/* Wildcard match function */
 	#define WILDCARD_MATCH(p, s)	PathMatchSpec((s), (p))

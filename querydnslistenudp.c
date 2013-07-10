@@ -136,8 +136,6 @@ static int Query(	SOCKET				*PrimarySocket,
 
 	SourceType = (DNSRecordType)DNSGetRecordType(DNSJumpHeader(QueryContent));
 
-	DEBUG("Get QueryDomain : %s and type : %d\n", QueryDomain, SourceType);
-
 	Context.PrimarySocket = PrimarySocket;
 	Context.SecondarySocket = SecondarySocket;
 	Context.PrimaryProtocolToServer = PrimaryProtocol;
@@ -370,7 +368,7 @@ static int QueryDNSListenUDP(void *ID){
 
 		}
 		RELEASE_MUTEX(ListenMutex);
-		DEBUG("Thread %d got a question.\n", ID);
+
 		if(State < 1)
 		{
 			if( ErrorMessages == TRUE )

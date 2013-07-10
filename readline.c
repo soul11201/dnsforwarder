@@ -36,14 +36,8 @@ static BOOL ReachedLineEnd(FILE *fp, char *str)
 
 static void EliminateCRLF(char *str)
 {
-	char *End = str + strlen(str) - 1;
-
-	if( End >= str )
-	{
-		ClearAnnotation(str, '\r');
-		ClearAnnotation(str, '\n');
-	}
-
+	ClearAnnotation(str, '\r');
+	ClearAnnotation(str, '\n');
 }
 
 static void EliminateHeadSpace(char *str)

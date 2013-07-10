@@ -219,7 +219,10 @@ static void GetCount(	FILE *fp,
 	{
 		const char *Appended;
 
-		for(Appended = StringList_GetNext(&AppendedHosts, NULL); Appended != NULL; Appended = StringList_GetNext(&AppendedHosts, Appended))
+		for(Appended = StringList_GetNext(&AppendedHosts, NULL);
+			Appended != NULL;
+			Appended = StringList_GetNext(&AppendedHosts, Appended)
+			)
 		{
 			switch( Edition(Appended) )
 			{
@@ -506,13 +509,17 @@ SWITCH:
 				goto DONE;
 
 			case READ_DONE:
+/*
                 {
                     char *itr;
 
                     for(itr = Buffer + strlen(Buffer) - 1; (*itr == '\r' || *itr == '\n') && itr != Buffer; --itr)
+                    {
                         *itr = '\0';
-                }
+					}
 
+                }
+*/
 				AddHosts(Buffer);
 
 				break;
@@ -591,6 +598,7 @@ static int LoadHosts(void)
 	{
 		Status = Status || LoadAppendHosts();
 	}
+
 	INFO("Loading Hosts completed, %d IPv4 Hosts, %d IPv6 Hosts, %d CName Hosts, %d Items denote disabled hosts, %d Hosts containing wildcards.\n",
 		IPv4Count + IPv4WCount,
 		IPv6Count + IPv6WCount,
@@ -741,11 +749,12 @@ int Hosts_Init(void)
 	FlushTime = ConfigGetInt32(&ConfigInfo, "HostsFlushTime");
 	RWLock_Init(HostsLock);
 
-	AppendedNum = 0;
 
 	if( Appended != NULL )
 	{
 		AppendedNum = StringList_Init(&AppendedHosts, Appended, ',');
+	} else {
+		AppendedNum = 0;
 	}
 
 	if( Path != NULL )
@@ -771,11 +780,14 @@ int Hosts_Init(void)
 
 			Internet = TRUE;
 
-			if( FileIsReadable(File) || Appended != NULL )
+			if( FileIsReadable(File) )
 			{
 				INFO("Loading the existing Hosts ...\n");
+				LoadHosts();
+			} else {
+				INFO("Hosts file is unreadable, this may cause some failures.\n");
 			}
-			LoadHosts();
+
 			CREATE_THREAD(GetHostsFromInternet_Thread, NULL, GetHosts_Thread);
 		}
 
@@ -1048,14 +1060,6 @@ static int GenerateSingleRecord(DNSRecordType Type, void *HostsItem, ExtendableB
 				HereSaved[0] = 0xC0;
 				HereSaved[1] = 0x0C;
 
-/*
-				SET_16_BIT_U_INT(HereSaved + 2, DNS_TYPE_A);
-				SET_16_BIT_U_INT(HereSaved + 4, DNS_CLASS_IN);
-				SET_32_BIT_U_INT(HereSaved + 6, 60);
-				SET_16_BIT_U_INT(HereSaved + 10, 4);
-				memcpy(HereSaved + 12, h -> IP, 4);
-*/
-
 				return 2 + 2 + 2 + 4 + 2 + 4;
 			}
 			break;
@@ -1075,13 +1079,7 @@ static int GenerateSingleRecord(DNSRecordType Type, void *HostsItem, ExtendableB
 
 				HereSaved[0] = 0xC0;
 				HereSaved[1] = 0x0C;
-/*
-				SET_16_BIT_U_INT(HereSaved + 2, DNS_TYPE_AAAA);
-				SET_16_BIT_U_INT(HereSaved + 4, DNS_CLASS_IN);
-				SET_32_BIT_U_INT(HereSaved + 6, 60);
-				SET_16_BIT_U_INT(HereSaved + 10, 16);
-				memcpy(HereSaved + 12, h -> IP, 16);
-*/
+
 				return 2 + 2 + 2 + 4 + 2 + 16;
 			}
 			break;
