@@ -71,6 +71,12 @@
     <ClInclude Include="..\addresslist.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\rwlock.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stringchunk.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\dnscache.c">
@@ -131,6 +137,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\addresslist.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\stringchunk.c">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

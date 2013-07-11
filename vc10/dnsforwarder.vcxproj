@@ -97,6 +97,8 @@
     <ClInclude Include="..\querydnslistenudp.h" />
     <ClInclude Include="..\readconfig.h" />
     <ClInclude Include="..\readline.h" />
+    <ClInclude Include="..\rwlock.h" />
+    <ClInclude Include="..\stringchunk.h" />
     <ClInclude Include="..\stringlist.h" />
     <ClInclude Include="..\utils.h" />
   </ItemGroup>
@@ -110,6 +112,7 @@
     <ClCompile Include="..\querydnsinterface.c" />
     <ClCompile Include="..\readconfig.c" />
     <ClCompile Include="..\readline.c" />
+    <ClCompile Include="..\stringchunk.c" />
     <ClCompile Include="..\stringlist.c" />
     <ClCompile Include="..\utils.c" />
     <ClCompile Include="..\dnscache.c" />
