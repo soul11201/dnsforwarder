@@ -93,4 +93,6 @@ int FindNextPrime(int Current);
 
 BOOL ContainWildCard(const char *item);
 
+int ELFHash(const char *str, int Unused);
+
 #endif /* _UTILS_ */

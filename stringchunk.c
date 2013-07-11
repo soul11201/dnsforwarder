@@ -13,7 +13,7 @@ int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain
 		return -1;
 	}
 
-	if( HashTable_Init(&(dl -> List_Pos), sizeof(EntryForString), InitialCount) != 0 )
+	if( HashTable_Init(&(dl -> List_Pos), sizeof(EntryForString), InitialCount, NULL) != 0 )
 	{
 		StringList_Free(&(dl -> List));
 		return -2;
@@ -92,7 +92,7 @@ int StringChunk_Add(StringChunk *dl,
 
 		if( NewEntry.OffsetOfString >= 0 )
 		{
-			HashTable_Add(&(dl -> List_Pos), Str, &NewEntry);
+			HashTable_Add(&(dl -> List_Pos), Str, 0, &NewEntry);
 		} else {
 			return -2;
 		}
@@ -111,7 +111,7 @@ BOOL StringChunk_Match_NoWildCard(StringChunk *dl,
 
 	const char *FoundString;
 
-	FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, NULL);
+	FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, 0, NULL);
 	while( FoundEntry != NULL )
 	{
 		FoundString = StringList_GetByOffset(&(dl -> List),
@@ -130,7 +130,7 @@ BOOL StringChunk_Match_NoWildCard(StringChunk *dl,
 			return TRUE;
 		}
 
-		FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, FoundEntry);
+		FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, 0, FoundEntry);
 	}
 
 	return FALSE;

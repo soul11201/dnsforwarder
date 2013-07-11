@@ -9,7 +9,7 @@
 #include "rwlock.h"
 #include "hashtable.h"
 
-#define	CACHE_VERSION		5
+#define	CACHE_VERSION		6
 
 #define	CACHE_END	'\x0A'
 #define	CACHE_START	'\xFF'
@@ -145,6 +145,7 @@ static void ReloadCache(void)
 
 	CacheInfo -> Slots.Data = MapStart + CacheSize - (CacheInfo -> Slots.DataLength) * (CacheInfo -> Slots.Used);
 	CacheInfo -> NodeChunk.Data = CacheInfo -> Slots.Data - CacheInfo -> NodeChunk.DataLength;
+	CacheInfo -> HashFunction = ELFHash;
 
 	CacheEnd = &(Header -> End);
 	CacheCount = &(Header -> CacheCount);
@@ -186,6 +187,8 @@ static void ManuallyInitHashTable(HashTable *ht)
 	ht -> NodeChunk.Allocated = -1;
 
 	ht -> RemovedNodes = -1;
+
+	ht -> HashFunction = ELFHash;
 }
 
 static void CreateNewCache(void)
@@ -372,7 +375,7 @@ static struct _CacheEntry *DNSCache_FindFromCache(char *Content, size_t Length, 
 	struct _CacheEntry	*Entry = Start;
 
 	do{
-		Entry = HashTable_Get(CacheInfo, Content, Entry);
+		Entry = HashTable_Get(CacheInfo, Content, 0, Entry);
 		if( Entry == NULL )
 		{
 			return NULL;
@@ -500,7 +503,7 @@ static int DNSCache_AddAItemToCache(char *DNSBody, char *RecordBody)
 			}
 
 			/* Add the entry to the hash table */
-			HashTable_AddByNode(CacheInfo, Buffer + 1, Subscript, Chunk);
+			HashTable_AddByNode(CacheInfo, Buffer + 1, 0, Subscript, Chunk);
 		} else {
 			return -1;
 		}

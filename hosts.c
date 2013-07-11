@@ -13,6 +13,7 @@
 #include "stringlist.h"
 #include "querydnsbase.h"
 #include "rwlock.h"
+#include "stringchunk.h"
 
 static BOOL			Inited = FALSE;
 
@@ -28,6 +29,7 @@ static ThreadHandle	GetHosts_Thread;
 
 static RWLock		HostsLock;
 
+
 static HashTable	A;
 static HashTable	AAAA;
 static HashTable	CName;
@@ -38,7 +40,14 @@ static Array		CNameW;
 static Array		DisabledW;
 
 static StringList	ListOfDomains;
+/*
 
+static StringChunk	Ipv4Hosts;
+static StringChunk	Ipv6Hosts;
+static StringChunk	CNameHosts;
+static StringChunk	ExcludedDomains;
+static StringChunk	ExcludedIPs;
+*/
 /* These two below once inited, never changed */
 static StringList	AppendedHosts;
 static int			AppendedNum = 0;
@@ -56,8 +65,8 @@ typedef enum _HostsRecordType{
 	HOSTS_TYPE_CNAME = 1 << 3,
 	HOSTS_TYPE_CNAME_W = HOSTS_TYPE_CNAME | HOSTS_TYPE_WILDCARD_MASK,
 
-	HOSTS_TYPE_DISABLED = 1 << 4,
-	HOSTS_TYPE_DISABLED_W = HOSTS_TYPE_DISABLED | HOSTS_TYPE_WILDCARD_MASK
+	HOSTS_TYPE_EXCLUEDE = 1 << 4,
+	HOSTS_TYPE_EXCLUEDE_W = HOSTS_TYPE_EXCLUEDE | HOSTS_TYPE_WILDCARD_MASK
 
 }HostsRecordType;
 
@@ -82,9 +91,9 @@ static HostsRecordType Edition(const char *item)
 	{
 		if( ContainWildCard(item + 1) )
 		{
-			return HOSTS_TYPE_DISABLED_W;
+			return HOSTS_TYPE_EXCLUEDE_W;
 		} else {
-			return HOSTS_TYPE_DISABLED;
+			return HOSTS_TYPE_EXCLUEDE;
 		}
 	}
 
@@ -195,10 +204,10 @@ static void GetCount(	FILE *fp,
 				case HOSTS_TYPE_CNAME_W:
 					++(*CNameW);
 					break;
-				case HOSTS_TYPE_DISABLED:
+				case HOSTS_TYPE_EXCLUEDE:
 					++(*Disabled);
 					break;
-				case HOSTS_TYPE_DISABLED_W:
+				case HOSTS_TYPE_EXCLUEDE_W:
 					++(*DisabledW);
 					break;
 				default:
@@ -244,10 +253,10 @@ static void GetCount(	FILE *fp,
 				case HOSTS_TYPE_CNAME_W:
 					++(*CNameW);
 					break;
-				case HOSTS_TYPE_DISABLED:
+				case HOSTS_TYPE_EXCLUEDE:
 					++(*Disabled);
 					break;
-				case HOSTS_TYPE_DISABLED_W:
+				case HOSTS_TYPE_EXCLUEDE_W:
 					++(*DisabledW);
 					break;
 				default:
@@ -267,19 +276,19 @@ static int InitHostsContainer(	int IPv4Count,
 								int DisabledCountW
 								)
 {
-	if( HashTable_Init(&A, sizeof(Host4), IPv4Count) != 0 )
+	if( HashTable_Init(&A, sizeof(Host4), IPv4Count, NULL) != 0 )
 	{
 		return 1;
 	}
-	if( HashTable_Init(&AAAA, sizeof(Host6), IPv6Count) != 0 )
+	if( HashTable_Init(&AAAA, sizeof(Host6), IPv6Count, NULL) != 0 )
 	{
 		return 2;
 	}
-	if( HashTable_Init(&CName, sizeof(HostCName), CNameCount) != 0 )
+	if( HashTable_Init(&CName, sizeof(HostCName), CNameCount, NULL) != 0 )
 	{
 		return 3;
 	}
-	if( HashTable_Init(&Disabled, sizeof(HostDisabled), DisabledCount) != 0 )
+	if( HashTable_Init(&Disabled, sizeof(HostDisabled), DisabledCount, NULL) != 0 )
 	{
 		return 4;
 	}
@@ -350,7 +359,7 @@ static int AddHosts(char *src)
 
 			IPv6AddressToNum(src, tmp6.IP);
 
-			HashTable_Add(&AAAA, itr, &tmp6);
+			HashTable_Add(&AAAA, itr, 0, &tmp6);
 
 			break;
 
@@ -388,7 +397,7 @@ static int AddHosts(char *src)
 				addr = inet_addr(src);
 				memcpy(tmp4.IP, &addr, 4);
 
-				HashTable_Add(&A, itr, &tmp4);
+				HashTable_Add(&A, itr, 0, &tmp4);
 
 			}
 			break;
@@ -430,7 +439,7 @@ static int AddHosts(char *src)
 			tmpC.CName = StringList_Add(&ListOfDomains, src);
 			tmpC.Domain = StringList_Add(&ListOfDomains, itr);
 
-			HashTable_Add(&CName, itr, &tmpC);
+			HashTable_Add(&CName, itr, 0, &tmpC);
 
 			break;
 
@@ -453,7 +462,7 @@ static int AddHosts(char *src)
 			Array_PushBack(&CNameW, &tmpC, NULL);
 			break;
 
-		case HOSTS_TYPE_DISABLED:
+		case HOSTS_TYPE_EXCLUEDE:
 			for(itr = src; !isspace(*itr); ++itr);
 			*itr = '\0';
 			for(++itr; isspace(*itr); ++itr);
@@ -464,11 +473,11 @@ static int AddHosts(char *src)
 			}
 			tmpD.Domain = StringList_Add(&ListOfDomains, itr);
 
-			HashTable_Add(&Disabled, itr, &tmpD);
+			HashTable_Add(&Disabled, itr, 0, &tmpD);
 
 			break;
 
-		case HOSTS_TYPE_DISABLED_W:
+		case HOSTS_TYPE_EXCLUEDE_W:
 			for(itr = src; !isspace(*itr); ++itr);
 			*itr = '\0';
 			for(++itr; isspace(*itr); ++itr);
@@ -599,7 +608,7 @@ static int LoadHosts(void)
 		Status = Status || LoadAppendHosts();
 	}
 
-	INFO("Loading Hosts completed, %d IPv4 Hosts, %d IPv6 Hosts, %d CName Hosts, %d Items denote disabled hosts, %d Hosts containing wildcards.\n",
+	INFO("Loading Hosts completed, %d IPv4 Hosts, %d IPv6 Hosts, %d CName Hosts, %d items are excluded, %d Hosts containing wildcards.\n",
 		IPv4Count + IPv4WCount,
 		IPv6Count + IPv6WCount,
 		CNameCount + CNameWCount,
@@ -813,7 +822,7 @@ static Host4 *FindFromA(char *Name)
 	Host4 *h = NULL;
 
 	do{
-		h = (Host4 *)HashTable_Get(&A, Name, h);
+		h = (Host4 *)HashTable_Get(&A, Name, 0, h);
 		if( h == NULL )
 		{
 			return NULL;
@@ -830,7 +839,7 @@ static Host6 *FindFromAAAA(char *Name)
 	Host6 *h = NULL;
 
 	do{
-		h = (Host6 *)HashTable_Get(&AAAA, Name, h);
+		h = (Host6 *)HashTable_Get(&AAAA, Name, 0, h);
 		if( h == NULL )
 		{
 			return NULL;
@@ -881,7 +890,7 @@ static HostCName *FindFromCName(char *Name)
 	HostCName *h = NULL;
 
 	do{
-		h = (HostCName *)HashTable_Get(&CName, Name, h);
+		h = (HostCName *)HashTable_Get(&CName, Name, 0, h);
 		if( h == NULL )
 		{
 			return NULL;
@@ -901,7 +910,7 @@ static HostDisabled *FindFromDisabled(char *Name)
 	HostDisabled *h = NULL;
 
 	do{
-		h = (HostDisabled *)HashTable_Get(&Disabled, Name, h);
+		h = (HostDisabled *)HashTable_Get(&Disabled, Name, 0, h);
 		if( h == NULL )
 		{
 			return NULL;

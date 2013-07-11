@@ -17,9 +17,15 @@ typedef struct _HashTable{
 	Array		NodeChunk;
 	Array		Slots;
 	_32BIT_INT	RemovedNodes;
+
+	int			(*HashFunction)(const char *, int);
 }HashTable;
 
-int HashTable_Init(HashTable *h, int DataLength, int InitialCount);
+int HashTable_Init(HashTable *h,
+					int DataLength,
+					int InitialCount,
+					int (*HashFunction)(const char *, int)
+					);
 
 int HashTable_Init_Manually(HashTable	*h,
 							void		*SlotsStartAddress,
@@ -43,15 +49,20 @@ _32BIT_INT HashTable_FindUnusedNode(HashTable *h, NodeHead **Out, _32BIT_INT Sta
 
 _32BIT_INT HashTable_FetchNode(HashTable *h, NodeHead *Node);
 
-int HashTable_AddByNode(HashTable *h, const char *Key, int Node_index, NodeHead *Node);
+int HashTable_AddByNode(HashTable *h,
+						const char *Key,
+						int KeyLength,
+						int Node_index,
+						NodeHead *Node
+						);
 
-int HashTable_Add(HashTable *h, const char *Key, void *Data);
+int HashTable_Add(HashTable *h, const char *Key, int KeyLength, void *Data);
 
 #define	HashTable_GetDataByNode(Node_ptr)	((void *)((NodeHead *)(Node_ptr) + 1))
 
 #define	HashTable_GetNodeBySubscript(h_ptr, Subscript)	((NodeHead *)Array_GetBySubscript(&((h_ptr) -> NodeChunk), (Subscript)))
 
-void *HashTable_Get(HashTable *h, const char *Key, void *Start);
+void *HashTable_Get(HashTable *h, const char *Key, int KeyLength, void *Start);
 
 void HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *Node);
 

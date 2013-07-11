@@ -581,3 +581,25 @@ BOOL ContainWildCard(const char *item)
 		return FALSE;
 	}
 }
+
+int ELFHash(const char *str, int Unused)
+{
+	_32BIT_UINT h = 0;
+	_32BIT_UINT x = 0;
+
+	while( *str != '\0' )
+	{
+		h += *str;
+		h <<= 4;
+
+		x = h & 0xF0000000;
+		if( x != 0 )
+		{
+			h ^= (x >> 24);
+
+		}
+		h &= ~x;
+		str++;
+	}
+	return (h & 0x7FFFFFFF);
+}

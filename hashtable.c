@@ -14,33 +14,15 @@ int HashTable_CalculateAppropriateSlotCount(int ElementCount)
 	}
 }
 
-static int ELFHash(const char *str)
-{
-	_32BIT_UINT h = 0;
-	_32BIT_UINT x = 0;
-
-	while( *str != '\0' )
-	{
-		h += *str;
-		h <<= 4;
-
-		x = h & 0xF0000000;
-		if( x != 0 )
-		{
-			h ^= (x >> 24);
-
-		}
-		h &= ~x;
-		str++;
-	}
-	return (h & 0x7FFFFFFF);
-}
-
-int HashTable_Init(HashTable *h, int DataLength, int InitialCount)
+int HashTable_Init(HashTable *h,
+					int DataLength,
+					int InitialCount,
+					int (*HashFunction)(const char *, int)
+					)
 {
 	int	loop;
 	int	SlotCount;
-	if( h == NULL)
+	if( h == NULL )
 		return -1;
 
 	SlotCount = HashTable_CalculateAppropriateSlotCount(InitialCount);
@@ -56,6 +38,13 @@ int HashTable_Init(HashTable *h, int DataLength, int InitialCount)
 	for(loop = 0; loop != h -> Slots.Allocated; ++loop)
 	{
 		((NodeHead *)Array_GetBySubscript(&(h -> Slots), loop)) -> Next = HASHTABLE_NODE_END;
+	}
+
+	if( HashFunction == NULL )
+	{
+		h -> HashFunction = ELFHash;
+	} else {
+		h -> HashFunction = HashFunction;
 	}
 
 	h -> RemovedNodes = -1;
@@ -208,7 +197,12 @@ _32BIT_INT HashTable_FetchNode(HashTable *h, NodeHead *Node)
 	return NextNode;
 }
 
-int HashTable_AddByNode(HashTable *h, const char *Key, int Node_index, NodeHead *Node)
+int HashTable_AddByNode(HashTable *h,
+						const char *Key,
+						int KeyLength,
+						int Node_index,
+						NodeHead *Node
+						)
 {
 	int			Slot_i;
 	NodeHead	*Slot;
@@ -216,7 +210,7 @@ int HashTable_AddByNode(HashTable *h, const char *Key, int Node_index, NodeHead 
 	if( h == NULL || Key == NULL || Node_index < 0 || Node == NULL )
 		return -1;
 
-	Slot_i = ELFHash(Key) % (h -> Slots.Allocated - 1);
+	Slot_i = (h -> HashFunction)(Key, KeyLength) % (h -> Slots.Allocated - 1);
 	Slot = (NodeHead *)Array_GetBySubscript(&(h -> Slots), Slot_i);
 	if( Slot == NULL )
 		return -2;
@@ -233,14 +227,14 @@ int HashTable_AddByNode(HashTable *h, const char *Key, int Node_index, NodeHead 
 	return 0;
 }
 
-int HashTable_Add(HashTable *h, const char *Key, void *Data)
+int HashTable_Add(HashTable *h, const char *Key, int KeyLength, void *Data)
 {
 	_32BIT_INT	Slot_i;
 	NodeHead	*Slot;
 	_32BIT_INT	NewNode_i;
 	NodeHead	*NewNode = NULL;
 
-	Slot_i = ELFHash(Key) % (h -> Slots.Allocated - 1);
+	Slot_i = (h -> HashFunction)(Key, KeyLength) % (h -> Slots.Allocated - 1);
 	Slot = (NodeHead *)Array_GetBySubscript(&(h -> Slots), Slot_i);
 	if( Slot == NULL )
 		return -2;
@@ -254,7 +248,7 @@ int HashTable_Add(HashTable *h, const char *Key, void *Data)
 
 	memcpy(NewNode + 1, Data, h -> NodeChunk.DataLength - sizeof(NodeHead));
 
-	return HashTable_AddByNode(h, Key, NewNode_i, NewNode);
+	return HashTable_AddByNode(h, Key, KeyLength, NewNode_i, NewNode);
 }
 
 void HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *Node)
@@ -318,7 +312,7 @@ void HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *No
 
 }
 
-void *HashTable_Get(HashTable *h, const char *Key, void *Start)
+void *HashTable_Get(HashTable *h, const char *Key, int KeyLength, void *Start)
 {
 	int			Slot_i;
 	NodeHead	*Head;
@@ -328,7 +322,7 @@ void *HashTable_Get(HashTable *h, const char *Key, void *Start)
 
 	if( Start == NULL )
 	{
-		Slot_i = ELFHash(Key) % (h -> Slots.Allocated - 1);
+		Slot_i = (h -> HashFunction)(Key, KeyLength) % (h -> Slots.Allocated - 1);
 		Head = (NodeHead *)Array_GetBySubscript(&(h -> Slots), Slot_i);
 
 		Head = (NodeHead *)Array_GetBySubscript(&(h -> NodeChunk), Head -> Next);
