@@ -79,6 +79,8 @@ int	Base64Decode(const char *File);
 
 int IPv6AddressToNum(const char *asc, void *Buffer);
 
+int IPv4AddressToNum(const char *asc, void *Buffer);
+
 sa_family_t GetAddressFamily(const char *Addr);
 
 int IPv6AddressToAsc(const void *Address, void *Buffer);

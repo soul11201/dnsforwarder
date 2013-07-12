@@ -112,7 +112,7 @@ char *ExtendableBuffer_Expand(	__in ExtendableBuffer	*eb,
 
 #define	ExtendableBuffer_SetEndOffset(eb_ptr, val)	((eb_ptr) -> Used = (val))
 
-#define	ExtendableBuffer_GetPositionByOffset(eb_ptr, offset)	(((eb_ptr) -> Data + (offset)))
+#define	ExtendableBuffer_GetPositionByOffset(eb_ptr, offset)	((    (  (char *)  (    (eb_ptr) -> Data)   ) + (offset)         ))
 
 _32BIT_INT ExtendableBuffer_Add(ExtendableBuffer *eb, const char *Data, _32BIT_UINT DataLength);
 

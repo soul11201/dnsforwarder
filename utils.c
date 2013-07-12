@@ -455,6 +455,21 @@ int IPv6AddressToNum(const char *asc, void *Buffer)
 	return 0;
 }
 
+int IPv4AddressToNum(const char *asc, void *Buffer)
+{
+	unsigned char *BufferInByte = (unsigned char *)Buffer;
+
+	int Components[4];
+
+	sscanf(asc, "%d.%d.%d.%d", Components, Components + 1, Components + 2, Components + 3);
+	BufferInByte[0] = Components[0];
+	BufferInByte[1] = Components[1];
+	BufferInByte[2] = Components[2];
+	BufferInByte[3] = Components[3];
+
+	return 0;
+}
+
 sa_family_t GetAddressFamily(const char *Addr)
 {
 	if( strchr(Addr, '[') != NULL )

@@ -34,6 +34,7 @@ int StringChunk_Add(StringChunk *dl,
 					int LengthOfAdditionalData
 					);
 
+/* NOTICE : Data address always return, not offset. */
 BOOL StringChunk_Match_NoWildCard(StringChunk *dl,
 								  const char *Str,
 								  char **Data
