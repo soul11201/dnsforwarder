@@ -66,8 +66,8 @@
 			</Target>
 			<Target title="Release_x64_InternalDebug">
 				<Option platforms="Windows;" />
-				<Option output="./bin/Release_x64/dnsforwarder" prefix_auto="1" extension_auto="1" />
-				<Option object_output="./obj/Release_x64/" />
+				<Option output="./bin/Release_x64_id/dnsforwarder" prefix_auto="1" extension_auto="1" />
+				<Option object_output="./obj/Release_x64_id/" />
 				<Option type="1" />
 				<Option compiler="gnu_gcc_compiler_w64" />
 				<Option parameters='-f &quot;D:\My_File\VC\dnsforwarder\codeblocks_win\bin\Release\dnsforwarder.config&quot;' />
