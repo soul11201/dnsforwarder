@@ -34,7 +34,7 @@ int Array_Init(__in Array *a, __in int DataLength, __in int InitialCount, __in B
 	return 0;
 }
 /* Subscript is always non-negative. */
-void *Array_GetBySubscript(Array *a, int Subscript)
+void *Array_GetBySubscript(__in Array *a, __in int Subscript)
 {
 
 	if( Subscript >= 0 && Subscript < a -> Used )

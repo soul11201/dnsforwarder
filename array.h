@@ -51,6 +51,13 @@ int Array_Init(	__in Array *a,
  *  0 on success, a non-zero value otherwise.
  */
 
+#define Array_IsEmpty(a_ptr)	(((a_ptr) -> Used) == 0)
+/* Description:
+ *  Check if an Array is empty.
+ * Parameters:
+ *  a_ptr : Pointer to an Array to be checked.
+ */
+
 #define Array_GetUsed(a_ptr)	((a_ptr) -> Used)
 /* Description:
  *  Get `Used' of an Array.

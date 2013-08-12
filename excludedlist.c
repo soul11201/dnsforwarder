@@ -9,27 +9,31 @@
 #include "common.h"
 #include "rwlock.h"
 #include "stringchunk.h"
+#include "array.h"
+#include "stringlist.h"
 
-static int			*DisabledTypes	=	NULL;
+static Array		DisabledTypes;
 
 static StringChunk	DisabledDomains;
 static StringChunk	ExcludedDomains;
 
 static RWLock		ExcludedListLock;
 
-BOOL IsDisabledType(int Type){
-	int *Itr;
+BOOL IsDisabledType(int Type)
+{
+	int Itr = 0;
 
-	if( DisabledTypes == NULL )
+	int	*TypeInArray = (int *)Array_GetBySubscript(&DisabledTypes, Itr);
+
+	while( TypeInArray != NULL )
 	{
-		return FALSE;
-	}
-
-	for(Itr = DisabledTypes; *Itr != 0; ++Itr){
-		if(*Itr == Type)
+		if( Type == *TypeInArray )
 		{
 			return TRUE;
 		}
+
+		++Itr;
+		TypeInArray = (int *)Array_GetBySubscript(&DisabledTypes, Itr);
 	}
 
 	return FALSE;
@@ -75,34 +79,46 @@ BOOL IsExcludedDomain(const char *Domain)
 	return Result;
 }
 
-static int DisableType(void)
+static int LoadDisableType(void)
 {
-	int loop, Count = 1;
-	char Tmp[10], *TmpItr;
+	StringList DisableType_Str;
 	const char *Types = ConfigGetString(&ConfigInfo, "DisabledType");
+	int NumberOfTypes;
 
-	if(Types == NULL) return 0;
+	const char *OneTypePendingToAdd_Str;
+	int OneTypePendingToAdd;
 
-	for(loop = 0; Types[loop] != '\0'; ++loop)
-		if(Types[loop] == ',') ++Count;
-
-	DisabledTypes = (int *)SafeMalloc((Count + 1) * sizeof(*(DisabledTypes)));
-	DisabledTypes[Count--] = 0;
-
-	for(loop = 0, TmpItr = Tmp; ; ++loop){
-		if(Types[loop] == '\0'){
-			*TmpItr = '\0';
-			DisabledTypes[Count--] = atoi(Tmp);
-			break;
-		}
-		if(Types[loop] != ',')
-			*TmpItr++ = Types[loop];
-		else{
-			*TmpItr = '\0';
-			DisabledTypes[Count--] = atoi(Tmp);
-			TmpItr = Tmp;
-		}
+	if( Types == NULL )
+	{
+		Array_Init(&DisabledTypes, sizeof(int), 0, FALSE, NULL);
+		return 0;
 	}
+
+	NumberOfTypes = StringList_Init(&DisableType_Str, Types, ',');
+	if( NumberOfTypes <= 0 )
+	{
+		Array_Init(&DisabledTypes, sizeof(int), 0, FALSE, NULL);
+		return 0;
+	}
+
+	if( Array_Init(&DisabledTypes, sizeof(int), NumberOfTypes, FALSE, NULL) != 0 )
+	{
+		Array_Init(&DisabledTypes, sizeof(int), 0, FALSE, NULL);
+		StringList_Free(&DisableType_Str);
+		return 1;
+	}
+
+	OneTypePendingToAdd_Str = StringList_GetNext(&DisableType_Str, NULL);
+	while( OneTypePendingToAdd_Str != NULL )
+	{
+		sscanf(OneTypePendingToAdd_Str, "%d", &OneTypePendingToAdd);
+		Array_PushBack(&DisabledTypes, &OneTypePendingToAdd, NULL);
+
+		OneTypePendingToAdd_Str = StringList_GetNext(&DisableType_Str, OneTypePendingToAdd_Str);
+	}
+
+	StringList_Free(&DisableType_Str);
+
 	return 0;
 }
 
@@ -329,11 +345,10 @@ END:
 
 int ExcludedList_Init(void)
 {
-	DisabledTypes = NULL;
 
 	LoadDomains(&DisabledDomains, ConfigGetString(&ConfigInfo, "DisabledDomain"), 31);
 	LoadDomains(&ExcludedDomains, ConfigGetString(&ConfigInfo, "ExcludedDomain"), 31);
-	DisableType();
+	LoadDisableType();
 
 	RWLock_Init(ExcludedListLock);
 

@@ -29,18 +29,6 @@ static ThreadHandle	GetHosts_Thread;
 
 static RWLock		HostsLock;
 
-/*
-static HashTable	A;
-static HashTable	AAAA;
-static HashTable	CName;
-static HashTable	Disabled;
-static Array		AW;
-static Array		AAAAW;
-static Array		CNameW;
-static Array		DisabledW;
-
-static StringList	ListOfDomains;
-*/
 
 typedef struct _OffsetOrAddress{
 	_32BIT_INT	Offset;
@@ -58,7 +46,7 @@ typedef struct _HostsContainer{
 
 volatile HostsContainer	*MainContainer = NULL;
 
-/* These two below once inited, never changed */
+/* These two below once inited, is never changed */
 static StringList	AppendedHosts;
 static int			AppendedNum = 0;
 
