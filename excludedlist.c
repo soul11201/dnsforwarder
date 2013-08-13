@@ -15,7 +15,14 @@
 static Array		DisabledTypes;
 
 static StringChunk	DisabledDomains;
-static StringChunk	ExcludedDomains;
+
+typedef struct _ExcludedContainer{
+	StringChunk	ExcludedDomains;
+} ExcludedContainer;
+
+static volatile ExcludedContainer *MainExcludedContainer = NULL;
+
+/* static StringChunk	ExcludedDomains; */
 
 static RWLock		ExcludedListLock;
 
@@ -41,6 +48,11 @@ BOOL IsDisabledType(int Type)
 
 static BOOL MatchDomain(StringChunk *List, const char *Domain)
 {
+	if( List == NULL )
+	{
+		return FALSE;
+	}
+
 	if( StringChunk_Match(List, Domain, NULL) == TRUE )
 	{
 		return TRUE;
@@ -73,7 +85,7 @@ BOOL IsExcludedDomain(const char *Domain)
 
 	RWLock_RdLock(ExcludedListLock);
 
-	Result = MatchDomain(&ExcludedDomains, Domain);
+	Result = MatchDomain(&(MainExcludedContainer -> ExcludedDomains), Domain);
 
 	RWLock_UnRLock(ExcludedListLock);
 	return Result;
@@ -144,6 +156,7 @@ static int LoadDomains(StringChunk *List, const char *Domains, int ApproximateCo
 		{
 			StringList_Free(&TmpList);
 			StringChunk_Free(List);
+
 			return -3;
 		}
 		Str = StringList_GetNext(&TmpList, Str);
@@ -154,7 +167,7 @@ static int LoadDomains(StringChunk *List, const char *Domains, int ApproximateCo
 }
 
 
-static BOOL ParseGfwListItem(char *Item)
+static BOOL ParseGfwListItem(char *Item, ExcludedContainer *Container)
 {
 	if( strchr(Item, '/') != NULL || strchr(Item, '*') != NULL || *Item == '@' || strchr(Item, '?') != NULL || *Item == '!' || strchr(Item, '.') == NULL || *Item == '[' )
 	{
@@ -171,9 +184,9 @@ static BOOL ParseGfwListItem(char *Item)
 		++Item;
 	}
 
-	if( MatchDomain(&ExcludedDomains, Item) == FALSE )
+	if( MatchDomain(&(Container -> ExcludedDomains), Item) == FALSE )
 	{
-		StringChunk_Add(&ExcludedDomains, Item, NULL, 0);
+		StringChunk_Add(&(Container -> ExcludedDomains), Item, NULL, 0);
 		return TRUE;
 	} else {
 		return FALSE;
@@ -181,7 +194,7 @@ static BOOL ParseGfwListItem(char *Item)
 
 }
 
-static int LoadGfwListFile(const char *File)
+static int LoadGfwListFile(const char *File, ExcludedContainer *Container)
 {
 	FILE	*fp = fopen(File, "r");
 	ReadLineStatus Status;
@@ -204,7 +217,7 @@ static int LoadGfwListFile(const char *File)
 				break;
 
 			case READ_DONE:
-				if( ParseGfwListItem(Buffer) == TRUE )
+				if( ParseGfwListItem(Buffer, Container) == TRUE )
 				{
 					++Count;
 				}
@@ -253,6 +266,8 @@ int LoadGfwList_Thread(void *Unused)
 			SLEEP(FlushTimeOnFailed * 1000);
 		} else {
 
+			ExcludedContainer *NewContainer = NULL;
+
 			INFO("GFW List saved at %s.\n", File);
 
 			if( (NeedBase64Decode == TRUE) && (Base64Decode(File) != 0) )
@@ -262,19 +277,29 @@ int LoadGfwList_Thread(void *Unused)
 				continue;
 			}
 
-			RWLock_WrLock(ExcludedListLock);
-
-			StringChunk_Free(&ExcludedDomains);
-
-			LoadDomains(&ExcludedDomains, ExcludedList, 2000);
-
-			Count = LoadGfwListFile(File);
-			if( Count < 0 )
+			NewContainer = SafeMalloc(sizeof(ExcludedContainer));
+			if( NewContainer == NULL )
 			{
-				ERRORMSG("Loading GFW List failed, cannot open file %s.\n", File);
-				RWLock_UnWLock(ExcludedListLock);
+				INFO("Loading GFW List failed, no enough memory?\n");
 				goto END;
 			}
+
+			LoadDomains(&(NewContainer -> ExcludedDomains), ExcludedList, 2000);
+
+			Count = LoadGfwListFile(File, NewContainer);
+			if( Count < 0 )
+			{
+				StringChunk_Free(&(NewContainer -> ExcludedDomains));
+				SafeFree(NewContainer);
+				ERRORMSG("Loading GFW List failed, cannot open file %s.\n", File);
+				goto END;
+			}
+
+			RWLock_WrLock(ExcludedListLock);
+
+			StringChunk_Free(&(MainExcludedContainer -> ExcludedDomains));
+			SafeFree(MainExcludedContainer);
+			MainExcludedContainer = NewContainer;
 
 			RWLock_UnWLock(ExcludedListLock);
 			INFO("Loading GFW List completed. %d effective items.\n", Count);
@@ -298,6 +323,8 @@ int LoadGfwList(void)
 	char		ProtocolStr[8] = {0};
 	int			Count;
 
+	ExcludedContainer *NewContainer = NULL;
+
 	strncpy(ProtocolStr, ConfigGetString(&ConfigInfo, "PrimaryServer"), 3);
 	StrToLower(ProtocolStr);
 
@@ -319,20 +346,31 @@ int LoadGfwList(void)
 
 	INFO("Loading the existing GFW List ...\n");
 
-	RWLock_WrLock(ExcludedListLock);
-
-	StringChunk_Free(&ExcludedDomains);
-
-	LoadDomains(&ExcludedDomains, ExcludedList, 2000);
-
-	Count = LoadGfwListFile(File);
-	if( Count < 0 )
+	NewContainer = SafeMalloc(sizeof(ExcludedContainer));
+	if( NewContainer == NULL )
 	{
-		RWLock_UnWLock(ExcludedListLock);
+		INFO("Loading the existing GFW List failed, no enough memory?\n");
 		goto END;
 	}
 
+	LoadDomains(&(NewContainer -> ExcludedDomains), ExcludedList, 2000);
+
+	Count = LoadGfwListFile(File, NewContainer);
+	if( Count < 0 )
+	{
+		StringChunk_Free(&(NewContainer -> ExcludedDomains));
+		SafeFree(NewContainer);
+		goto END;
+	}
+
+	RWLock_WrLock(ExcludedListLock);
+
+	StringChunk_Free(&(MainExcludedContainer -> ExcludedDomains));
+	SafeFree(MainExcludedContainer);
+	MainExcludedContainer = NewContainer;
+
 	RWLock_UnWLock(ExcludedListLock);
+
 	INFO("Loading the existing GFW List completed. %d effective items.\n", Count);
 
 END:
@@ -347,7 +385,14 @@ int ExcludedList_Init(void)
 {
 
 	LoadDomains(&DisabledDomains, ConfigGetString(&ConfigInfo, "DisabledDomain"), 31);
-	LoadDomains(&ExcludedDomains, ConfigGetString(&ConfigInfo, "ExcludedDomain"), 31);
+
+	MainExcludedContainer = SafeMalloc(sizeof(ExcludedContainer));
+
+	if( MainExcludedContainer != NULL )
+	{
+		LoadDomains(&(MainExcludedContainer -> ExcludedDomains), ConfigGetString(&ConfigInfo, "ExcludedDomain"), 31);
+	}
+
 	LoadDisableType();
 
 	RWLock_Init(ExcludedListLock);
