@@ -8,12 +8,7 @@
 #include "hosts.h"
 #include "excludedlist.h"
 #include "utils.h"
-
-#ifdef WIN32
-#define GetFileDirectory(out)	(GetModulePath(out, sizeof(out)))
-#else /* WIN32 */
-#define GetFileDirectory(out)	(GetConfigDirectory(out))
-#endif /* WIN32 */
+#include "domainstatistic.h"
 
 static int CheckArgs(void)
 {
@@ -93,6 +88,12 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "UDPServer", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "UDP Server");
+
+    TmpTypeDescriptor.boolean = FALSE;
+    ConfigAddOption(&ConfigInfo, "DomainStatistic", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
+
+    TmpTypeDescriptor.INT32 = 60;
+    ConfigAddOption(&ConfigInfo, "StatisticFlushInterval", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.boolean = FALSE;
     ConfigAddOption(&ConfigInfo, "FallBackToSecondary", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
@@ -220,6 +221,12 @@ int QueryDNSInterfaceStart(void)
 #endif
 
 	InitAddress();
+
+	if( ConfigGetBoolean(&ConfigInfo, "DomainStatistic") == TRUE && ShowMassages == TRUE )
+	{
+		DomainStatistic_Init(ConfigGetInt32(&ConfigInfo, "StatisticFlushInterval"));
+	}
+
 	ExcludedList_Init();
 
 	TimeToServer = ConfigGetInt32(&ConfigInfo, "TimeToServer");
@@ -274,13 +281,20 @@ void QueryDNSInterfaceWait(void)
 #ifdef WIN32
 	ThreadHandle CurrentThread = GetCurrentThread();
 #endif /* WIN32 */
-Start:
+
+	if( ConfigGetBoolean(&ConfigInfo, "DomainStatistic") == TRUE && ShowMassages == TRUE )
+	{
+		DomainStatistic_Hold();
+	} else {
+		while(TRUE)
+		{
 #ifdef WIN32
-	SuspendThread(CurrentThread);
+			SuspendThread(CurrentThread);
 #else /* WIN32 */
-	pause();
+			pause();
 #endif /* WIN32 */
-	goto Start;
+		}
+	}
 
 #ifdef WIN32
 	CloseHandle(CurrentThread);

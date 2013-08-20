@@ -15,6 +15,7 @@
 #include "excludedlist.h"
 #include "addresslist.h"
 #include "stringlist.h"
+#include "domainstatistic.h"
 
 ConfigFileInfo	ConfigInfo;
 int				TimeToServer;
@@ -330,6 +331,7 @@ int DNSQueryOriginViaUDP(SOCKET				Sock,
 }
 
 int QueryFromHostsAndCache(QueryContext		*Context,
+						   const char		*QueryDomain,
 						   char				*QueryContent,
 						   int				QueryContentLength,
 						   ExtendableBuffer	*Buffer,
@@ -360,6 +362,8 @@ int QueryFromHostsAndCache(QueryContext		*Context,
 		{
 			if( ProtocolCharacter != NULL )
 				*ProtocolCharacter = 'H';
+
+			DomainStatistic_Add(QueryDomain, STATISTIC_TYPE_HOSTS);
 
 			if( Context -> ProtocolToSrc == DNS_QUARY_PROTOCOL_UDP )
 			{
@@ -395,6 +399,8 @@ int QueryFromHostsAndCache(QueryContext		*Context,
 		{
 			if( ProtocolCharacter != NULL )
 				*ProtocolCharacter = 'C';
+
+			DomainStatistic_Add(QueryDomain, STATISTIC_TYPE_CACHE);
 
 			if( Context -> ProtocolToSrc == DNS_QUARY_PROTOCOL_UDP )
 			{
@@ -478,7 +484,8 @@ int QueryFromServerBase(SOCKET				*Socket,
 						char				*QueryContent,
 						int					QueryContentLength,
 						DNSQuaryProtocol	ProtocolToSrc,
-						ExtendableBuffer	*Buffer
+						ExtendableBuffer	*Buffer,
+						const char			*QueryDomain
 						)
 {
 	int State;
@@ -494,6 +501,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 
 			if __STILL(*Socket == INVALID_SOCKET)
 			{
+				DomainStatistic_Add(QueryDomain, STATISTIC_TYPE_REFUSED);
 				return -2; /* Failed */
 			}
 		}
@@ -504,6 +512,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 		{
 			if(ConnectToTCPServer(Socket, PeerAddr, Family, TimeToServer) == FALSE)
 			{
+				DomainStatistic_Add(QueryDomain, STATISTIC_TYPE_REFUSED);
 				return -2; /* Failed */
 			} else {
 				INFO("(Connecting to server Successfully.)\n");
@@ -537,6 +546,13 @@ int QueryFromServerBase(SOCKET				*Socket,
 			}
 		}
 
+		if( ProtocolToServer == DNS_QUARY_PROTOCOL_UDP )
+		{
+			DomainStatistic_Add(QueryDomain, STATISTIC_TYPE_UDP);
+		} else {
+			DomainStatistic_Add(QueryDomain, STATISTIC_TYPE_TCP);
+		}
+
 		return State;
 	} else {
 		int OriginErrorCode = GET_LAST_ERROR();
@@ -559,6 +575,8 @@ int QueryFromServerBase(SOCKET				*Socket,
 		/* For not to overwrite internal error code(may be done by
 		 * CLOSE_SOCKET() or CloseTCPConnection() ), write it back */
 		SET_LAST_ERROR(OriginErrorCode);
+
+		DomainStatistic_Add(QueryDomain, STATISTIC_TYPE_REFUSED);
 
 		return -1; /* Failed */
 	}
@@ -650,7 +668,9 @@ static int QueryFromServer(QueryContext		*Context,
 								QueryContent,
 								QueryContentLength,
 								Context -> ProtocolToSrc,
-								Buffer);
+								Buffer,
+								QueryDomain
+								);
 
 	if(State < 0) /* Failed */
 	{
@@ -685,7 +705,9 @@ static int QueryFromServer(QueryContext		*Context,
 										QueryContent,
 										QueryContentLength,
 										Context -> ProtocolToSrc,
-										Buffer);
+										Buffer,
+										QueryDomain
+										);
 
 			if( State < 0 )
 			{
@@ -716,6 +738,7 @@ int QueryBase(QueryContext		*Context,
 	/* Check if this domain or type is disabled */
 	if( IsDisabledType(SourceType) || IsDisabledDomain(QueryDomain) )
 	{
+		DomainStatistic_Add(QueryDomain, STATISTIC_TYPE_REFUSED);
 		return QUERY_RESULT_DISABLE;
 	}
 
@@ -730,7 +753,7 @@ int QueryBase(QueryContext		*Context,
 	if( QuestionCount == 1 )
 	{
 		/* First query from hosts and cache */
-		State = QueryFromHostsAndCache(Context, QueryContent, QueryContentLength, Buffer, ProtocolCharacter);
+		State = QueryFromHostsAndCache(Context, QueryDomain, QueryContent, QueryContentLength, Buffer, ProtocolCharacter);
 	} else {
 		State = -1;
 	}

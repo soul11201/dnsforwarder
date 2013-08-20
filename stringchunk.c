@@ -186,6 +186,27 @@ BOOL StringChunk_Match(StringChunk *dl, const char *Str, char **Data)
 	}
 }
 
+const char *StringChunk_Enum(StringChunk *dl, const char *Start, char **Data)
+{
+	const char *str;
+
+	str = StringList_GetNext(&(dl -> List), Start);
+
+	if( str == NULL )
+	{
+		str = StringList_GetNext(&(dl -> List_W), Start);
+	}
+
+	if( str == NULL )
+	{
+		return NULL;
+	}
+
+	StringChunk_Match(dl, str, Data);
+
+	return str;
+}
+
 void StringChunk_Free(StringChunk *dl)
 {
 	StringList_Free(&(dl -> List));

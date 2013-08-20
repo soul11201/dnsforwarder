@@ -78,6 +78,7 @@ int DNSQueryOriginViaUDP(SOCKET				Sock,
 int InitAddress(void);
 
 int QueryFromHostsAndCache(QueryContext		*Context,
+						   const char		*QueryDomain,
 						   char				*QueryContent,
 						   int				QueryContentLength,
 						   ExtendableBuffer	*Buffer,
@@ -91,7 +92,8 @@ int QueryFromServerBase(SOCKET				*Socket,
 						char				*QueryContent,
 						int					QueryContentLength,
 						DNSQuaryProtocol	ProtocolToSrc,
-						ExtendableBuffer	*Buffer
+						ExtendableBuffer	*Buffer,
+						const char			*QueryDomain
 						);
 
 #define QUERY_RESULT_DISABLE	(-1)

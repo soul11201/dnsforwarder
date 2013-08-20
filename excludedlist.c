@@ -22,8 +22,6 @@ typedef struct _ExcludedContainer{
 
 static volatile ExcludedContainer *MainExcludedContainer = NULL;
 
-/* static StringChunk	ExcludedDomains; */
-
 static RWLock		ExcludedListLock;
 
 BOOL IsDisabledType(int Type)
@@ -152,6 +150,11 @@ static int LoadDomains(StringChunk *List, const char *Domains, int ApproximateCo
 	Str = StringList_GetNext(&TmpList, NULL);
 	while( Str != NULL )
 	{
+		if( *Str == '.' )
+		{
+			Str++;
+		}
+
 		if( StringChunk_Add(List, Str, NULL, 0) != 0 )
 		{
 			StringList_Free(&TmpList);
@@ -169,6 +172,8 @@ static int LoadDomains(StringChunk *List, const char *Domains, int ApproximateCo
 
 static BOOL ParseGfwListItem(char *Item, ExcludedContainer *Container)
 {
+	char *Itr = NULL;
+
 	if( strchr(Item, '/') != NULL || strchr(Item, '*') != NULL || *Item == '@' || strchr(Item, '?') != NULL || *Item == '!' || strchr(Item, '.') == NULL || *Item == '[' )
 	{
 		return FALSE;
@@ -182,6 +187,36 @@ static BOOL ParseGfwListItem(char *Item, ExcludedContainer *Container)
 	if( *Item == '.' )
 	{
 		++Item;
+	}
+
+	if( strncmp("http://", Item, 7) == 0 )
+	{
+		Item += 7;
+	}
+
+	if( strncmp("https://", Item, 8) == 0 )
+	{
+		Item += 8;
+	}
+
+	Itr = strchr(Item, '/');
+	if( Itr != NULL )
+	{
+		*Itr = '\0';
+	}
+
+	if( strstr("wikipedia.org", Item) == 0 )
+	{
+		Itr = strchr(Item + 13, '*');
+		if( Itr != NULL )
+		{
+			*Itr = '\0';
+		}
+	}
+
+	if( strchr(Item, '%') != NULL )
+	{
+		return FALSE;
 	}
 
 	if( MatchDomain(&(Container -> ExcludedDomains), Item) == FALSE )
@@ -198,7 +233,7 @@ static int LoadGfwListFile(const char *File, ExcludedContainer *Container)
 {
 	FILE	*fp = fopen(File, "r");
 	ReadLineStatus Status;
-	char	Buffer[64];
+	char	Buffer[256];
 	int		Count = 0;
 
 	if( fp == NULL )
@@ -224,6 +259,7 @@ static int LoadGfwListFile(const char *File, ExcludedContainer *Container)
 				break;
 
 			case READ_TRUNCATED:
+				INFO("GFWList Item is too long : %s\n", Buffer);
 				ReadLine_GoToNextLine(fp);
 				break;
 		}

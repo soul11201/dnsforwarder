@@ -47,6 +47,8 @@ BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl,
 
 BOOL StringChunk_Match(StringChunk *dl, const char *Str, char **Data);
 
+const char *StringChunk_Enum(StringChunk *dl, const char *Start, char **Data);
+
 void StringChunk_Free(StringChunk *dl);
 
 #endif // STRINGCHUNK_H_INCLUDED

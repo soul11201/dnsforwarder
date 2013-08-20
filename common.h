@@ -227,6 +227,12 @@
 	#define EFFECTIVE_LOCK_DESTROY(l)	DESTROY_SPIN(l)
 #endif
 
+#ifdef WIN32
+	#define GetFileDirectory(out)	(GetModulePath(out, sizeof(out)))
+#else /* WIN32 */
+	#define GetFileDirectory(out)	(GetConfigDirectory(out))
+#endif /* WIN32 */
+
 #define INVALID_THREAD	((ThreadHandle)NULL)
 
 /* Unified interfaces end */
