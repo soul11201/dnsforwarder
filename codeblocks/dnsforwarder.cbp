@@ -75,6 +75,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../dnsrelated.h" />
+		<Unit filename="../domainstatistic.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../domainstatistic.h" />
 		<Unit filename="../downloader.c">
 			<Option compilerVar="CC" />
 		</Unit>
