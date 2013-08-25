@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 #include "common.h"
 #include "stringchunk.h"
 #include "extendablebuffer.h"
@@ -26,6 +27,9 @@ static int				Interval = 0;
 
 static FILE				*MainFile = NULL;
 
+static char				InitTime_Str[32];
+static time_t			InitTime_Num;
+
 
 int DomainStatistic_Init(int OutputInterval)
 {
@@ -41,6 +45,9 @@ int DomainStatistic_Init(int OutputInterval)
 	StringChunk_Init(&MainChunk, 512);
 
 	Interval = OutputInterval * 1000;
+
+	GetCurDateAndTime(InitTime_Str, sizeof(InitTime_Str));
+	InitTime_Num = time(NULL);
 
 	return 0;
 }
@@ -167,6 +174,9 @@ int DomainStatistic_Hold(void)
 	RankList Ranks[MAXIMUN_NUMBER_OF_RANKED_DOMAIN];
 	int Loop;
 
+	char GenerateTime_Str[32];
+	time_t GenerateTime_Num;
+
 	while(TRUE)
 	{
 		SLEEP(Interval);
@@ -181,12 +191,21 @@ int DomainStatistic_Hold(void)
 			Ranks[Loop].Count = 0;
 		}
 
+		GetCurDateAndTime(GenerateTime_Str, sizeof(GenerateTime_Str));
+		GenerateTime_Num = time(NULL);
+
 		fprintf(MainFile,
 			    "-----------------------------------------\n"
+			    "Program starting time : %s\n"
+			    "Last statistic : %s\n"
+			    "Elapsed time : %ds\n"
 			    "\n"
 			    "Domain Statistic:\n"
 			    "                                                                Refused&Failed\n"
-			    "                                                          Domain   Total     | Hosts Cache   UDP   TCP\n"
+			    "                                                          Domain   Total     | Hosts Cache   UDP   TCP\n",
+			InitTime_Str,
+			GenerateTime_Str,
+			GenerateTime_Num - InitTime_Num
 			);
 
 		DomainCount = 0;
@@ -236,6 +255,8 @@ int DomainStatistic_Hold(void)
 				Sum.Udp,
 				Sum.Tcp
 				);
+
+		fprintf(MainFile, "Requests per minute : %.1f\n", (double)Sum.Count / (double)(GenerateTime_Num - InitTime_Num) * 60.0);
 
 		if( Sum.Udp + Sum.Tcp + Sum.Cache != 0 )
 		{

@@ -935,8 +935,6 @@ static int Hosts_Match(char *Name, DNSRecordType Type, void *OutBuffer)
 {
 	const char *Result;
 
-	DEBUG("Get in Hosts_Match, Type : %d\n", Type);
-
 	if( MainContainer == NULL )
 	{
 		return MATCH_STATE_NONE;
@@ -977,7 +975,6 @@ static int Hosts_Match(char *Name, DNSRecordType Type, void *OutBuffer)
 			{
 				return MATCH_STATE_NONE;
 			}
-			DEBUG("Fetch CName record : %s for %s\n", Result, Name);
 			strcpy(OutBuffer, Result);
 			return MATCH_STATE_PERFECT;
 			break;
@@ -993,7 +990,6 @@ static int Hosts_Match(char *Name, DNSRecordType Type, void *OutBuffer)
 		{
 			return MATCH_STATE_NONE;
 		}
-		DEBUG("Fetch CName record : %s for %s\n", Result, Name);
 		strcpy(OutBuffer, Result);
 		return MATCH_STATE_ONLY_CNAME;
 	} else {
