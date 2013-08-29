@@ -188,25 +188,9 @@ int ArgParse(int argc, char *argv_ori[])
 
 int GetDefaultConfigureFile(char *out)
 {
-#ifdef WIN32
-	if( GetModuleFileName(NULL, out, 319) != 0 )
-	{
-		out[319] = '\0';
-		strcpy(strrchr(out, '\\') + 1, "dnsforwarder.config");
-	}
-
-	return 0;
-#else /* WIN32 */
-	struct passwd *pw = getpwuid(getuid());
-	char *home = pw -> pw_dir;
-	*out = '\0';
-	if( home == NULL )
-		return 1;
-
-	strcpy(out, home);
+	GetFileDirectory(out);
 	strcat(out, "/.dnsforwarder/config");
 	return 0;
-#endif /* WIN32 */
 }
 
 int main(int argc, char *argv[])
