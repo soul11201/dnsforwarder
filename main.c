@@ -189,7 +189,11 @@ int ArgParse(int argc, char *argv_ori[])
 int GetDefaultConfigureFile(char *out)
 {
 	GetFileDirectory(out);
+#ifdef WIN32
+	strcat(out, "\\dnsforwarder.config");
+#else
 	strcat(out, "/.dnsforwarder/config");
+#endif
 	return 0;
 }
 
