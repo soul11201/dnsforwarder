@@ -192,7 +192,7 @@ int GetDefaultConfigureFile(char *out)
 #ifdef WIN32
 	strcat(out, "\\dnsforwarder.config");
 #else
-	strcat(out, "/.dnsforwarder/config");
+	strcat(out, "/config");
 #endif
 	return 0;
 }
