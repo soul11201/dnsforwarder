@@ -30,7 +30,7 @@ int QueryDNSListenTCPInit(void)
 {
 	static struct _Address	ListenAddr;
 
-	const char	*LocalAddr = ConfigGetString(&ConfigInfo, "LocalInterface");
+	const char	*LocalAddr = ConfigGetRawString(&ConfigInfo, "LocalInterface");
 	int			LocalPort = ConfigGetInt32(&ConfigInfo, "LocalPort");
 
 	int			AddrLen;
@@ -275,7 +275,7 @@ static int TCPRecv(RecvInfo *Info)
 
 	char				ProtocolStr[8] = {0};
 
-	strncpy(ProtocolStr, ConfigGetString(&ConfigInfo, "PrimaryServer"), 3);
+	strncpy(ProtocolStr, ConfigGetRawString(&ConfigInfo, "PrimaryServer"), 3);
 	StrToLower(ProtocolStr);
 
 	if( strcmp(ProtocolStr, "tcp") == 0 )
@@ -283,7 +283,7 @@ static int TCPRecv(RecvInfo *Info)
 		PrimaryProtocol = DNS_QUARY_PROTOCOL_TCP;
 		PrimarySocketPtr = &TCPSocket;
 
-		if( ConfigGetString(&ConfigInfo, "UDPServer") != NULL )
+		if( ConfigGetStringList(&ConfigInfo, "UDPServer") != NULL )
 			SecondarySocketPtr = &UDPSocket;
 		else
 			SecondarySocketPtr = NULL;
@@ -292,7 +292,7 @@ static int TCPRecv(RecvInfo *Info)
 		PrimaryProtocol = DNS_QUARY_PROTOCOL_UDP;
 		PrimarySocketPtr = &UDPSocket;
 
-		if( ConfigGetString(&ConfigInfo, "TCPServer") != NULL )
+		if( ConfigGetStringList(&ConfigInfo, "TCPServer") != NULL )
 			SecondarySocketPtr = &TCPSocket;
 		else
 			SecondarySocketPtr = NULL;
@@ -421,7 +421,7 @@ void QueryDNSListenTCPStart(void)
 		return;
 
 	INFO("Starting TCP socket %s:%d successfully.\n",
-		 ConfigGetString(&ConfigInfo, "LocalInterface"),
+		 ConfigGetRawString(&ConfigInfo, "LocalInterface"),
 		 ConfigGetInt32(&ConfigInfo, "LocalPort")
 		 );
 	CREATE_THREAD(QueryDNSListenTCP, NULL, Unused);

@@ -13,12 +13,6 @@
 static int CheckArgs(void)
 {
 	VType tmp;
-    if(ConfigGetString(&ConfigInfo, "UDPServer") == NULL && ConfigGetString(&ConfigInfo, "ExcludedDomain") != NULL)
-    {
-        INFO("Ignored option `ExcludeDomain', because no UDP server was specified.\n");
-        tmp.str = NULL;
-        ConfigSetValue(&ConfigInfo, tmp, "ExcludedDomain");
-    }
 
     if( ConfigGetBoolean(&ConfigInfo, "UseCache") == TRUE )
     {
@@ -129,6 +123,9 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
 	GetFileDirectory(TmpStr);
 	strcat(TmpStr, PATH_SLASH_STR);
 	strcat(TmpStr, "cache");
+
+    TmpTypeDescriptor.boolean = FALSE;
+    ConfigAddOption(&ConfigInfo, "MemeryCache", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = TmpStr;
     ConfigAddOption(&ConfigInfo, "CacheFile", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, "Cache File");
@@ -265,7 +262,7 @@ int QueryDNSInterfaceStart(void)
 	} else {
 		if( Hosts_Init() == 0 )
 		{
-			const char *LocalAddr = ConfigGetString(&ConfigInfo, "LocalInterface");
+			const char *LocalAddr = ConfigGetRawString(&ConfigInfo, "LocalInterface");
 			int IsZeroZeroZeroZero = !strncmp(LocalAddr, "0.0.0.0", 7);
 			INFO("Now you can set DNS%s%s.\n", IsZeroZeroZeroZero ? "" : " to ", IsZeroZeroZeroZero ? "" : LocalAddr);
 		}

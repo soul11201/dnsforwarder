@@ -91,63 +91,45 @@ BOOL IsExcludedDomain(const char *Domain)
 
 static int LoadDisableType(void)
 {
-	StringList DisableType_Str;
-	const char *Types = ConfigGetString(&ConfigInfo, "DisabledType");
-	int NumberOfTypes;
+	const StringList *DisableType_Str = ConfigGetStringList(&ConfigInfo, "DisabledType");
 
 	const char *OneTypePendingToAdd_Str;
 	int OneTypePendingToAdd;
 
-	if( Types == NULL )
+	Array_Init(&DisabledTypes, sizeof(int), 0, FALSE, NULL);
+
+	if( DisableType_Str == NULL )
 	{
-		Array_Init(&DisabledTypes, sizeof(int), 0, FALSE, NULL);
 		return 0;
 	}
 
-	NumberOfTypes = StringList_Init(&DisableType_Str, Types, ',');
-	if( NumberOfTypes <= 0 )
-	{
-		Array_Init(&DisabledTypes, sizeof(int), 0, FALSE, NULL);
-		return 0;
-	}
-
-	if( Array_Init(&DisabledTypes, sizeof(int), NumberOfTypes, FALSE, NULL) != 0 )
-	{
-		Array_Init(&DisabledTypes, sizeof(int), 0, FALSE, NULL);
-		StringList_Free(&DisableType_Str);
-		return 1;
-	}
-
-	OneTypePendingToAdd_Str = StringList_GetNext(&DisableType_Str, NULL);
+	OneTypePendingToAdd_Str = StringList_GetNext(DisableType_Str, NULL);
 	while( OneTypePendingToAdd_Str != NULL )
 	{
 		sscanf(OneTypePendingToAdd_Str, "%d", &OneTypePendingToAdd);
 		Array_PushBack(&DisabledTypes, &OneTypePendingToAdd, NULL);
 
-		OneTypePendingToAdd_Str = StringList_GetNext(&DisableType_Str, OneTypePendingToAdd_Str);
+		OneTypePendingToAdd_Str = StringList_GetNext(DisableType_Str, OneTypePendingToAdd_Str);
 	}
-
-	StringList_Free(&DisableType_Str);
 
 	return 0;
 }
 
-static int LoadDomains(StringChunk *List, const char *Domains, int ApproximateCount)
+static int LoadDomains(StringChunk *List, const StringList *Domains, int ApproximateCount)
 {
-	StringList TmpList;
-
 	const char *Str;
-
-	if( StringList_Init(&TmpList, Domains, ',') < 0 )
-		return -1;
 
 	if( StringChunk_Init(List, ApproximateCount) < 0 )
 	{
-		StringList_Free(&TmpList);
-		return -2;
+		return -1;
 	}
 
-	Str = StringList_GetNext(&TmpList, NULL);
+	if( Domains == NULL )
+	{
+		return 0;
+	}
+
+	Str = StringList_GetNext(Domains, NULL);
 	while( Str != NULL )
 	{
 		if( *Str == '.' )
@@ -157,15 +139,11 @@ static int LoadDomains(StringChunk *List, const char *Domains, int ApproximateCo
 
 		if( StringChunk_Add(List, Str, NULL, 0) != 0 )
 		{
-			StringList_Free(&TmpList);
-			StringChunk_Free(List);
-
-			return -3;
+			return -2;
 		}
-		Str = StringList_GetNext(&TmpList, Str);
+		Str = StringList_GetNext(Domains, Str);
 	}
 
-	StringList_Free(&TmpList);
 	return 0;
 }
 
@@ -277,9 +255,9 @@ int LoadGfwList_Thread(void *Unused)
 	int	FlushTime = ConfigGetInt32(&ConfigInfo, "GfwListFlushTime");
 	int	FlushTimeOnFailed = ConfigGetInt32(&ConfigInfo, "GfwListFlushTimeOnFailed");
 
-	const char	*GfwList	=	ConfigGetString(&ConfigInfo, "GfwList");
-	const char	*ExcludedList	=	ConfigGetString(&ConfigInfo, "ExcludedDomain");
-	const char	*File	=	ConfigGetString(&ConfigInfo, "GfwListDownloadPath");
+	const char	*GfwList	=	ConfigGetRawString(&ConfigInfo, "GfwList");
+	const StringList *ExcludedList	=	ConfigGetStringList(&ConfigInfo, "ExcludedDomain");
+	const char	*File	=	ConfigGetRawString(&ConfigInfo, "GfwListDownloadPath");
 	const BOOL	NeedBase64Decode	=	ConfigGetBoolean(&ConfigInfo, "GfwListBase64Decode");
 	int			Count;
 
@@ -331,6 +309,7 @@ int LoadGfwList_Thread(void *Unused)
 				goto END;
 			}
 
+			/* Evict old container */
 			RWLock_WrLock(ExcludedListLock);
 
 			StringChunk_Free(&(MainExcludedContainer -> ExcludedDomains));
@@ -353,15 +332,14 @@ END:
 int LoadGfwList(void)
 {
 	ThreadHandle gt;
-	const char	*GfwList	=	ConfigGetString(&ConfigInfo, "GfwList");
-	const char	*File	=	ConfigGetString(&ConfigInfo, "GfwListDownloadPath");
-	const char	*ExcludedList	=	ConfigGetString(&ConfigInfo, "ExcludedDomain");
-	char		ProtocolStr[8] = {0};
+	const char	*GfwList	=	ConfigGetRawString(&ConfigInfo, "GfwList");
+	const char	*File	=	ConfigGetRawString(&ConfigInfo, "GfwListDownloadPath");
+	const StringList *ExcludedList	=	ConfigGetStringList(&ConfigInfo, "ExcludedDomain");
+	const char	*ProtocolStr	=	ConfigGetRawString(&ConfigInfo, "PrimaryServer");
 	int			Count;
 
 	ExcludedContainer *NewContainer = NULL;
 
-	strncpy(ProtocolStr, ConfigGetString(&ConfigInfo, "PrimaryServer"), 3);
 	StrToLower(ProtocolStr);
 
 	if( GfwList == NULL )
@@ -369,7 +347,7 @@ int LoadGfwList(void)
 		return 0;
 	}
 
-	if( strcmp(ProtocolStr, "udp") != 0 )
+	if( strncmp(ProtocolStr, "udp", 3) != 0 )
 	{
 		ERRORMSG("Cannot load GFW List because `PrimaryServer' is not udp.\n");
 		return -1;
@@ -399,6 +377,7 @@ int LoadGfwList(void)
 		goto END;
 	}
 
+	/* Evict old container */
 	RWLock_WrLock(ExcludedListLock);
 
 	StringChunk_Free(&(MainExcludedContainer -> ExcludedDomains));
@@ -420,13 +399,13 @@ END:
 int ExcludedList_Init(void)
 {
 
-	LoadDomains(&DisabledDomains, ConfigGetString(&ConfigInfo, "DisabledDomain"), 31);
+	LoadDomains(&DisabledDomains, ConfigGetStringList(&ConfigInfo, "DisabledDomain"), 31);
 
 	MainExcludedContainer = SafeMalloc(sizeof(ExcludedContainer));
 
 	if( MainExcludedContainer != NULL )
 	{
-		LoadDomains(&(MainExcludedContainer -> ExcludedDomains), ConfigGetString(&ConfigInfo, "ExcludedDomain"), 31);
+		LoadDomains(&(MainExcludedContainer -> ExcludedDomains), ConfigGetStringList(&ConfigInfo, "ExcludedDomain"), 31);
 	}
 
 	LoadDisableType();

@@ -9,7 +9,7 @@
 #include "rwlock.h"
 #include "hashtable.h"
 
-#define	CACHE_VERSION		6
+#define	CACHE_VERSION		7
 
 #define	CACHE_END	'\x0A'
 #define	CACHE_START	'\xFF'
@@ -54,27 +54,26 @@ static void DNSCacheTTLMinusOne_Thread(void)
 {
 	register	int			loop;
 	register	BOOL		GotMutex	=	FALSE;
-	register	int			cc;
+				int			ChunkCount;
 				NodeHead	*Node	=	NULL;
 	register	struct _CacheEntry	*Entry	=	NULL;
+
+	register	char		*ChunkList	=	CacheInfo -> NodeChunk.Data;
 	register	int			DataLength	=	CacheInfo -> NodeChunk.DataLength;
 
 	while(Inited)
 	{
-		cc = (-1) * (CacheInfo -> NodeChunk.Used);
+		ChunkCount = CacheInfo -> NodeChunk.Used;
 
-		for(loop = cc + 1; loop <= 0; ++loop)
+		for(loop = ((-1) * ChunkCount) + 1; loop <= 0; ++loop)
 		{
-			Node = (NodeHead *)((CacheInfo -> NodeChunk.Data) + loop * DataLength);
+			Node = (NodeHead *)(ChunkList + loop * DataLength);
 			Entry = HashTable_GetDataByNode(Node);
 
-			if( Node -> Next >= HASHTABLE_NODE_END && Entry -> TTL > 0 )
+			if( Node -> Next >= HASHTABLE_NODE_TAIL && Entry -> TTL > 0 )
 			{
-				if(--(Entry -> TTL) == 0)
+				if(--(Entry -> TTL) < 1)
 				{
-/*
-					static char Name[128];
-*/
 
 					if(GotMutex == FALSE)
 					{
@@ -82,10 +81,6 @@ static void DNSCacheTTLMinusOne_Thread(void)
 						GotMutex = TRUE;
 					}
 
-/*
-					sscanf(MapStart + CacheInfo[loop].Offset + 1, "%127[^\1]", Name);
-					printf("[C][%s] : Cache removed.\n", Name);
-*/
 					*(char *)(MapStart + Entry -> Offset) = 0xFD;
 
 					HashTable_RemoveNode(CacheInfo, -1, Node);
@@ -177,7 +172,7 @@ static void ManuallyInitHashTable(HashTable *ht)
 
 	for(loop = 0; loop != ht -> Slots.Allocated; ++loop)
 	{
-		((NodeHead *)Array_GetBySubscript(&(ht -> Slots), loop)) -> Next = HASHTABLE_NODE_END;
+		((NodeHead *)Array_GetBySubscript(&(ht -> Slots), loop)) -> Next = HASHTABLE_NODE_TAIL;
 		((NodeHead *)Array_GetBySubscript(&(ht -> Slots), loop)) -> Prev = 0xAAAA0000 + loop;
 	}
 
@@ -186,7 +181,7 @@ static void ManuallyInitHashTable(HashTable *ht)
 	ht -> NodeChunk.Used = 0;
 	ht -> NodeChunk.Allocated = -1;
 
-	ht -> RemovedNodes = -1;
+	ht -> FreeList = -1;
 
 	ht -> HashFunction = ELFHash;
 }
@@ -239,8 +234,7 @@ int DNSCache_Init(void)
 {
 	int			_CacheSize = ConfigGetInt32(&ConfigInfo, "CacheSize");
 	BOOL		IgnoreTTL = ConfigGetBoolean(&ConfigInfo, "IgnoreTTL");
-	const char	*CacheFile = ConfigGetString(&ConfigInfo, "CacheFile");
-	BOOL		FileExists;
+	const char	*CacheFile = ConfigGetRawString(&ConfigInfo, "CacheFile");
 	int			InitCacheInfoState;
 
 	ForceTTL = ConfigGetInt32(&ConfigInfo, "ForceTTL");
@@ -262,58 +256,71 @@ int DNSCache_Init(void)
 		return 1;
 	}
 
-	FileExists = FileIsReadable(CacheFile);
-
-	CacheFileHandle = OPEN_FILE(CacheFile);
-	if(CacheFileHandle == INVALID_FILE)
+	if( ConfigGetBoolean(&ConfigInfo, "MemeryCache") == TRUE )
 	{
-		int ErrorNum = GET_LAST_ERROR();
-		char ErrorMessage[320];
+		MapStart = SafeMalloc(CacheSize);
 
-		GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
+		if( MapStart == NULL )
+		{
+			ERRORMSG("Cache initializing failed.\n");
+			return 2;
+		}
 
-		ERRORMSG("Cache initializing failed : %d : %s.\n", ErrorNum, ErrorMessage);
-
-		return 2;
-	}
-
-	CacheMappingHandle = CREATE_FILE_MAPPING(CacheFileHandle, CacheSize);
-	if(CacheMappingHandle == INVALID_MAP)
-	{
-		int ErrorNum = GET_LAST_ERROR();
-		char ErrorMessage[320];
-
-		GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
-
-		ERRORMSG("Cache initializing failed : %d : %s.\n", ErrorNum, ErrorMessage);
-		return 3;
-	}
-
-	MapStart = (char *)MPA_FILE(CacheMappingHandle, CacheSize);
-	if(MapStart == INVALID_MAPPING_FILE)
-	{
-		int ErrorNum = GET_LAST_ERROR();
-		char ErrorMessage[320];
-
-		GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
-
-		ERRORMSG("Cache initializing failed : %d : %s.\n", ErrorNum, ErrorMessage);
-		return 4;
-	}
-
-	RWLock_Init(CacheLock);
-
-	if( FileExists == FALSE )
-	{
 		InitCacheInfoState = InitCacheInfo(FALSE);
 	} else {
-		InitCacheInfoState = InitCacheInfo(ConfigGetBoolean(&ConfigInfo, "ReloadCache"));
+		BOOL FileExists = FileIsReadable(CacheFile);
+
+		CacheFileHandle = OPEN_FILE(CacheFile);
+		if(CacheFileHandle == INVALID_FILE)
+		{
+			int ErrorNum = GET_LAST_ERROR();
+			char ErrorMessage[320];
+
+			GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
+
+			ERRORMSG("Cache initializing failed : %d : %s.\n", ErrorNum, ErrorMessage);
+
+			return 3;
+		}
+
+		CacheMappingHandle = CREATE_FILE_MAPPING(CacheFileHandle, CacheSize);
+		if(CacheMappingHandle == INVALID_MAP)
+		{
+			int ErrorNum = GET_LAST_ERROR();
+			char ErrorMessage[320];
+
+			GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
+
+			ERRORMSG("Cache initializing failed : %d : %s.\n", ErrorNum, ErrorMessage);
+			return 4;
+		}
+
+		MapStart = (char *)MPA_FILE(CacheMappingHandle, CacheSize);
+		if(MapStart == INVALID_MAPPING_FILE)
+		{
+			int ErrorNum = GET_LAST_ERROR();
+			char ErrorMessage[320];
+
+			GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
+
+			ERRORMSG("Cache initializing failed : %d : %s.\n", ErrorNum, ErrorMessage);
+			return 5;
+		}
+
+		if( FileExists == FALSE )
+		{
+			InitCacheInfoState = InitCacheInfo(FALSE);
+		} else {
+			InitCacheInfoState = InitCacheInfo(ConfigGetBoolean(&ConfigInfo, "ReloadCache"));
+		}
 	}
 
 	if( InitCacheInfoState != 0 )
 	{
-		return 5;
+		return 6;
 	}
+
+	RWLock_Init(CacheLock);
 
 	Inited = TRUE;
 
@@ -330,7 +337,7 @@ BOOL Cache_IsInited(void)
 
 static _32BIT_INT DNSCache_GetAviliableChunk(_32BIT_UINT Length, NodeHead **Out)
 {
-	_32BIT_INT	Itr = HASHTABLE_FINDUNUSEDNODE_START;
+	_32BIT_INT	Itr = HASHTABLE_FINDFREENODE_START;
 	NodeHead	*Node;
 	struct _CacheEntry *Entry;
 	_32BIT_UINT RoundedLength = ROUND_UP(Length, 8);
@@ -494,10 +501,9 @@ static int DNSCache_AddAItemToCache(char *DNSBody, char *RecordBody)
 			memcpy(MapStart + Entry -> Offset, Buffer, BufferItr - Buffer + 1);
 
 			/* Assign TTL */
-			Entry -> OriginalTTL = DNSGetTTL(RecordBody);
 			if(ForceTTL < 0)
 			{
-				Entry -> TTL = Entry -> OriginalTTL * TTLMultiple;
+				Entry -> TTL = DNSGetTTL(RecordBody) * TTLMultiple;
 			} else {
 				Entry -> TTL = ForceTTL;
 			}
@@ -616,7 +622,7 @@ static int DNSCache_GetRawRecordsFromCache(	__in	char				*Name,
 				if(ForceTTL < 0)
 					DNSGenResourceRecord(HereSaved, SingleLength, Name, Type, Class, Entry -> TTL / TTLMultiple, NULL, 0, FALSE);
 				else
-					DNSGenResourceRecord(HereSaved, SingleLength, Name, Type, Class, Entry -> OriginalTTL, NULL, 0, FALSE);
+					DNSGenResourceRecord(HereSaved, SingleLength, Name, Type, Class, Entry -> TTL, NULL, 0, FALSE);
 
 				for(; *CacheItr != '\0'; ++CacheItr);
 				/* Then *CacheItr == '\0' */
@@ -724,11 +730,17 @@ void DNSCacheClose(void)
 	{
 		Inited = FALSE;
 		RWLock_WrLock(CacheLock);
-		UNMAP_FILE(MapStart, CacheSize);
-		DESTROY_MAPPING(CacheMappingHandle);
-		CLOSE_FILE(CacheFileHandle);
+
+		if( ConfigGetBoolean(&ConfigInfo, "MemeryCache") == FALSE )
+		{
+			UNMAP_FILE(MapStart, CacheSize);
+			DESTROY_MAPPING(CacheMappingHandle);
+			CLOSE_FILE(CacheFileHandle);
+		} else {
+			SafeFree(MapStart);
+		}
+
 		RWLock_UnWLock(CacheLock);
 		RWLock_Destroy(CacheLock);
-
 	}
 }

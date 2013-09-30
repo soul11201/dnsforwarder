@@ -38,7 +38,7 @@ int StringList_Init(__in StringList *s, __in const char *ori, __in char Delimite
 	}
 }
 
-const char *StringList_GetNext(__in StringList *s, __in const char *Current)
+const char *StringList_GetNext(__in const StringList *s, __in const char *Current)
 {
 	const char *n;
 	const char *End;
@@ -99,9 +99,18 @@ int StringList_Count(StringList *s)
 	return n;
 }
 
-_32BIT_INT StringList_Add(StringList *s, const char *str)
+_32BIT_INT StringList_Add(StringList *s, const char *str, char Delimiter)
 {
-	return ExtendableBuffer_Add((ExtendableBuffer *)s, str, strlen(str) + 1);
+	int Offset = ExtendableBuffer_Add((ExtendableBuffer *)s, str, strlen(str) + 1);
+
+	if( Offset < 0 )
+	{
+		return -1;
+	}
+
+	Divide(s -> Data + Offset, Delimiter);
+
+	return Offset;
 }
 
 const char *StringList_Find(StringList *s, const char *str)
@@ -120,4 +129,28 @@ const char *StringList_Find(StringList *s, const char *str)
 	}
 
 	return NULL;
+}
+
+_32BIT_INT StringList_AppendLast(StringList *s, const char *str, char Delimiter)
+{
+	char *Tail;
+	int Length = strlen(str);
+
+	if( s == NULL )
+		return 0;
+
+	Tail = s -> Data + s -> Used - 1;
+
+	if( ExtendableBuffer_GuarantyLeft(s, Length) == FALSE )
+	{
+		return -1;
+	}
+
+	s -> Used += Length;
+
+	strcat(Tail, str);
+
+	Divide(Tail, Delimiter);
+
+	return 0;
 }

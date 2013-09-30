@@ -422,11 +422,8 @@ int QueryFromHostsAndCache(QueryContext		*Context,
 
 int InitAddress(void)
 {
-	const char	*tcpaddrs	=	ConfigGetString(&ConfigInfo, "TCPServer");
-	const char	*udpaddrs	=	ConfigGetString(&ConfigInfo, "UDPServer");
-
-	StringList	tcps;
-	StringList	udps;
+	const StringList	*tcpaddrs	=	ConfigGetStringList(&ConfigInfo, "TCPServer");
+	const StringList	*udpaddrs	=	ConfigGetStringList(&ConfigInfo, "UDPServer");
 
 	const char	*Itr	=	NULL;
 
@@ -441,37 +438,20 @@ int InitAddress(void)
 		return -2;
 	}
 
-	if( StringList_Init(&tcps, tcpaddrs, ',') < 0 )
-	{
-		AddressList_Free(&TCPAddresses);
-		AddressList_Free(&UDPAddresses);
-		return -3;
-	}
 
-	if( StringList_Init(&udps, udpaddrs, ',') < 0 )
-	{
-		AddressList_Free(&TCPAddresses);
-		AddressList_Free(&UDPAddresses);
-		StringList_Free(&tcps);
-		return -4;
-	}
-
-	Itr = StringList_GetNext(&tcps, NULL);
+	Itr = StringList_GetNext(tcpaddrs, NULL);
 	while( Itr != NULL )
 	{
 		AddressList_Add_From_String(&TCPAddresses, Itr);
-		Itr = StringList_GetNext(&tcps, Itr);
+		Itr = StringList_GetNext(tcpaddrs, Itr);
 	}
 
-	Itr = StringList_GetNext(&udps, NULL);
+	Itr = StringList_GetNext(udpaddrs, NULL);
 	while( Itr != NULL )
 	{
 		AddressList_Add_From_String(&UDPAddresses, Itr);
-		Itr = StringList_GetNext(&udps, Itr);
+		Itr = StringList_GetNext(udpaddrs, Itr);
 	}
-
-	StringList_Free(&tcps);
-	StringList_Free(&udps);
 
 	return 0;
 
@@ -566,10 +546,10 @@ int QueryFromServerBase(SOCKET				*Socket,
 			*Socket = INVALID_SOCKET;
 
 			/* Assume the server is not avaliable now, move to the next server */
-			AddressList_Incr(&UDPAddresses);
+			AddressList_Advance(&UDPAddresses);
 		} else { /* Similarly, for TCP, below */
 			CloseTCPConnection(Socket);
-			AddressList_Incr(&TCPAddresses);
+			AddressList_Advance(&TCPAddresses);
 		}
 
 		/* For not to overwrite internal error code(may be done by

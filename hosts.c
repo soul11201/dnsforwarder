@@ -47,7 +47,7 @@ typedef struct _HostsContainer{
 volatile HostsContainer	*MainContainer = NULL;
 
 /* These two below once inited, is never changed */
-static StringList	AppendedHosts;
+static const StringList	*AppendedHosts;
 static int			AppendedNum = 0;
 
 typedef enum _HostsRecordType{
@@ -226,9 +226,9 @@ static void GetCount(	FILE *fp,
 	{
 		const char *Appended;
 
-		for(Appended = StringList_GetNext(&AppendedHosts, NULL);
+		for(Appended = StringList_GetNext(AppendedHosts, NULL);
 			Appended != NULL;
-			Appended = StringList_GetNext(&AppendedHosts, Appended)
+			Appended = StringList_GetNext(AppendedHosts, Appended)
 			)
 		{
 			switch( Edition(Appended) )
@@ -589,7 +589,7 @@ static int LoadAppendHosts(HostsContainer *Container)
 		const char *Appended;
 		char Changable[256];
 
-		for(Appended = StringList_GetNext(&AppendedHosts, NULL); Appended != NULL; Appended = StringList_GetNext(&AppendedHosts, Appended))
+		for(Appended = StringList_GetNext(AppendedHosts, NULL); Appended != NULL; Appended = StringList_GetNext(AppendedHosts, Appended))
 		{
 			Changable[sizeof(Changable) - 1] = '\0';
 			strncpy(Changable, Appended, sizeof(Changable));
@@ -768,8 +768,8 @@ static int TryLoadHosts(void)
 
 static void GetHostsFromInternet_Thread(void *Unused)
 {
-	const char *URL = ConfigGetString(&ConfigInfo, "Hosts");
-	const char *Script = ConfigGetString(&ConfigInfo, "HostsScript");
+	const char *URL = ConfigGetRawString(&ConfigInfo, "Hosts");
+	const char *Script = ConfigGetRawString(&ConfigInfo, "HostsScript");
 	int			FlushTimeOnFailed = ConfigGetInt32(&ConfigInfo, "HostsFlushTimeOnFailed");
 
 	if( FlushTimeOnFailed < 0 )
@@ -812,13 +812,12 @@ static void GetHostsFromInternet_Thread(void *Unused)
 int Hosts_Init(void)
 {
 	const char	*Path;
-	const char	*Appended;
 
-	Path = ConfigGetString(&ConfigInfo, "Hosts");
-	Appended = ConfigGetString(&ConfigInfo, "AppendHosts");
+	Path = ConfigGetRawString(&ConfigInfo, "Hosts");
+	AppendedHosts = ConfigGetStringList(&ConfigInfo, "AppendHosts");
 
 
-	if( Path == NULL && Appended == NULL )
+	if( Path == NULL && AppendedHosts == NULL )
 	{
 		Inited = FALSE;
 		return 0;
@@ -827,13 +826,7 @@ int Hosts_Init(void)
 	FlushTime = ConfigGetInt32(&ConfigInfo, "HostsFlushTime");
 	RWLock_Init(HostsLock);
 
-
-	if( Appended != NULL )
-	{
-		AppendedNum = StringList_Init(&AppendedHosts, Appended, ',');
-	} else {
-		AppendedNum = 0;
-	}
+	AppendedNum = ConfigGetNumberOfStrings(&ConfigInfo, "AppendHosts");
 
 	if( Path != NULL )
 	{
@@ -849,8 +842,8 @@ int Hosts_Init(void)
 			}
 		} else {
 			/* Internet file */
-			File = ConfigGetString(&ConfigInfo, "HostsDownloadPath");
-			if( ConfigGetInt32(&ConfigInfo, "HostsFlushTimeOnFailed") < 1)
+			File = ConfigGetRawString(&ConfigInfo, "HostsDownloadPath");
+			if( ConfigGetInt32(&ConfigInfo, "HostsFlushTimeOnFailed") < 1 )
 			{
 				ERRORMSG("`HostsFlushTimeOnFailed' is too small (< 1).\n");
 				return 1;

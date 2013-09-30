@@ -70,18 +70,19 @@ int ConfigAddOption(ConfigFileInfo *Info, char *KeyName, MultilineStrategy Strat
 	switch( Type )
 	{
 		case TYPE_INT32:
+			Info -> Options[loop].Holder.INT32 = Initial.INT32;
+			break;
+
 		case TYPE_BOOLEAN:
-			Info -> Options[loop].Holder = Initial;
+			Info -> Options[loop].Holder.boolean = Initial.boolean;
 			break;
 
 		case TYPE_STRING:
-			if(Initial.str != NULL)
+			if( StringList_Init(&(Info -> Options[loop].Holder.str), Initial.str, ',') != 0 )
 			{
-				Info -> Options[loop].Holder.str = SafeMalloc(strlen(Initial.str) + 1);
-				strcpy(Info -> Options[loop].Holder.str, Initial.str);
-			} else {
-				Info -> Options[loop].Holder.str = NULL;
+				return 2;
 			}
+
 			Info -> Options[loop].Strategy = Strategy;
 			break;
 
@@ -264,8 +265,6 @@ int ConfigRead(ConfigFileInfo *Info)
 
 			case TYPE_STRING:
 				{
-					char *result;
-
 					switch (Option -> Strategy)
 					{
 						case STRATEGY_APPEND_DISCARD_DEFAULT:
@@ -277,40 +276,19 @@ int ConfigRead(ConfigFileInfo *Info)
 
 						case STRATEGY_DEFAULT:
 						case STRATEGY_REPLACE:
-							if( Option -> Holder.str != NULL )
-							{
-								SafeFree(Option -> Holder.str);
-							}
-
-							result = SafeMalloc(strlen(ValuePos) + 1);
-							if( result == NULL )
+							StringList_Clear(&(Option -> Holder.str));
+							Option -> Status = STATUS_SPECIAL_VALUE;
+							if( StringList_Add(&(Option -> Holder.str), ValuePos, ',') != 0 )
 							{
 								continue;
 							}
 
-							strcpy(result, ValuePos);
-							Option -> Status = STATUS_SPECIAL_VALUE;
 							break;
 
 						case STRATEGY_APPEND:
-							if( Option -> Holder.str != NULL )
+							if( StringList_Add(&(Option -> Holder.str), ValuePos, ',') != 0 )
 							{
-								result = SafeMalloc(strlen(Option -> Holder.str) + strlen(ValuePos) + 2);
-								if( result == NULL )
-								{
-									continue;
-								}
-								strcpy(result, Option -> Holder.str);
-								strcat(result, ",");
-								strcat(result, ValuePos);
-								SafeFree(Option -> Holder.str);
-							} else {
-								result = SafeMalloc(strlen(ValuePos) + 1);
-								if( result == NULL )
-								{
-									continue;
-								}
-								strcpy(result, ValuePos);
+								continue;
 							}
 							Option -> Status = STATUS_SPECIAL_VALUE;
 							break;
@@ -325,23 +303,10 @@ int ConfigRead(ConfigFileInfo *Info)
 						ReadStatus = ReadLine(Info -> fp, Buffer, sizeof(Buffer));
 						if( ReadStatus == READ_FAILED_OR_END )
 							break;
-						if( SafeRealloc((void *)&result, strlen(result) + strlen(Buffer) + 1) != 0 )
-							break;
-						strcat(result, Buffer);
+
+						StringList_AppendLast(&(Option -> Holder.str), Buffer, ',');
 					}
 
-					if( strlen(result) != 0 )
-					{
-						int loop = strlen(result) - 1;
-
-						while( result[loop] == '\n' || result[loop] == '\r' )
-						{
-							result[loop] = '\0';
-							--loop;
-						}
-					}
-
-					Option -> Holder.str = result;
 				}
 				break;
 
@@ -353,13 +318,52 @@ int ConfigRead(ConfigFileInfo *Info)
 	return NumOfRead;
 }
 
-const char *ConfigGetString(ConfigFileInfo *Info, char *KeyName)
+const char *ConfigGetRawString(ConfigFileInfo *Info, char *KeyName)
 {
 	int loop;
 	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
 	{
 		if( Info -> Options[loop].Type == TYPE_STRING && strncmp(Info -> Options[loop].KeyName, KeyName, KEY_NAME_MAX_SIZE) == 0 )
-			return Info -> Options[loop].Holder.str;
+		{
+			if( Info -> Options[loop].Holder.str.Used == 0 )
+			{
+				return NULL;
+			} else {
+				return Info -> Options[loop].Holder.str.Data;
+			}
+		}
+	}
+	return 0;
+}
+
+const StringList *ConfigGetStringList(ConfigFileInfo *Info, char *KeyName)
+{
+	int loop;
+	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
+	{
+		if( Info -> Options[loop].Type == TYPE_STRING && strncmp(Info -> Options[loop].KeyName, KeyName, KEY_NAME_MAX_SIZE) == 0 )
+		{
+			if( Info -> Options[loop].Holder.str.Used == 0 )
+			{
+				return NULL;
+			} else {
+				return &(Info -> Options[loop].Holder.str);
+			}
+		}
+
+	}
+	return 0;
+}
+
+_32BIT_INT ConfigGetNumberOfStrings(ConfigFileInfo *Info, char *KeyName)
+{
+	int loop;
+	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
+	{
+		if( Info -> Options[loop].Type == TYPE_STRING && strncmp(Info -> Options[loop].KeyName, KeyName, KEY_NAME_MAX_SIZE) == 0 )
+		{
+			return StringList_Count(&(Info -> Options[loop].Holder.str));
+		}
 	}
 	return 0;
 }
@@ -393,7 +397,25 @@ void ConfigSetValue(ConfigFileInfo *Info, VType Value, char *KeyName)
 	{
 		if( strncmp(Info -> Options[loop].KeyName, KeyName, KEY_NAME_MAX_SIZE) == 0 )
 		{
-			Info -> Options[loop].Holder = Value;
+			Info -> Options[loop].Status = STATUS_SPECIAL_VALUE;
+			switch( Info -> Options[loop].Type )
+			{
+				case TYPE_INT32:
+					Info -> Options[loop].Holder.INT32 = Value.INT32;
+					break;
+
+				case TYPE_BOOLEAN:
+					Info -> Options[loop].Holder.boolean = Value.boolean;
+					break;
+
+				case TYPE_STRING:
+					StringList_Clear(&(Info -> Options[loop].Holder.str));
+					StringList_Add(&(Info -> Options[loop].Holder.str), Value.str, ',');
+					break;
+
+				default:
+					break;
+			}
 			break;
 		}
 	}
@@ -415,8 +437,16 @@ void ConfigDisplay(ConfigFileInfo *Info)
 					printf("%s:%s\n", Info -> Options[loop].Caption, BoolToYesNo(Info -> Options[loop].Holder.boolean));
 					break;
 				case TYPE_STRING:
-					if( Info -> Options[loop].Holder.str != NULL )
-						printf("%s:%s\n", Info -> Options[loop].Caption, Info -> Options[loop].Holder.str);
+					if( Info -> Options[loop].Holder.str.Used >= 0 )
+					{
+						const char *Str = StringList_GetNext(&(Info -> Options[loop].Holder.str), NULL);
+
+						while( Str != NULL )
+						{
+							printf("%s:%s\n", Info -> Options[loop].Caption, Info -> Options[loop].Holder.str.Data);
+							Str = StringList_GetNext(&(Info -> Options[loop].Holder.str), Str);
+						}
+					}
 					break;
 				default:
 					break;

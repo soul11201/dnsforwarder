@@ -37,7 +37,7 @@ int HashTable_Init(HashTable *h,
 
 	for(loop = 0; loop != h -> Slots.Allocated; ++loop)
 	{
-		((NodeHead *)Array_GetBySubscript(&(h -> Slots), loop)) -> Next = HASHTABLE_NODE_END;
+		((NodeHead *)Array_GetBySubscript(&(h -> Slots), loop)) -> Next = HASHTABLE_NODE_TAIL;
 	}
 
 	if( HashFunction == NULL )
@@ -47,7 +47,7 @@ int HashTable_Init(HashTable *h,
 		h -> HashFunction = HashFunction;
 	}
 
-	h -> RemovedNodes = -1;
+	h -> FreeList = -1;
 
 	return 0;
 }
@@ -76,7 +76,7 @@ int HashTable_Init_Manually(HashTable	*h,
 		h -> NodeChunk.Allocated = 0;
 	}
 
-	h -> RemovedNodes = -1;
+	h -> FreeList = -1;
 
 	return 0;
 }
@@ -111,8 +111,8 @@ int HashTable_CreateNewNode(HashTable *h, NodeHead **Out, void *Boundary /* Only
 
 _32BIT_INT HashTable_FindUnusedNode(HashTable *h,
 									NodeHead **Out,
-									_32BIT_INT Start /* Initially -1 */,
-									void *Boundary /* Only used by grow down array */,
+									_32BIT_INT Start, /* Initially HASHTABLE_FINDFREENODE_START(-1) */
+									void *Boundary, /* Only used by grow down array */
 									BOOL AutoCreateNewNode
 									)
 {
@@ -123,9 +123,9 @@ _32BIT_INT HashTable_FindUnusedNode(HashTable *h,
 
 	NodeChunk = &(h -> NodeChunk);
 
-	if( Start == HASHTABLE_FINDUNUSEDNODE_START )
+	if( Start == HASHTABLE_FINDFREENODE_START )
 	{
-		Subscript = h -> RemovedNodes;
+		Subscript = h -> FreeList;
 	} else if( Start >= 0 ){
 		Node = (NodeHead *)Array_GetBySubscript(NodeChunk, Start);
 		Subscript = Node -> Next;
@@ -134,7 +134,7 @@ _32BIT_INT HashTable_FindUnusedNode(HashTable *h,
 		{
 			*Out = NULL;
 		}
-		return HASHTABLE_FINDUNUSEDNODE_FAILED;
+		return HASHTABLE_FINDFREENODE_FAILED;
 	}
 
 	if( Subscript >= 0 )
@@ -157,7 +157,7 @@ _32BIT_INT HashTable_FindUnusedNode(HashTable *h,
 		{
 			*Out = NULL;
 		}
-		return HASHTABLE_FINDUNUSEDNODE_FAILED;
+		return HASHTABLE_FINDFREENODE_FAILED;
 	}
 }
 
@@ -179,7 +179,7 @@ _32BIT_INT HashTable_FetchNode(HashTable *h, NodeHead *Node)
 		NextRemovedNode = (NodeHead *)Array_GetBySubscript(NodeChunk, Node -> Prev);
 		NextRemovedNode -> Next = Node -> Next;
 	} else {
-		h -> RemovedNodes = Node -> Next;
+		h -> FreeList = Node -> Next;
 	}
 
 	if( Node -> Next >= 0 )
@@ -191,8 +191,8 @@ _32BIT_INT HashTable_FetchNode(HashTable *h, NodeHead *Node)
 
 	NextNode = Node -> Next;
 
-	Node -> Next = HASHTABLE_NODE_UNUSED;
-	Node -> Prev = HASHTABLE_NODE_UNUSED;
+	Node -> Next = HASHTABLE_NODE_FREE;
+	Node -> Prev = HASHTABLE_NODE_FREE;
 
 	return NextNode;
 }
@@ -251,12 +251,19 @@ int HashTable_Add(HashTable *h, const char *Key, int KeyLength, void *Data)
 	return HashTable_AddByNode(h, Key, KeyLength, NewNode_i, NewNode);
 }
 
-void HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *Node)
+int HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *Node)
 {
 	Array	*NodeChunk;
 
 	NodeChunk = &(h -> NodeChunk);
 
+	/* The node must be given in at least one form */
+	if( SubScriptOfNode < 0 && Node == NULL )
+	{
+		return -1;
+	}
+
+	/* If the subscript is not given, compute it */
 	if( SubScriptOfNode < 0 )
 	{
 		SubScriptOfNode = ((char *)Node - (char *)(NodeChunk -> Data)) / (NodeChunk -> DataLength);
@@ -266,13 +273,16 @@ void HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *No
 		}
 	}
 
+	/* If the address of the node is not given, get it */
 	if( Node == NULL )
 	{
 		Node = (NodeHead *)Array_GetBySubscript(&(h -> NodeChunk), SubScriptOfNode);
 	}
 
-	if( Node -> Next != HASHTABLE_NODE_UNUSED )
+	/* If this node has not been removed */
+	if( Node -> Next != HASHTABLE_NODE_FREE )
 	{
+		/* If this node is not tail */
 		if( Node -> Next >= 0 )
 		{
 			((NodeHead *)Array_GetBySubscript(NodeChunk, Node -> Next)) -> Prev = Node -> Prev;
@@ -287,19 +297,24 @@ void HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *No
 			((NodeHead *)Array_GetBySubscript(NodeChunk, Node -> Prev)) -> Next = Node -> Next;
 		}
 
+		/* If this node is not the last one of NodeChunk, add it into free list,
+		 * or simply delete it from NodeChunk
+		 */
 		if( SubScriptOfNode != NodeChunk -> Used - 1 )
 		{
 
-			if( h -> RemovedNodes >= 0 )
+			/* Modify the first node in FreeList */
+			if( h -> FreeList >= 0 )
 			{
 				NodeHead	*PreviousRemovedNode;
-				PreviousRemovedNode = (NodeHead *)Array_GetBySubscript(NodeChunk, h -> RemovedNodes);
+				PreviousRemovedNode = (NodeHead *)Array_GetBySubscript(NodeChunk, h -> FreeList);
 				PreviousRemovedNode -> Prev = SubScriptOfNode;
 			}
 
-			Node -> Next = h -> RemovedNodes;
+			/* Insert this node at the head of the FreeList */
+			Node -> Next = h -> FreeList;
 			Node -> Prev = -1;
-			h -> RemovedNodes = SubScriptOfNode;
+			h -> FreeList = SubScriptOfNode;
 		} else {
 			--(NodeChunk -> Used);
 		}
@@ -310,6 +325,7 @@ void HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *No
 		}
 	}
 
+	return 0;
 }
 
 void *HashTable_Get(HashTable *h, const char *Key, int KeyLength, void *Start)
@@ -347,5 +363,5 @@ void HashTable_Free(HashTable *h)
 {
 	Array_Free(&(h -> NodeChunk));
 	Array_Free(&(h -> Slots));
-	h -> RemovedNodes = -1;
+	h -> FreeList = -1;
 }

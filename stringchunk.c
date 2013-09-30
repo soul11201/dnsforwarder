@@ -79,7 +79,7 @@ int StringChunk_Add(StringChunk *dl,
 
 	if( ContainWildCard(Str) )
 	{
-		NewEntry.OffsetOfString = StringList_Add(&(dl -> List_W), Str);
+		NewEntry.OffsetOfString = StringList_Add(&(dl -> List_W), Str, ',');
 
 		if( NewEntry.OffsetOfString >= 0 )
 		{
@@ -88,7 +88,7 @@ int StringChunk_Add(StringChunk *dl,
 			return -1;
 		}
 	} else {
-		NewEntry.OffsetOfString = StringList_Add(&(dl -> List), Str);
+		NewEntry.OffsetOfString = StringList_Add(&(dl -> List), Str, ',');
 
 		if( NewEntry.OffsetOfString >= 0 )
 		{

@@ -31,7 +31,7 @@ typedef struct _AddressList {
 	/* An array of `struct _Address' */
 	Array		AddressList;
 
-	/* The `Counter' is used by `AddressList_Incr' and `AddressList_GetOne',
+	/* The `Counter' is used by `AddressList_Advance' and `AddressList_GetOne',
 	 * see them.
 	 */
 	_32BIT_UINT	Counter;
@@ -79,7 +79,7 @@ int AddressList_Add_From_String(__in	AddressList	*a,
  *  0 on success, a non-zero value otherwise.
  */
 
-int AddressList_Incr(__in AddressList *a);
+int AddressList_Advance(__in AddressList *a);
 /* Description:
  *  Increase a -> Counter by 1 .
  * Return value:

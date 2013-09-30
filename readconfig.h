@@ -2,6 +2,7 @@
 #define _READCONFIG_
 
 #include <stdio.h>
+#include "stringlist.h"
 #include "common.h"
 
 /* A valid line of a configuration file has the following structure:
@@ -37,7 +38,7 @@ typedef enum _MultilineStrategy{
 } MultilineStrategy;
 
 typedef union _VType{
-	char		*str;
+	const char	*str;
 	_32BIT_INT	INT32;
 	BOOL		boolean;
 } VType;
@@ -63,7 +64,11 @@ typedef struct _Option{
 	OptionType	Type;
 
 	/* Value holder */
-	VType		Holder;
+	struct {
+		StringList	str;
+		_32BIT_INT	INT32;
+		BOOL		boolean;
+	} Holder;
 
 	/* Caption */
 	char		Caption[CAPTION_MAX_SIZE + 1];
@@ -93,7 +98,11 @@ int ConfigAddOption(ConfigFileInfo *Info, char *KeyName, MultilineStrategy Strat
 
 int ConfigRead(ConfigFileInfo *Info);
 
-const char *ConfigGetString(ConfigFileInfo *Info, char *KeyName);
+const char *ConfigGetRawString(ConfigFileInfo *Info, char *KeyName);
+
+const StringList *ConfigGetStringList(ConfigFileInfo *Info, char *KeyName);
+
+_32BIT_INT ConfigGetNumberOfStrings(ConfigFileInfo *Info, char *KeyName);
 
 _32BIT_INT ConfigGetInt32(ConfigFileInfo *Info, char *KeyName);
 

@@ -4,6 +4,7 @@
 #include "stringchunk.h"
 #include "extendablebuffer.h"
 #include "domainstatistic.h"
+#include "utils.h"
 
 typedef struct _DomainInfo{
 	int		Count;
