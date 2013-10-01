@@ -29,7 +29,6 @@ static ThreadHandle	GetHosts_Thread;
 
 static RWLock		HostsLock;
 
-
 typedef struct _OffsetOrAddress{
 	_32BIT_INT	Offset;
 } OffsetOfHosts;
@@ -47,60 +46,41 @@ typedef struct _HostsContainer{
 volatile HostsContainer	*MainContainer = NULL;
 
 /* These two below once inited, is never changed */
-static const StringList	*AppendedHosts;
+static StringList	*AppendedHosts;
 static int			AppendedNum = 0;
 
 typedef enum _HostsRecordType{
+	HOSTS_TYPE_TOO_LONG = -1,
+
 	HOSTS_TYPE_UNKNOWN = 0,
-	HOSTS_TYPE_WILDCARD_MASK = 1,
 
 	HOSTS_TYPE_A = 1 << 1,
-	HOSTS_TYPE_A_W = HOSTS_TYPE_A | HOSTS_TYPE_WILDCARD_MASK,
 
 	HOSTS_TYPE_AAAA = 1 << 2,
-	HOSTS_TYPE_AAAA_W = HOSTS_TYPE_AAAA | HOSTS_TYPE_WILDCARD_MASK,
 
 	HOSTS_TYPE_CNAME = 1 << 3,
-	HOSTS_TYPE_CNAME_W = HOSTS_TYPE_CNAME | HOSTS_TYPE_WILDCARD_MASK,
 
 	HOSTS_TYPE_EXCLUEDE = 1 << 4,
-	HOSTS_TYPE_EXCLUEDE_W = HOSTS_TYPE_EXCLUEDE | HOSTS_TYPE_WILDCARD_MASK
 
-}HostsRecordType;
+} HostsRecordType;
 
-static HostsRecordType Edition(const char *item)
+typedef struct _HostsRecord{
+	char			Domain[256];
+	char			IPOrCName[256];
+	HostsRecordType Type;
+} HostsRecord;
+
+static HostsRecordType DetermineIPTypes(const char *item)
 {
-	HostsRecordType WildCard;
-
 	if( item == NULL )
 	{
 		return HOSTS_TYPE_UNKNOWN;
 	}
 
-	for(; isspace(*item); ++item);
-
-	/* Check if it is a Hosts item */
-	if( strchr(item, ' ') == NULL && strchr(item, '\t') == NULL )
-	{
-		return HOSTS_TYPE_UNKNOWN;
-	}
-
+	/* A hosts item started by "@@ " is excluded */
 	if( *item == '@' && *(item + 1) == '@' )
 	{
-		if( ContainWildCard(item + 1) )
-		{
-			return HOSTS_TYPE_EXCLUEDE_W;
-		} else {
-			return HOSTS_TYPE_EXCLUEDE;
-		}
-	}
-
-	/* Check if it contain wildcard */
-	if( ContainWildCard(item) )
-	{
-		WildCard = HOSTS_TYPE_WILDCARD_MASK;
-	} else {
-		WildCard = HOSTS_TYPE_UNKNOWN;
+		return HOSTS_TYPE_EXCLUEDE;
 	}
 
 	if( isxdigit(*item) )
@@ -109,23 +89,23 @@ static HostsRecordType Edition(const char *item)
 		/* Check if it is IPv6 */
 		if( strchr(item, ':') != NULL )
 		{
-			return HOSTS_TYPE_AAAA | WildCard;
+			return HOSTS_TYPE_AAAA;
 		}
 
 		/* Check if it is CNAME */
-		for(Itr = item; !isspace(*Itr) ; ++Itr)
+		for(Itr = item; *Itr != '\0'; ++Itr)
 		{
 			if( isalpha(*Itr) )
 			{
-				return HOSTS_TYPE_CNAME | WildCard;
+				return HOSTS_TYPE_CNAME;
 			}
 		}
 
-		for(Itr = item; !isspace(*Itr) ; ++Itr)
+		for(Itr = item; *Itr != '\0'; ++Itr)
 		{
 			if( isdigit(*Itr) || *Itr == '.' )
 			{
-				return HOSTS_TYPE_A | WildCard;
+				return HOSTS_TYPE_A;
 			}
 		}
 
@@ -135,10 +115,10 @@ static HostsRecordType Edition(const char *item)
 
 		if( *item == ':' )
 		{
-			return HOSTS_TYPE_AAAA | WildCard;
+			return HOSTS_TYPE_AAAA;
 		}
 
-		for(; !isspace(*item) ; ++item)
+		for(; *item != '\0'; ++item)
 		{
 			if( !isalnum(*item) && *item != '.' )
 			{
@@ -146,32 +126,72 @@ static HostsRecordType Edition(const char *item)
 			}
 		}
 
-		return HOSTS_TYPE_CNAME | WildCard;
+		return HOSTS_TYPE_CNAME;
 	}
 }
 
-static void GetCount(	FILE *fp,
-						int *IPv4,
-						int *IPv6,
-						int *IPv4W,
-						int *IPv6W,
-						int *CName,
-						int *CNameW,
-						int *Disabled,
-						int *DisabledW
+static void RefineARecord(HostsRecord *Record, const char *RawRecord)
+{
+	for(; isspace(*RawRecord); ++RawRecord);
+
+	if( *RawRecord != '/' )
+	{
+		const char *Space;
+
+		for( Space = RawRecord; !isspace(*Space) && *Space != '\0'; ++Space );
+
+		if( *Space == '\0' )
+		{
+			return;
+		}
+
+		strncpy(Record -> IPOrCName, RawRecord, Space - RawRecord);
+		Record -> IPOrCName[Space - RawRecord] = '\0';
+
+		for(; isspace(*Space); ++Space);
+
+		strcpy(Record -> Domain, Space);
+
+	} else {
+		if( strchr(RawRecord + 1, '/') == NULL )
+		{
+			return;
+		}
+
+		sscanf(RawRecord, "/%[^/]/%s", Record -> Domain, Record -> IPOrCName);
+	}
+
+	Record -> Type = DetermineIPTypes(Record -> IPOrCName);
+
+	if( strlen(Record -> Domain) > DOMAIN_NAME_LENGTH_MAX )
+	{
+		Record -> Type = HOSTS_TYPE_TOO_LONG;
+	}
+
+	if( Record -> Type == HOSTS_TYPE_CNAME && strlen(Record -> IPOrCName) > DOMAIN_NAME_LENGTH_MAX )
+	{
+		Record -> Type = HOSTS_TYPE_TOO_LONG;
+	}
+
+}
+
+static int LoadMetaInfo(	FILE *fp,
+							Array *MetaInfo,
+							int *IPv4,
+							int *IPv6,
+							int *CName,
+							int *Disabled
 						)
 {
+	HostsRecord		Record;
+
 	char			Buffer[320];
 	ReadLineStatus	Status;
 
 	*IPv4 = 0;
 	*IPv6 = 0;
-	*IPv4W = 0;
-	*IPv6W = 0;
 	*CName = 0;
-	*CNameW = 0;
 	*Disabled = 0;
-	*DisabledW = 0;
 
 	if( fp != NULL )
 	{
@@ -182,40 +202,49 @@ static void GetCount(	FILE *fp,
 			if( Status == READ_FAILED_OR_END )
 				break;
 
-			switch( Edition(Buffer) )
+			RefineARecord(&Record, Buffer);
+
+			switch( Record.Type )
 			{
+				case HOSTS_TYPE_TOO_LONG:
+					ERRORMSG("Hosts is too long : %s\n", Buffer);
+					break;
+
+				case HOSTS_TYPE_UNKNOWN:
+					ERRORMSG("Unrecognisable host : %s\n", Buffer);
+					break;
+
 				case HOSTS_TYPE_AAAA:
 					++(*IPv6);
+					Array_PushBack(MetaInfo, &Record, NULL);
 					break;
-				case HOSTS_TYPE_AAAA_W:
-					++(*IPv6W);
-					break;
+
 				case HOSTS_TYPE_A:
 					++(*IPv4);
+					Array_PushBack(MetaInfo, &Record, NULL);
 					break;
-				case HOSTS_TYPE_A_W:
-					++(*IPv4W);
-					break;
+
 				case HOSTS_TYPE_CNAME:
 					++(*CName);
+					Array_PushBack(MetaInfo, &Record, NULL);
 					break;
-				case HOSTS_TYPE_CNAME_W:
-					++(*CNameW);
-					break;
+
 				case HOSTS_TYPE_EXCLUEDE:
 					++(*Disabled);
+					Array_PushBack(MetaInfo, &Record, NULL);
 					break;
-				case HOSTS_TYPE_EXCLUEDE_W:
-					++(*DisabledW);
-					break;
+
 				default:
 					break;
 			}
 
 			if( Status == READ_TRUNCATED )
 			{
+				ERRORMSG("Hosts is too long : %s\n", Buffer);
 				while( Status == READ_TRUNCATED )
+				{
 					Status = ReadLine(fp, Buffer, sizeof(Buffer));
+				}
 				goto READDONE;
 			}
 		}
@@ -226,53 +255,56 @@ static void GetCount(	FILE *fp,
 	{
 		const char *Appended;
 
-		for(Appended = StringList_GetNext(AppendedHosts, NULL);
-			Appended != NULL;
-			Appended = StringList_GetNext(AppendedHosts, Appended)
-			)
+		Appended = StringList_GetNext(AppendedHosts, NULL);
+		while( Appended != NULL )
 		{
-			switch( Edition(Appended) )
+			RefineARecord(&Record, Appended);
+
+			switch( Record.Type )
 			{
+				case HOSTS_TYPE_TOO_LONG:
+					ERRORMSG("Hosts is too long : %s\n", Buffer);
+					break;
+
+				case HOSTS_TYPE_UNKNOWN:
+					ERRORMSG("Unrecognisable host : %s\n", Buffer);
+					break;
+
 				case HOSTS_TYPE_AAAA:
 					++(*IPv6);
+					Array_PushBack(MetaInfo, &Record, NULL);
 					break;
-				case HOSTS_TYPE_AAAA_W:
-					++(*IPv6W);
-					break;
+
 				case HOSTS_TYPE_A:
 					++(*IPv4);
+					Array_PushBack(MetaInfo, &Record, NULL);
 					break;
-				case HOSTS_TYPE_A_W:
-					++(*IPv4W);
-					break;
+
 				case HOSTS_TYPE_CNAME:
 					++(*CName);
+					Array_PushBack(MetaInfo, &Record, NULL);
 					break;
-				case HOSTS_TYPE_CNAME_W:
-					++(*CNameW);
-					break;
+
 				case HOSTS_TYPE_EXCLUEDE:
 					++(*Disabled);
+					Array_PushBack(MetaInfo, &Record, NULL);
 					break;
-				case HOSTS_TYPE_EXCLUEDE_W:
-					++(*DisabledW);
-					break;
+
 				default:
 					break;
 			}
+
+			Appended = StringList_GetNext(AppendedHosts, Appended);
 		}
 	}
+	return 0;
 }
 
 static int InitHostsContainer(	HostsContainer	*Container,
 								int			IPv4Count,
 								int			IPv6Count,
-								int			IPv4WCount,
-								int			IPv6WCount,
 								int			CNameCount,
-								int			CNameWCount,
-								int			ExcludedCount,
-								int			ExcludedCountW
+								int			ExcludedCount
 								)
 {
 
@@ -360,50 +392,33 @@ static _32BIT_INT IdenticalToLast(HostsContainer	*Container,
 
 }
 
-static int AddHosts(HostsContainer *Container, char *src)
+static int AddHosts(HostsContainer *Container, HostsRecord *MetaInfo)
 {
-	/* Domain position */
-	char		*itr;
 	OffsetOfHosts	r;
-	char		CurrentIP[16];
+	char			NumericIP[16];
 
-	switch( Edition(src) )
+	if( MetaInfo == NULL )
 	{
-		case HOSTS_TYPE_UNKNOWN:
-			ERRORMSG("Unrecognisable host : %s\n", src);
-			return 0;
-			break;
+		return 1;
+	}
 
+	switch( MetaInfo -> Type )
+	{
 		case HOSTS_TYPE_AAAA:
-		case HOSTS_TYPE_AAAA_W:
-
-			for(itr = src; !isspace(*itr); ++itr);
-			*itr = '\0';
-
-			for(++itr; isspace(*itr); ++itr);
-
-			if( strlen(itr) > DOMAIN_NAME_LENGTH_MAX )
+			if( StringChunk_Match_NoWildCard(&(Container -> Ipv6Hosts), MetaInfo -> Domain, NULL) == TRUE )
 			{
-				ERRORMSG("Hosts domain is too long : %s\n", itr);
+				INFO("IPv6 Hosts is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
 				return 0;
 			}
 
-			if( StringChunk_Match_NoWildCard(&(Container -> Ipv6Hosts), itr, NULL) == TRUE )
-			{
-				INFO("IPv6 Hosts domain is duplicated : %s, take only the first occurrence.\n", itr);
-				return 0;
-			}
+			IPv6AddressToNum(MetaInfo -> IPOrCName, NumericIP);
 
-			IPv6AddressToNum(src, CurrentIP);
-
-			r.Offset = IdenticalToLast(Container, HOSTS_TYPE_AAAA, CurrentIP, 16);
-
+			r.Offset = IdenticalToLast(Container, HOSTS_TYPE_AAAA, NumericIP, 16);
 
 			if( r.Offset < 0 )
 			{
 
-
-				r.Offset = ExtendableBuffer_Add(&(Container -> IPs), CurrentIP, 16);
+				r.Offset = ExtendableBuffer_Add(&(Container -> IPs), NumericIP, 16);
 
 				if( r.Offset < 0 )
 				{
@@ -412,38 +427,25 @@ static int AddHosts(HostsContainer *Container, char *src)
 
 			}
 
-			StringChunk_Add(&(Container -> Ipv6Hosts), itr, (const char *)&r, sizeof(OffsetOfHosts));
+			StringChunk_Add(&(Container -> Ipv6Hosts), MetaInfo -> Domain, (const char *)&r, sizeof(OffsetOfHosts));
 
 			break;
 
 		case HOSTS_TYPE_A:
-		case HOSTS_TYPE_A_W:
-
-			for(itr = src; !isspace(*itr); ++itr);
-			*itr = '\0';
-
-			for(++itr; isspace(*itr); ++itr);
-
-			if( strlen(itr) > DOMAIN_NAME_LENGTH_MAX )
+			if( StringChunk_Match_NoWildCard(&(Container -> Ipv4Hosts), MetaInfo -> Domain, NULL) == TRUE )
 			{
-				ERRORMSG("Hosts domain is too long : %s\n", itr);
+				INFO("IPv4 Hosts domain is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
 				return 0;
 			}
 
-			if( StringChunk_Match_NoWildCard(&(Container -> Ipv4Hosts), itr, NULL) == TRUE )
-			{
-				INFO("IPv4 Hosts domain is duplicated : %s, take only the first occurrence.\n", itr);
-				return 0;
-			}
+			IPv4AddressToNum(MetaInfo -> IPOrCName, NumericIP);
 
-			IPv4AddressToNum(src, CurrentIP);
-
-			r.Offset = IdenticalToLast(Container, HOSTS_TYPE_A, CurrentIP, 4);
+			r.Offset = IdenticalToLast(Container, HOSTS_TYPE_A, NumericIP, 4);
 
 			if( r.Offset < 0 )
 			{
 
-				r.Offset = ExtendableBuffer_Add(&(Container -> IPs), CurrentIP, 4);
+				r.Offset = ExtendableBuffer_Add(&(Container -> IPs), NumericIP, 4);
 
 				if( r.Offset < 0 )
 				{
@@ -452,36 +454,23 @@ static int AddHosts(HostsContainer *Container, char *src)
 
 			}
 
-			StringChunk_Add(&(Container -> Ipv4Hosts), itr, (const char *)&r, sizeof(OffsetOfHosts));
+			StringChunk_Add(&(Container -> Ipv4Hosts), MetaInfo -> Domain, (const char *)&r, sizeof(OffsetOfHosts));
 
 			break;
 
 		case HOSTS_TYPE_CNAME:
-		case HOSTS_TYPE_CNAME_W:
-
-			for(itr = src; !isspace(*itr); ++itr);
-			*itr = '\0';
-
-			for(++itr; isspace(*itr); ++itr);
-
-			if( strlen(itr) > DOMAIN_NAME_LENGTH_MAX || strlen(src) > DOMAIN_NAME_LENGTH_MAX )
+			if( StringChunk_Match_NoWildCard(&(Container -> CNameHosts), MetaInfo -> Domain, NULL) == TRUE )
 			{
-				ERRORMSG("Hosts domain is too long : %s\n", itr);
+				INFO("CName Hosts domain is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
 				return 0;
 			}
 
-			if( StringChunk_Match_NoWildCard(&(Container -> CNameHosts), itr, NULL) == TRUE )
-			{
-				INFO("CName Hosts domain is duplicated : %s, take only the first occurrence.\n", itr);
-				return 0;
-			}
-
-			r.Offset = IdenticalToLast(Container, HOSTS_TYPE_CNAME, src, strlen(src) + 1);
+			r.Offset = IdenticalToLast(Container, HOSTS_TYPE_CNAME, MetaInfo -> IPOrCName, strlen(MetaInfo -> IPOrCName) + 1);
 
 			if( r.Offset < 0 )
 			{
 
-				r.Offset = ExtendableBuffer_Add(&(Container -> IPs), src, strlen(src) + 1);
+				r.Offset = ExtendableBuffer_Add(&(Container -> IPs), MetaInfo -> IPOrCName, strlen(MetaInfo -> IPOrCName) + 1);
 
 				if( r.Offset < 0 )
 				{
@@ -490,34 +479,20 @@ static int AddHosts(HostsContainer *Container, char *src)
 
 			}
 
-			StringChunk_Add(&(Container -> CNameHosts), itr, (const char *)&r, sizeof(OffsetOfHosts));
+			StringChunk_Add(&(Container -> CNameHosts), MetaInfo -> Domain, (const char *)&r, sizeof(OffsetOfHosts));
 
 			break;
 
 		case HOSTS_TYPE_EXCLUEDE:
-		case HOSTS_TYPE_EXCLUEDE_W:
-
-			for(itr = src; !isspace(*itr); ++itr);
-			*itr = '\0';
-
-			for(++itr; isspace(*itr); ++itr);
-
-			if( strlen(itr) > DOMAIN_NAME_LENGTH_MAX )
+			if( StringChunk_Match_NoWildCard(&(Container -> ExcludedDomains), MetaInfo -> Domain, NULL) == TRUE )
 			{
-				ERRORMSG("Hosts domain is too long : %s\n", itr);
+				INFO("Excluded Hosts domain is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
 				return 0;
 			}
 
-			if( StringChunk_Match_NoWildCard(&(Container -> ExcludedDomains), itr, NULL) == TRUE )
-			{
-				INFO("Excluded Hosts domain is duplicated : %s, take only the first occurrence.\n", itr);
-				return 0;
-			}
-
-			StringChunk_Add(&(Container -> ExcludedDomains), itr, NULL, 0);
+			StringChunk_Add(&(Container -> ExcludedDomains), MetaInfo -> Domain, NULL, 0);
 
 			break;
-
 
 		default:
 			break;
@@ -525,94 +500,30 @@ static int AddHosts(HostsContainer *Container, char *src)
 	return 0;
 }
 
-static int LoadFileHosts(FILE *fp, HostsContainer *Container)
+static int LoadFromMetaInfo(HostsContainer *Container, Array *MetaList)
 {
-	char			Buffer[256];
+	HostsRecord *MetaInfo = NULL;
 
-	ReadLineStatus	Status;
-
-	if( fp == NULL )
+	int loop;
+	for( loop = 0; loop != Array_GetUsed(MetaList); ++loop )
 	{
-		return 1;
-	}
-
-	while(TRUE)
-	{
-		Status = ReadLine(fp, Buffer, sizeof(Buffer));
-SWITCH:
-		switch(Status)
+		MetaInfo = (HostsRecord *)Array_GetBySubscript(MetaList, loop);
+		if( AddHosts(Container, MetaInfo) != 0 )
 		{
-			case READ_FAILED_OR_END:
-				goto DONE;
-
-			case READ_DONE:
-/*
-                {
-                    char *itr;
-
-                    for(itr = Buffer + strlen(Buffer) - 1; (*itr == '\r' || *itr == '\n') && itr != Buffer; --itr)
-                    {
-                        *itr = '\0';
-					}
-
-                }
-*/
-				if( AddHosts(Container, Buffer) != 0 )
-				{
-					return 1;
-				}
-
-				break;
-
-			case READ_TRUNCATED:
-				if( strlen(Buffer) > sizeof(Buffer) - 1 )
-				{
-					ERRORMSG("Hosts Item is too long : %s\n", Buffer);
-					do
-					{
-						Status = ReadLine(fp, Buffer, sizeof(Buffer));
-					}
-					while( Status == READ_TRUNCATED );
-					goto SWITCH;
-				}
-				break;
+			return -1;
 		}
 	}
-DONE:
-	return 0;
-}
 
-static int LoadAppendHosts(HostsContainer *Container)
-{
-	if( AppendedNum > 0 )
-	{
-		const char *Appended;
-		char Changable[256];
-
-		for(Appended = StringList_GetNext(AppendedHosts, NULL); Appended != NULL; Appended = StringList_GetNext(AppendedHosts, Appended))
-		{
-			Changable[sizeof(Changable) - 1] = '\0';
-			strncpy(Changable, Appended, sizeof(Changable));
-			if( Changable[sizeof(Changable) - 1] == '\0' )
-			{
-				if( AddHosts(Container, Changable) != 0 )
-				{
-					return 1;
-				}
-			}
-		}
-	}
 	return 0;
 }
 
 static int LoadHosts(void)
 {
 	FILE	*fp;
-	int		Status = 1;
 
 	int		IPv4Count, IPv6Count, CNameCount, ExcludedCount;
-	int		IPv4WCount, IPv6WCount, CNameWCount, ExcludedCountW;
 
+	Array	MetaInfo;
 	HostsContainer *TempContainer;
 
 	if( File != NULL)
@@ -622,49 +533,33 @@ static int LoadHosts(void)
 		fp = NULL;
 	}
 
-	GetCount(fp, &IPv4Count, &IPv6Count, &IPv4WCount, &IPv6WCount, &CNameCount, &CNameWCount, &ExcludedCount, &ExcludedCountW);
-
-	TempContainer = (HostsContainer *)SafeMalloc(sizeof(HostsContainer));
-	if( TempContainer == NULL )
+	if( Array_Init(&MetaInfo, sizeof(HostsRecord), 128, FALSE, NULL) != 0 )
 	{
 		return -1;
 	}
 
-	if( InitHostsContainer(TempContainer,
-							IPv4Count,
-							IPv6Count,
-							IPv4WCount,
-							IPv6WCount,
-							CNameCount,
-							CNameWCount,
-							ExcludedCount,
-							ExcludedCountW
-							)
-		!= 0 )
+	LoadMetaInfo(fp, &MetaInfo, &IPv4Count, &IPv6Count, &CNameCount, &ExcludedCount);
+
+	TempContainer = (HostsContainer *)SafeMalloc(sizeof(HostsContainer));
+	if( TempContainer == NULL )
+	{
+		Array_Free(&(MetaInfo));
+		return -1;
+	}
+
+	if( InitHostsContainer(TempContainer, IPv4Count, IPv6Count, CNameCount, ExcludedCount) != 0 )
 	{
 		if( fp != NULL)
 		{
 			fclose(fp);
 		}
+
 		SafeFree(TempContainer);
-		return 1;
+		Array_Free(&(MetaInfo));
+		return -1;
 	}
 
-	if( AppendedNum > 0 )
-	{
-		int s;
-		s = LoadAppendHosts(TempContainer);
-		Status = Status && !s;
-	}
-
-	if( fp != NULL )
-	{
-		int s;
-		s = LoadFileHosts(fp, TempContainer);
-		Status = Status && !s;
-	}
-
-	if( Status != 0 )
+	if( LoadFromMetaInfo(TempContainer, &MetaInfo) == 0 )
 	{
 		RWLock_WrLock(HostsLock);
 		if( MainContainer != NULL )
@@ -676,21 +571,21 @@ static int LoadHosts(void)
 
 		RWLock_UnWLock(HostsLock);
 
-		INFO("Loading Hosts completed, %d IPv4 Hosts, %d IPv6 Hosts, %d CName Hosts, %d items are excluded, %d Hosts containing wildcards.\n",
-			IPv4Count + IPv4WCount,
-			IPv6Count + IPv6WCount,
-			CNameCount + CNameWCount,
-			ExcludedCount + ExcludedCountW,
-			IPv4WCount + IPv6WCount + CNameWCount + ExcludedCountW);
+		INFO("Loading Hosts completed, %d IPv4 Hosts, %d IPv6 Hosts, %d CName Hosts, %d items are excluded.\n",
+			IPv4Count,
+			IPv6Count,
+			CNameCount,
+			ExcludedCount);
+
+		Array_Free(&(MetaInfo));
 		return 0;
 	} else {
 		SafeFree(TempContainer);
+		Array_Free(&(MetaInfo));
 		return -1;
 	}
 
 }
-
-
 
 static BOOL NeedReload(void)
 {
@@ -809,15 +704,31 @@ static void GetHostsFromInternet_Thread(void *Unused)
 	}
 }
 
+static int InitAppendedHostsContainer(void)
+{
+	AppendedHosts = ConfigGetStringList(&ConfigInfo, "AppendHosts");
+
+	if( AppendedHosts == NULL )
+	{
+		AppendedHosts = ConfigGetStringList(&ConfigInfo, "address");
+	} else {
+		StringList_Catenate(AppendedHosts, ConfigGetStringList(&ConfigInfo, "address"));
+	}
+
+	AppendedNum = StringList_Count(AppendedHosts);
+
+	return AppendedNum;
+}
+
 int Hosts_Init(void)
 {
 	const char	*Path;
 
 	Path = ConfigGetRawString(&ConfigInfo, "Hosts");
-	AppendedHosts = ConfigGetStringList(&ConfigInfo, "AppendHosts");
 
+	InitAppendedHostsContainer();
 
-	if( Path == NULL && AppendedHosts == NULL )
+	if( Path == NULL && AppendedNum <=0 )
 	{
 		Inited = FALSE;
 		return 0;
@@ -826,8 +737,7 @@ int Hosts_Init(void)
 	FlushTime = ConfigGetInt32(&ConfigInfo, "HostsFlushTime");
 	RWLock_Init(HostsLock);
 
-	AppendedNum = ConfigGetNumberOfStrings(&ConfigInfo, "AppendHosts");
-
+	/* If hosts file is desinated */
 	if( Path != NULL )
 	{
 		if( strncmp(Path, "http", 4) != 0 && strncmp(Path, "ftp", 3) != 0 )
