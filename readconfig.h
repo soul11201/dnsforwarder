@@ -100,7 +100,7 @@ int ConfigRead(ConfigFileInfo *Info);
 
 const char *ConfigGetRawString(ConfigFileInfo *Info, char *KeyName);
 
-const StringList *ConfigGetStringList(ConfigFileInfo *Info, char *KeyName);
+StringList *ConfigGetStringList(ConfigFileInfo *Info, char *KeyName);
 
 _32BIT_INT ConfigGetNumberOfStrings(ConfigFileInfo *Info, char *KeyName);
 

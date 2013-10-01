@@ -108,17 +108,22 @@ static ConfigOption *GetOptionOfAInfo(const ConfigFileInfo *Info, const char *Ke
 static char *GetKeyNameFromLine(const char *Line, char *Buffer)
 {
 	const char	*itr = Line;
-	const char	*SpacePosition;
+	const char	*Delimiter;
 
 	for(; isspace(*itr); ++itr);
 
-	SpacePosition = strchr(itr, ' ');
+	Delimiter = strchr(itr, ' ');
 
-	if(SpacePosition == NULL)
+	if( Delimiter == NULL )
+	{
+		Delimiter = strchr(itr, '=');
+	}
+
+	if(Delimiter == NULL)
 		return NULL;
 
-	strncpy(Buffer, itr, SpacePosition - Line);
-	Buffer[SpacePosition - Line] = '\0';
+	strncpy(Buffer, itr, Delimiter - Line);
+	Buffer[Delimiter - Line] = '\0';
 
 	return Buffer;
 }
@@ -132,7 +137,16 @@ static const char *GetValuePosition(const char *Line)
 	itr = strchr(itr, ' ');
 
 	if(itr == NULL)
+	{
+		itr = strchr(Line, '=');
+	}
+
+	if( itr == NULL )
+	{
 		return NULL;
+	}
+
+	++itr;
 
 	for(; isspace(*itr) && *itr != '\0'; ++itr);
 
@@ -333,10 +347,11 @@ const char *ConfigGetRawString(ConfigFileInfo *Info, char *KeyName)
 			}
 		}
 	}
-	return 0;
+
+	return NULL;
 }
 
-const StringList *ConfigGetStringList(ConfigFileInfo *Info, char *KeyName)
+StringList *ConfigGetStringList(ConfigFileInfo *Info, char *KeyName)
 {
 	int loop;
 	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
@@ -352,7 +367,7 @@ const StringList *ConfigGetStringList(ConfigFileInfo *Info, char *KeyName)
 		}
 
 	}
-	return 0;
+	return NULL;
 }
 
 _32BIT_INT ConfigGetNumberOfStrings(ConfigFileInfo *Info, char *KeyName)
@@ -387,7 +402,7 @@ BOOL ConfigGetBoolean(ConfigFileInfo *Info, char *KeyName)
 		if( Info -> Options[loop].Type == TYPE_BOOLEAN && strncmp(Info -> Options[loop].KeyName, KeyName, KEY_NAME_MAX_SIZE) == 0 )
 			return Info -> Options[loop].Holder.boolean;
 	}
-	return 0;
+	return FALSE;
 }
 
 void ConfigSetValue(ConfigFileInfo *Info, VType Value, char *KeyName)

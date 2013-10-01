@@ -173,6 +173,9 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     TmpTypeDescriptor.str = TmpStr;
     ConfigAddOption(&ConfigInfo, "GfwListDownloadPath", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, NULL);
 
+    TmpTypeDescriptor.str = NULL;
+    ConfigAddOption(&ConfigInfo, "address", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
+
 	if( ConfigOpenFile(&ConfigInfo, ConfigFile) == 0 )
 	{
 		ConfigRead(&ConfigInfo);

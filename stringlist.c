@@ -154,3 +154,13 @@ _32BIT_INT StringList_AppendLast(StringList *s, const char *str, char Delimiter)
 
 	return 0;
 }
+
+void StringList_Catenate(StringList *des, StringList *src)
+{
+	if( des == NULL || src == NULL )
+	{
+		return;
+	}
+
+	ExtendableBuffer_Add(des, src -> Data, src -> Used);
+}

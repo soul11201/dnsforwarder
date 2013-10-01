@@ -18,6 +18,8 @@ _32BIT_INT StringList_Add(StringList *s, const char *str, char Delimiter);
 
 _32BIT_INT StringList_AppendLast(StringList *s, const char *str, char Delimiter);
 
+void StringList_Catenate(StringList *des, StringList *src);
+
 #define	StringList_GetByOffset(s_ptr, offset)	((const char *)((s_ptr) -> Data + (offset)))
 
 #define StringList_Clear(s_ptr)	(ExtendableBuffer_Reset(s_ptr))
