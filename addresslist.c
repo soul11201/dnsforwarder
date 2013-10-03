@@ -12,9 +12,14 @@ int AddressList_Init(AddressList *a)
 		return 0;
 	}
 
-	if( Array_Init(&(a ->AddressList), sizeof(struct _Address), 8, FALSE, NULL) != 0 )
+	if( Array_Init(&(a -> AddressList), sizeof(struct _Address), 8, FALSE, NULL) != 0 )
 	{
 		return -1;
+	}
+
+	if( StringChunk_Init(&(a -> Specitied), NumberOfSpeified) != 0 )
+	{
+		return -2;
 	}
 
 	a -> Counter = 0;

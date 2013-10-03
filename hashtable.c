@@ -3,6 +3,8 @@
 #include "common.h"
 #include "utils.h"
 
+#define	GET_SLOT_SUBSCRIPT(d)	(-1) * (d) - 1)
+
 int HashTable_CalculateAppropriateSlotCount(int ElementCount)
 {
 	if( ElementCount > 10 )
@@ -97,7 +99,7 @@ int HashTable_CreateNewNode(HashTable *h, NodeHead **Out, void *Boundary /* Only
 	}
 
 	NewNode = (NodeHead *)Array_GetBySubscript(NodeChunk, NewNode_i);
-	NewNode -> Next = HASHTABLE_NODE_NEWLY_CREATED;
+	NewNode -> Next = HASHTABLE_NODE_STRAY;
 
 	if( Out != NULL )
 	{
@@ -106,8 +108,6 @@ int HashTable_CreateNewNode(HashTable *h, NodeHead **Out, void *Boundary /* Only
 
 	return NewNode_i;
 }
-
-
 
 _32BIT_INT HashTable_FindUnusedNode(HashTable *h,
 									NodeHead **Out,
@@ -163,12 +163,11 @@ _32BIT_INT HashTable_FindUnusedNode(HashTable *h,
 
 _32BIT_INT HashTable_FetchNode(HashTable *h, NodeHead *Node)
 {
-	_32BIT_INT	NextNode;
 	Array		*NodeChunk;
 
-	if( Node -> Next == HASHTABLE_NODE_NEWLY_CREATED )
+	if( Node -> Next == HASHTABLE_NODE_STRAY )
 	{
-		return -1;
+		return 0;
 	}
 
 	NodeChunk = &(h -> NodeChunk);
@@ -189,19 +188,17 @@ _32BIT_INT HashTable_FetchNode(HashTable *h, NodeHead *Node)
 		PreviousRemovedNode -> Prev = Node -> Prev;
 	}
 
-	NextNode = Node -> Next;
+	Node -> Next = HASHTABLE_NODE_STRAY;
+	Node -> Prev = HASHTABLE_NODE_STRAY;
 
-	Node -> Next = HASHTABLE_NODE_FREE;
-	Node -> Prev = HASHTABLE_NODE_FREE;
-
-	return NextNode;
+	return 0;
 }
 
-int HashTable_AddByNode(HashTable *h,
-						const char *Key,
-						int KeyLength,
-						int Node_index,
-						NodeHead *Node
+int HashTable_AddByNode(HashTable	*h,
+						const char	*Key,
+						int			KeyLength,
+						int			Node_index,
+						NodeHead	*Node
 						)
 {
 	int			Slot_i;
@@ -229,20 +226,13 @@ int HashTable_AddByNode(HashTable *h,
 
 int HashTable_Add(HashTable *h, const char *Key, int KeyLength, void *Data)
 {
-	_32BIT_INT	Slot_i;
-	NodeHead	*Slot;
 	_32BIT_INT	NewNode_i;
 	NodeHead	*NewNode = NULL;
-
-	Slot_i = (h -> HashFunction)(Key, KeyLength) % (h -> Slots.Allocated - 1);
-	Slot = (NodeHead *)Array_GetBySubscript(&(h -> Slots), Slot_i);
-	if( Slot == NULL )
-		return -2;
 
 	NewNode_i = HashTable_FindUnusedNode(h, &NewNode, -1, NULL, TRUE);
 
 	if( NewNode_i < 0 )
-		return -3;
+		return -1;
 
 	HashTable_FetchNode(h, NewNode);
 
@@ -282,19 +272,24 @@ int HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *Nod
 	/* If this node has not been removed */
 	if( Node -> Next != HASHTABLE_NODE_FREE )
 	{
-		/* If this node is not tail */
-		if( Node -> Next >= 0 )
-		{
-			((NodeHead *)Array_GetBySubscript(NodeChunk, Node -> Next)) -> Prev = Node -> Prev;
-		}
 
-		if( Node -> Prev < 0 )
+		/* If this node is not a stray node */
+		if( Node -> Next != HASHTABLE_NODE_STRAY )
 		{
-			/* If prev is a slot */
-			((NodeHead *)Array_GetBySubscript(&(h -> Slots), (-1) * (Node -> Prev) - 1)) -> Next = Node -> Next;
-		} else {
-			/* If prev is a node. */
-			((NodeHead *)Array_GetBySubscript(NodeChunk, Node -> Prev)) -> Next = Node -> Next;
+			/* If this node is not tail */
+			if( Node -> Next >= 0 )
+			{
+				((NodeHead *)Array_GetBySubscript(NodeChunk, Node -> Next)) -> Prev = Node -> Prev;
+			}
+
+			if( Node -> Prev < 0 )
+			{
+				/* Prev is a slot */
+				((NodeHead *)Array_GetBySubscript(&(h -> Slots), GET_SLOT_SUBSCRIPT(Node -> Prev)) -> Next = Node -> Next;
+			} else {
+				/* Prev is a node. */
+				((NodeHead *)Array_GetBySubscript(NodeChunk, Node -> Prev)) -> Next = Node -> Next;
+			}
 		}
 
 		/* If this node is not the last one of NodeChunk, add it into free list,
@@ -330,7 +325,6 @@ int HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *Nod
 
 void *HashTable_Get(HashTable *h, const char *Key, int KeyLength, void *Start)
 {
-	int			Slot_i;
 	NodeHead	*Head;
 
 	if( h == NULL || Key == NULL)
@@ -338,10 +332,13 @@ void *HashTable_Get(HashTable *h, const char *Key, int KeyLength, void *Start)
 
 	if( Start == NULL )
 	{
-		Slot_i = (h -> HashFunction)(Key, KeyLength) % (h -> Slots.Allocated - 1);
-		Head = (NodeHead *)Array_GetBySubscript(&(h -> Slots), Slot_i);
+		int			Slot_i;
+		NodeHead	*Slot;
 
-		Head = (NodeHead *)Array_GetBySubscript(&(h -> NodeChunk), Head -> Next);
+		Slot_i = (h -> HashFunction)(Key, KeyLength) % (h -> Slots.Allocated - 1);
+		Slot = (NodeHead *)Array_GetBySubscript(&(h -> Slots), Slot_i);
+
+		Head = (NodeHead *)Array_GetBySubscript(&(h -> NodeChunk), Slot -> Next);
 		if( Head == NULL )
 			return NULL;
 

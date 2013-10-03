@@ -10,7 +10,6 @@
 #include "array.h"
 #include "common.h"
 
-
 struct _Address{
 
 	/* Union of address of IPv4 and IPv6 */
@@ -35,6 +34,7 @@ typedef struct _AddressList {
 	 * see them.
 	 */
 	_32BIT_UINT	Counter;
+
 } AddressList;
 
 
@@ -42,7 +42,7 @@ int AddressList_Init(__in AddressList *a);
 /* Description:
  *  Initialize an AddressList.
  * Parameters:
- *  a : The AddressList to be initialized.
+ *  a                : The AddressList to be initialized.
  * Return value:
  *  0 on success, a non-zero value otherwise.
  */

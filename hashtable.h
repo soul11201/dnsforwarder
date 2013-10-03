@@ -4,18 +4,18 @@
 #include "array.h"
 
 /* Tail of a linked list */
-#define	HASHTABLE_NODE_TAIL				(-1)
+#define	HASHTABLE_NODE_TAIL			(-1)
 
-#define	HASHTABLE_NODE_FREE				(-2)
+#define	HASHTABLE_NODE_FREE			(-2)
 
-#define	HASHTABLE_NODE_UNAVAILABLE		(-3)
+#define	HASHTABLE_NODE_UNAVAILABLE	(-3)
 
-#define	HASHTABLE_NODE_NEWLY_CREATED	(-4)
+#define	HASHTABLE_NODE_STRAY	(-4)
 
 typedef struct _NodeHead{
 	_32BIT_INT	Next; /* This value can be HASHTABLE_NODE_TAIL if this node is a end, HASHTABLE_NODE_FREE if this node has been removed, or a non-negative number otherwise. */
 	_32BIT_INT	Prev; /* If this value is negative, it denotes the subscript of Slots, Prev == (-1) * (Subscript + 1). A non-negative number otherwise. */
-}NodeHead;
+} NodeHead;
 
 typedef struct _HashTable{
 	Array		NodeChunk;

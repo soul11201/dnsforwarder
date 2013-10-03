@@ -22,6 +22,7 @@ int				TimeToServer;
 BOOL			FallBackToSecondary;
 BOOL			ShowMassages;
 BOOL			ErrorMessages;
+
 #ifdef INTERNAL_DEBUG
 EFFECTIVE_LOCK	Debug_Mutex;
 FILE			*Debug_File;
@@ -458,7 +459,7 @@ int InitAddress(void)
 }
 
 int QueryFromServerBase(SOCKET				*Socket,
-						struct	sockaddr	*PeerAddr,
+						struct	sockaddr	*Server,
 						sa_family_t			Family,
 						DNSQuaryProtocol	ProtocolToServer,
 						char				*QueryContent,
@@ -490,7 +491,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 	} else {
 		if(TCPSocketIsHealthy(Socket) == FALSE)
 		{
-			if(ConnectToTCPServer(Socket, PeerAddr, Family, TimeToServer) == FALSE)
+			if(ConnectToTCPServer(Socket, Server, Family, TimeToServer) == FALSE)
 			{
 				DomainStatistic_Add(QueryDomain, STATISTIC_TYPE_REFUSED);
 				return -2; /* Failed */
@@ -502,7 +503,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 	/* Querying from server */
 	if( ProtocolToServer == DNS_QUARY_PROTOCOL_UDP )
     {
-		State = DNSQueryOriginViaUDP(*Socket, (struct sockaddr *)PeerAddr, Family, QueryContent, QueryContentLength, ProtocolToSrc, Buffer);
+		State = DNSQueryOriginViaUDP(*Socket, (struct sockaddr *)Server, Family, QueryContent, QueryContentLength, ProtocolToSrc, Buffer);
     } else {
 		State = DNSQueryOriginViaTCP(*Socket, QueryContent, QueryContentLength, ProtocolToSrc, Buffer);
     }
