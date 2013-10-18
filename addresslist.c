@@ -17,11 +17,6 @@ int AddressList_Init(AddressList *a)
 		return -1;
 	}
 
-	if( StringChunk_Init(&(a -> Specitied), NumberOfSpeified) != 0 )
-	{
-		return -2;
-	}
-
 	a -> Counter = 0;
 	return 0;
 }

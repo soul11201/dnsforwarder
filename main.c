@@ -186,12 +186,13 @@ int ArgParse(int argc, char *argv_ori[])
     return 0;
 }
 
-int GetDefaultConfigureFile(char *out)
+int GetDefaultConfigureFile(char *out, int OutLength)
 {
-	GetFileDirectory(out);
 #ifdef WIN32
+	GetModulePath(out, OutLength);
 	strcat(out, "\\dnsforwarder.config");
 #else
+	GetConfigDirectory(out);
 	strcat(out, "/config");
 #endif
 	return 0;
@@ -220,7 +221,7 @@ int main(int argc, char *argv[])
 
 	if( ProgramArgs.ConfigFile_ptr == NULL )
 	{
-		GetDefaultConfigureFile(ProgramArgs.ConfigFile);
+		GetDefaultConfigureFile(ProgramArgs.ConfigFile, sizeof(ProgramArgs.ConfigFile));
 		ProgramArgs.ConfigFile_ptr = ProgramArgs.ConfigFile;
 	}
 

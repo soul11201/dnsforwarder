@@ -177,6 +177,8 @@ static BOOL GetBoolealValueFromString(char *str)
 		else if( strstr(str, "yes") != NULL )
 			return TRUE;
 	}
+
+	return FALSE;
 }
 
 int ConfigRead(ConfigFileInfo *Info)

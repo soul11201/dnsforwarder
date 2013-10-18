@@ -248,8 +248,7 @@ static int DNSQueryRawViaUDP(SOCKET				Sock,
 							 ){
 	int		AddrLen;
 	char	*NewFromServer;
-	int		LengthFromServer = 0;
-	int		LengthOfNewAllocated = 0;
+	static int	LengthOfNewAllocated = 2048;
 
 	int		ReceiveState = 0;
 
@@ -265,37 +264,29 @@ static int DNSQueryRawViaUDP(SOCKET				Sock,
 
 	if(sendto(Sock, Content, ContentLength, 0, PeerAddr, AddrLen) < 1) return -2;
 
-	do
+	if( Family == AF_INET )
 	{
-		if( Family == AF_INET )
-		{
-			AddrLen = sizeof(struct sockaddr);
-		} else {
-			AddrLen = sizeof(struct sockaddr_in6);
-		}
+		AddrLen = sizeof(struct sockaddr);
+	} else {
+		AddrLen = sizeof(struct sockaddr_in6);
+	}
 
-		NewFromServer = ExtendableBuffer_Expand(ResultBuffer, 384, NULL);
+	NewFromServer = ExtendableBuffer_Expand(ResultBuffer, LengthOfNewAllocated, NULL);
 
-		if( NewFromServer == NULL )
-		{
-			return -1;
-		}
+	if( NewFromServer == NULL )
+	{
+		return -1;
+	}
 
-		LengthOfNewAllocated += 384;
+	ReceiveState = recvfrom(Sock, NewFromServer, LengthOfNewAllocated, 0, PeerAddr, (socklen_t *)&AddrLen);
+	if( ReceiveState <= 0 )
+	{
+		return -1;
+	}
 
-		ReceiveState = recvfrom(Sock, NewFromServer, 384, 0, PeerAddr, (socklen_t *)&AddrLen);
-		if( ReceiveState > 0 )
-		{
-			LengthFromServer += ReceiveState;
-		} else {
-			return -1;
-		}
+	ExtendableBuffer_Eliminate_Tail(ResultBuffer, LengthOfNewAllocated - ReceiveState);
 
-	} while( SocketIsStillReadable(Sock) );
-
-	ExtendableBuffer_Eliminate_Tail(ResultBuffer, LengthOfNewAllocated - LengthFromServer);
-
-	return LengthFromServer;
+	return ReceiveState;
 }
 
 int DNSQueryOriginViaUDP(SOCKET				Sock,
