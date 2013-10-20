@@ -460,7 +460,7 @@ void ConfigDisplay(ConfigFileInfo *Info)
 
 						while( Str != NULL )
 						{
-							printf("%s:%s\n", Info -> Options[loop].Caption, Info -> Options[loop].Holder.str.Data);
+							printf("%s:%s\n", Info -> Options[loop].Caption, Str);
 							Str = StringList_GetNext(&(Info -> Options[loop].Holder.str), Str);
 						}
 					}
