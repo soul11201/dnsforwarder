@@ -1,0 +1,394 @@
+#include "request_response.h"
+#include "extendablebuffer.h"
+#include "domainstatistic.h"
+#include "dnsparser.h"
+#include "dnsgenerator.h"
+#include "common.h"
+
+int SendAndReveiveRawMessageViaUDP(SOCKET				Sock,
+								   struct	sockaddr	*PeerAddr,
+								   sa_family_t			AddressFamily,
+								   const void			*Content,
+								   int					ContentLength,
+							       ExtendableBuffer		*ResultBuffer
+								   )
+{
+	int		AddrLen;
+	char	*NewlyReceived;
+	static int	LengthOfNewlyAllocated = 2048;
+
+	int		StateOfReceiving = 0;
+
+	if(ContentLength == 0) return 0;
+	if(ContentLength < 0) return -1;
+
+	if( AddressFamily == AF_INET )
+	{
+		AddrLen = sizeof(struct sockaddr);
+	} else {
+		AddrLen = sizeof(struct sockaddr_in6);
+	}
+
+	if(sendto(Sock, Content, ContentLength, 0, PeerAddr, AddrLen) < 1) return -2;
+
+	if( AddressFamily == AF_INET )
+	{
+		AddrLen = sizeof(struct sockaddr);
+	} else {
+		AddrLen = sizeof(struct sockaddr_in6);
+	}
+
+	NewlyReceived = ExtendableBuffer_Expand(ResultBuffer, LengthOfNewlyAllocated, NULL);
+
+	if( NewlyReceived == NULL )
+	{
+		return -1;
+	}
+
+	StateOfReceiving = recvfrom(Sock, NewlyReceived, LengthOfNewlyAllocated, 0, PeerAddr, (socklen_t *)&AddrLen);
+	if( StateOfReceiving <= 0 )
+	{
+		return -1;
+	}
+
+	ExtendableBuffer_Eliminate_Tail(ResultBuffer, LengthOfNewlyAllocated - StateOfReceiving);
+
+	return StateOfReceiving;
+}
+
+int SendAndReveiveRawMessageViaTCP(SOCKET			Sock,
+								   const void		*Content,
+								   int				ContentLength,
+								   ExtendableBuffer	*ResultBuffer,
+								   _16BIT_UINT		*TCPLength /* Big-endian */
+								   )
+{
+	int		StateOfReceiving;
+	char	*NewlyReceived;
+	int		NewTCPLength;
+
+	if(ContentLength == 0) return 0;
+	if(ContentLength < 0) return -1;
+
+	if( TCPLength != NULL )
+	{
+		StateOfReceiving = send(Sock, (const char *)TCPLength, 2, MSG_NOSIGNAL);
+
+		if( StateOfReceiving < 1 )
+		{
+			return -2;
+		}
+	}
+
+	StateOfReceiving = send(Sock, (const char *)Content, ContentLength, MSG_NOSIGNAL);
+	if( StateOfReceiving < 1) return -2;
+
+	/* Get TCPLength field of response */
+	NewlyReceived = ExtendableBuffer_Expand(ResultBuffer, 2, NULL);
+	if( NewlyReceived == NULL )
+	{
+		return -2;
+	}
+
+	StateOfReceiving = recv(Sock, NewlyReceived, 2, MSG_NOSIGNAL);
+	if( StateOfReceiving < 2 )
+	{
+		return -2;
+	}
+
+	NewTCPLength = GET_16_BIT_U_INT(NewlyReceived);
+
+	/* Get DNS entity */
+	NewlyReceived = ExtendableBuffer_Expand(ResultBuffer, NewTCPLength, NULL);
+	if( NewlyReceived == NULL )
+	{
+		return -2;
+	}
+
+	StateOfReceiving = recv(Sock, NewlyReceived, NewTCPLength, MSG_NOSIGNAL);
+	if( StateOfReceiving < 2 )
+	{
+		return -2;
+	}
+
+	return NewTCPLength + 2;
+}
+
+int QueryDNSViaTCP(SOCKET			Sock,
+				   const void		*RequestEntity,
+				   int				RequestLength,
+				   DNSQuaryProtocol	OriginProtocol,
+				   ExtendableBuffer	*ResultBuffer
+				   )
+{
+	if(RequestLength == 0) return 0;
+	if(RequestLength < 0) return -1;
+
+	if(OriginProtocol == DNS_QUARY_PROTOCOL_UDP){
+		int			StateOfReceiving;
+		int			CurrentOffset;
+		_16BIT_UINT	TCPLength;
+
+		SET_16_BIT_U_INT(&TCPLength, RequestLength);
+
+		CurrentOffset = ExtendableBuffer_GetEndOffset(ResultBuffer);
+
+		StateOfReceiving = SendAndReveiveRawMessageViaTCP(Sock, RequestEntity, RequestLength, ResultBuffer, &TCPLength);
+		if( StateOfReceiving > 2 )
+		{
+			ExtendableBuffer_Eliminate(ResultBuffer, CurrentOffset, 2);
+			return StateOfReceiving - 2;
+		} else {
+			return -1;
+		}
+
+	}else{ /* DNS_QUARY_PROTOCOL_TCP */
+		return SendAndReveiveRawMessageViaTCP(Sock, RequestEntity, RequestLength, ResultBuffer, NULL);
+	}
+}
+
+int QueryDNSViaUDP(SOCKET			Sock,
+				   struct sockaddr	*PeerAddr,
+				   sa_family_t		AddressFamily,
+				   const void		*RequestEntity,
+				   int				RequestLength,
+				   DNSQuaryProtocol	OriginProtocol,
+				   ExtendableBuffer	*ResultBuffer
+				   )
+{
+	if(OriginProtocol == DNS_QUARY_PROTOCOL_UDP)
+	{
+		return SendAndReveiveRawMessageViaUDP(Sock, PeerAddr, AddressFamily, RequestEntity, RequestLength, ResultBuffer);
+	} else { /* DNS_QUARY_PROTOCOL_TCP */
+		int StateOfReceiving;
+
+		char *TCPLength = ExtendableBuffer_Expand(ResultBuffer, 2, NULL);
+
+		if( TCPLength == NULL )
+		{
+			return -1;
+		}
+
+		StateOfReceiving = SendAndReveiveRawMessageViaUDP(Sock, PeerAddr, AddressFamily, ((char *)RequestEntity) + 2, RequestLength - 2, ResultBuffer);
+		if( StateOfReceiving > 0 )
+		{
+			SET_16_BIT_U_INT(TCPLength, StateOfReceiving);
+			return StateOfReceiving + 2;
+		} else {
+			return -1;
+		}
+	}
+}
+
+int SetSocketWait(SOCKET sock, BOOL Wait)
+{
+	return setsockopt(sock, SOL_SOCKET, SO_DONTLINGER, (const char *)&Wait, sizeof(BOOL));
+}
+
+int SetSocketSendTimeLimit(SOCKET sock, int time)
+{
+#ifdef WIN32
+	return setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&time, sizeof(time));
+#else
+	struct timeval Time = {time / 1000, (time % 1000) * 1000};
+	return setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&Time, sizeof(Time));
+#endif
+}
+
+int SetSocketRecvTimeLimit(SOCKET sock, int time)
+{
+#ifdef WIN32
+	return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&time, sizeof(time));
+#else
+	struct timeval Time = {time / 1000, (time % 1000) * 1000};
+	return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&Time, sizeof(Time));
+#endif
+}
+
+BOOL TCPSocketIsHealthy(SOCKET *sock)
+{
+	if(*sock != INVALID_SOCKET){
+		/* Testing effectiveness of `*sock' */
+		fd_set rfd;
+		struct timeval TimeLimit = {0, 0};
+
+		FD_ZERO(&rfd);
+		FD_SET((*sock), &rfd);
+
+		switch(select((*sock) + 1, &rfd, NULL, NULL, &TimeLimit)){
+			case 0:
+				/* Effective */
+				return TRUE;
+				break;
+			case 1:{
+				char Buffer[1];
+				int state = recv(*sock, Buffer, 1, MSG_NOSIGNAL);
+
+				if(state == 0 || state == SOCKET_ERROR)
+					break;
+				else
+					/* Effective */
+					return TRUE;
+				   }
+				break;
+			case SOCKET_ERROR:
+				break;
+			default:
+				break;
+		}
+		/* Ineffective */
+	}
+	/* Ineffective */
+	return FALSE;
+}
+
+/* BOOL ConnectToServer(SOCKET *sock, struct sockaddr_in *addr);
+ * Description:
+ *  Let the `sock' Connect to the server addressed by `addr'.
+ * Parameters:
+ *  sock:A pointer to a `SOCKET' that hold the connection.
+ *  addr:A pointer to a `struct sockaddr_in' specifying the address to connect.
+*/
+BOOL ConnectToTCPServer(SOCKET *sock, struct sockaddr *addr, sa_family_t Family, int TimeToServer)
+{
+	int SizeOfAddr;
+
+	if(*sock != INVALID_SOCKET) CloseTCPConnection(sock);
+
+	if( Family == AF_INET )
+	{
+		SizeOfAddr = sizeof(struct sockaddr);
+	} else {
+		SizeOfAddr = sizeof(struct sockaddr_in6);
+	}
+
+	/* Rebuild connection */
+	*sock = socket(Family, SOCK_STREAM, IPPROTO_TCP);
+	if(*sock == INVALID_SOCKET){
+		return FALSE;
+	}
+
+	/* Do not Wait after closed. */
+	SetSocketWait(*sock, TRUE);
+
+	/* Set time limit. */
+	SetSocketSendTimeLimit(*sock, TimeToServer);
+	SetSocketRecvTimeLimit(*sock, TimeToServer);
+
+	if(connect(*sock, addr, SizeOfAddr) != 0){
+		int OriginErrorCode = GET_LAST_ERROR();
+		CloseTCPConnection(sock);
+		SET_LAST_ERROR(OriginErrorCode);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+void CloseTCPConnection(SOCKET *sock)
+{
+	if(*sock != INVALID_SOCKET){
+		CLOSE_SOCKET(*sock);
+		*sock = INVALID_SOCKET;
+	}
+}
+
+int QueryFromServerBase(SOCKET				*Socket,
+						struct	sockaddr	*ServerAddress,
+						sa_family_t			AddressFamily,
+						DNSQuaryProtocol	ProtocolToServer,
+						char				*RequestEntity,
+						int					RequestLength,
+						DNSQuaryProtocol	ProtocolToSource,
+						ExtendableBuffer	*ResultBuffer,
+						const char			*RequestingDomain
+						)
+{
+	int StateOfReceiving;
+
+	int	StartOffset = ExtendableBuffer_GetEndOffset(ResultBuffer);
+
+	/* Connecting to Server */
+	if( ProtocolToServer == DNS_QUARY_PROTOCOL_UDP )
+	{
+		if(*Socket == INVALID_SOCKET)
+		{
+			*Socket = socket(AddressFamily, SOCK_DGRAM, IPPROTO_UDP);
+
+			if __STILL(*Socket == INVALID_SOCKET)
+			{
+				DomainStatistic_Add(RequestingDomain, STATISTIC_TYPE_REFUSED);
+				return -2; /* Failed */
+			}
+		}
+
+		SetSocketRecvTimeLimit(*Socket, TimeToServer);
+	} else {
+		if(TCPSocketIsHealthy(Socket) == FALSE)
+		{
+			if(ConnectToTCPServer(Socket, ServerAddress, AddressFamily, TimeToServer) == FALSE)
+			{
+				DomainStatistic_Add(RequestingDomain, STATISTIC_TYPE_REFUSED);
+				return -2; /* Failed */
+			} else {
+				INFO("(Connecting to server Successfully.)\n");
+			}
+		}
+	}
+	/* Querying from server */
+	if( ProtocolToServer == DNS_QUARY_PROTOCOL_UDP )
+    {
+		StateOfReceiving = QueryDNSViaUDP(*Socket, (struct sockaddr *)ServerAddress, AddressFamily, RequestEntity, RequestLength, ProtocolToSource, ResultBuffer);
+    } else {
+		StateOfReceiving = QueryDNSViaTCP(*Socket, RequestEntity, RequestLength, ProtocolToSource, ResultBuffer);
+    }
+
+	if( StateOfReceiving > 0 ) /* Succeed  */
+	{
+		if( Cache_IsInited() )
+		{
+			int StateOfCacheing;
+
+			if( ProtocolToSource == DNS_QUARY_PROTOCOL_UDP )
+			{
+				StateOfCacheing = DNSCache_AddItemsToCache(ExtendableBuffer_GetPositionByOffset(ResultBuffer, StartOffset));
+			} else {
+				StateOfCacheing = DNSCache_AddItemsToCache(ExtendableBuffer_GetPositionByOffset(ResultBuffer, StartOffset) + 2);
+			}
+
+			if( StateOfCacheing != 0 )
+			{
+				INFO("(Caching in failed. Cache is running out of space?)\n");
+			}
+		}
+
+		if( ProtocolToServer == DNS_QUARY_PROTOCOL_UDP )
+		{
+			DomainStatistic_Add(RequestingDomain, STATISTIC_TYPE_UDP);
+		} else {
+			DomainStatistic_Add(RequestingDomain, STATISTIC_TYPE_TCP);
+		}
+
+		return StateOfReceiving;
+	} else {
+		int OriginErrorCode = GET_LAST_ERROR();
+
+		ExtendableBuffer_SetEndOffset(ResultBuffer, StartOffset);
+
+		if( ProtocolToServer == DNS_QUARY_PROTOCOL_UDP )
+		{
+			/* Close the bad socket */
+			CLOSE_SOCKET(*Socket);
+			*Socket = INVALID_SOCKET;
+		} else { /* Similarly, for TCP, below */
+			CloseTCPConnection(Socket);
+		}
+
+		/* For not to overwrite internal error code(may be done by
+		 * CLOSE_SOCKET() or CloseTCPConnection() ), write it back */
+		SET_LAST_ERROR(OriginErrorCode);
+
+		DomainStatistic_Add(RequestingDomain, STATISTIC_TYPE_REFUSED);
+
+		return -1; /* Failed */
+	}
+}
