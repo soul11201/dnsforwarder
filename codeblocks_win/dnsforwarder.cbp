@@ -12,7 +12,6 @@
 				<Option object_output="./obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters='-f &quot;D:\My_File\VC\dnsforwarder\codeblocks_win\bin\Release\dnsforwarder.config&quot;' />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -95,6 +94,10 @@
 			<Add library="libshlwapi.a" />
 			<Add library="libcrypt32.a" />
 		</Linker>
+		<Unit filename="../addresschunk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../addresschunk.h" />
 		<Unit filename="../addresslist.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -171,6 +174,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../readline.h" />
+		<Unit filename="../request_response.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../request_response.h" />
 		<Unit filename="../rwlock.h" />
 		<Unit filename="../stringchunk.c">
 			<Option compilerVar="CC" />

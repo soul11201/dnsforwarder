@@ -50,6 +50,10 @@
 			<Add option="-lcurl -lssl -lcrypto -lldap -lrt -lssl -lcrypto -lz" />
 			<Add library="pthread" />
 		</Linker>
+		<Unit filename="../addresschunk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../addresschunk.h" />
 		<Unit filename="../addresslist.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -126,6 +130,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../readline.h" />
+		<Unit filename="../request_response.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../request_response.h" />
 		<Unit filename="../rwlock.h" />
 		<Unit filename="../stringchunk.c">
 			<Option compilerVar="CC" />
