@@ -6,7 +6,7 @@
 typedef struct _ExtendableBuffer{
 
 	/* All datas reside here. */
-	volatile char	*Data;
+	char			*Data;
 
 	/* How many bytes have been used. */
 	_32BIT_UINT		Used;

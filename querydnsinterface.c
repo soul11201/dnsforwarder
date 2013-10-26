@@ -90,10 +90,13 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     ConfigAddOption(&ConfigInfo, "StatisticFlushInterval", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.boolean = FALSE;
-    ConfigAddOption(&ConfigInfo, "FallBackToSecondary", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "AllowFallBack", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.INT32 = 3000;
     ConfigAddOption(&ConfigInfo, "TimeToServer", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+
+    TmpTypeDescriptor.str = NULL;
+    ConfigAddOption(&ConfigInfo, "DedicatedServer", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "Hosts", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Hosts File");
@@ -230,7 +233,7 @@ int QueryDNSInterfaceStart(void)
 	ExcludedList_Init();
 
 	TimeToServer = ConfigGetInt32(&ConfigInfo, "TimeToServer");
-	FallBackToSecondary = ConfigGetBoolean(&ConfigInfo, "FallBackToSecondary");
+	AllowFallBack = ConfigGetBoolean(&ConfigInfo, "AllowFallBack");
 
     if( ConfigGetBoolean(&ConfigInfo, "UseCache") == TRUE)
     {

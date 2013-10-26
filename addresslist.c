@@ -22,44 +22,30 @@ int AddressList_Init(AddressList *a)
 }
 
 
-int AddressList_Add(AddressList *a, sa_family_t family, void *Addr)
+int AddressList_Add(AddressList *a, struct _Address	*Addr)
 {
-	struct _Address Address;
-
 	if( a == NULL )
 	{
+		return -1;
+	}
+
+	if( Array_PushBack(&(a -> AddressList), Addr, NULL) < 0 )
+	{
+		return -1;
+	} else {
 		return 0;
 	}
 
-	switch( family )
-	{
-		case AF_INET:
-			Address.family = family;
-			memcpy(&(Address.Addr), Addr, sizeof(Address.Addr.Addr4));
-			break;
-
-		case AF_INET6:
-			Address.family = family;
-			memcpy(&(Address.Addr), Addr, sizeof(Address.Addr.Addr6));
-			break;
-
-		default:
-			return 1;
-			break;
-	}
-
-	return Array_PushBack(&(a -> AddressList), &Address, NULL);
 }
 
-int AddressList_Add_From_String(AddressList *a, const char *Addr_Port)
+sa_family_t AddressList_ConvertToAddressFromString(struct _Address *Out, const char *Addr_Port, int DefaultPort)
 {
-	struct	_Address	Tmp;
-			sa_family_t	Family;
+	sa_family_t	Family;
 
-	memset(&Tmp, 0, sizeof(Tmp));
+	memset(Out, 0, sizeof(struct _Address));
 
 	Family = GetAddressFamily(Addr_Port);
-	Tmp.family = Family;
+	Out -> family = Family;
 
 	switch( Family )
 	{
@@ -81,7 +67,7 @@ int AddressList_Add_From_String(AddressList *a, const char *Addr_Port)
 				if( PortPos == NULL )
 				{
 					sscanf(Addr_Port, "[%s]", Addr);
-					Port = 53;
+					Port = DefaultPort;
 				} else {
 					int	Port_warpper;
 
@@ -90,12 +76,12 @@ int AddressList_Add_From_String(AddressList *a, const char *Addr_Port)
 					Port = Port_warpper;
 				}
 
-				Tmp.Addr.Addr6.sin6_family = Family;
-				Tmp.Addr.Addr6.sin6_port = htons(Port);
+				Out -> Addr.Addr6.sin6_family = Family;
+				Out -> Addr.Addr6.sin6_port = htons(Port);
 
-				IPv6AddressToNum(Addr, &(Tmp.Addr.Addr6.sin6_addr));
+				IPv6AddressToNum(Addr, &(Out -> Addr.Addr6.sin6_addr));
 
-				return AddressList_Add(a, Family, &Tmp);
+				return AF_INET6;
 			}
 			break;
 
@@ -111,23 +97,35 @@ int AddressList_Add_From_String(AddressList *a, const char *Addr_Port)
 				if( PortPos == NULL )
 				{
 					sscanf(Addr_Port, "%s", Addr);
-					Port = 53;
+					Port = DefaultPort;
 				} else {
 					int Port_warpper;
 					sscanf(Addr_Port, "%[^:]", Addr);
 					sscanf(PortPos + 1, "%d", &Port_warpper);
 					Port = Port_warpper;
 				}
-				FILL_ADDR4(Tmp.Addr.Addr4, Family, Addr, Port);
+				FILL_ADDR4(Out -> Addr.Addr4, Family, Addr, Port);
 
-				return AddressList_Add(a, Family, &Tmp);
+				return AF_INET;
 			}
 			break;
 
 		default:
-			return -1;
+			return AF_UNSPEC;
 			break;
 	}
+}
+
+int AddressList_Add_From_String(AddressList *a, const char *Addr_Port)
+{
+	struct	_Address	Tmp;
+
+	if( AddressList_ConvertToAddressFromString(&Tmp, Addr_Port, 53) == AF_UNSPEC )
+	{
+		return -1;
+	}
+
+	return AddressList_Add(a, &Tmp);
 
 }
 
@@ -145,7 +143,7 @@ struct sockaddr *AddressList_GetOne(AddressList *a, sa_family_t *family)
 {
 	struct _Address *Result;
 
-	if( a == NULL || family == NULL )
+	if( a == NULL )
 	{
 		return 0;
 	}
@@ -155,7 +153,10 @@ struct sockaddr *AddressList_GetOne(AddressList *a, sa_family_t *family)
 	{
 		return NULL;
 	} else {
-		*family = Result -> family;
+		if( family != NULL )
+		{
+			*family = Result -> family;
+		}
 		return (struct sockaddr *)&(Result -> Addr);
 	}
 

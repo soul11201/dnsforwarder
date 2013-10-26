@@ -97,4 +97,6 @@ BOOL ContainWildCard(const char *item);
 
 int ELFHash(const char *str, int Unused);
 
+void HexDump(const char *Data, int Length);
+
 #endif /* _UTILS_ */

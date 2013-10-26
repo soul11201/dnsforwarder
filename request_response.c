@@ -5,55 +5,27 @@
 #include "dnsgenerator.h"
 #include "common.h"
 
-int SendAndReveiveRawMessageViaUDP(SOCKET				Sock,
-								   struct	sockaddr	*PeerAddr,
-								   sa_family_t			AddressFamily,
-								   const void			*Content,
-								   int					ContentLength,
-							       ExtendableBuffer		*ResultBuffer
-								   )
+BOOL SocketIsStillReadable(SOCKET Sock)
 {
-	int		AddrLen;
-	char	*NewlyReceived;
-	static int	LengthOfNewlyAllocated = 2048;
+	fd_set rfd;
+	struct timeval TimeLimit = {0, 0};
 
-	int		StateOfReceiving = 0;
+	FD_ZERO(&rfd);
+	FD_SET(Sock, &rfd);
 
-	if(ContentLength == 0) return 0;
-	if(ContentLength < 0) return -1;
-
-	if( AddressFamily == AF_INET )
+	switch(select(Sock + 1, &rfd, NULL, NULL, &TimeLimit))
 	{
-		AddrLen = sizeof(struct sockaddr);
-	} else {
-		AddrLen = sizeof(struct sockaddr_in6);
+		case SOCKET_ERROR:
+		case 0:
+			return FALSE;
+			break;
+		case 1:
+			return TRUE;
+			break;
+		default:
+			return FALSE;
+			break;
 	}
-
-	if(sendto(Sock, Content, ContentLength, 0, PeerAddr, AddrLen) < 1) return -2;
-
-	if( AddressFamily == AF_INET )
-	{
-		AddrLen = sizeof(struct sockaddr);
-	} else {
-		AddrLen = sizeof(struct sockaddr_in6);
-	}
-
-	NewlyReceived = ExtendableBuffer_Expand(ResultBuffer, LengthOfNewlyAllocated, NULL);
-
-	if( NewlyReceived == NULL )
-	{
-		return -1;
-	}
-
-	StateOfReceiving = recvfrom(Sock, NewlyReceived, LengthOfNewlyAllocated, 0, PeerAddr, (socklen_t *)&AddrLen);
-	if( StateOfReceiving <= 0 )
-	{
-		return -1;
-	}
-
-	ExtendableBuffer_Eliminate_Tail(ResultBuffer, LengthOfNewlyAllocated - StateOfReceiving);
-
-	return StateOfReceiving;
 }
 
 int SendAndReveiveRawMessageViaTCP(SOCKET			Sock,
@@ -117,33 +89,27 @@ int SendAndReveiveRawMessageViaTCP(SOCKET			Sock,
 int QueryDNSViaTCP(SOCKET			Sock,
 				   const void		*RequestEntity,
 				   int				RequestLength,
-				   DNSQuaryProtocol	OriginProtocol,
 				   ExtendableBuffer	*ResultBuffer
 				   )
 {
+	int			StateOfReceiving;
+	int			CurrentOffset;
+	_16BIT_UINT	TCPLength;
+
 	if(RequestLength == 0) return 0;
 	if(RequestLength < 0) return -1;
 
-	if(OriginProtocol == DNS_QUARY_PROTOCOL_UDP){
-		int			StateOfReceiving;
-		int			CurrentOffset;
-		_16BIT_UINT	TCPLength;
+	SET_16_BIT_U_INT(&TCPLength, RequestLength);
 
-		SET_16_BIT_U_INT(&TCPLength, RequestLength);
+	CurrentOffset = ExtendableBuffer_GetEndOffset(ResultBuffer);
 
-		CurrentOffset = ExtendableBuffer_GetEndOffset(ResultBuffer);
-
-		StateOfReceiving = SendAndReveiveRawMessageViaTCP(Sock, RequestEntity, RequestLength, ResultBuffer, &TCPLength);
-		if( StateOfReceiving > 2 )
-		{
-			ExtendableBuffer_Eliminate(ResultBuffer, CurrentOffset, 2);
-			return StateOfReceiving - 2;
-		} else {
-			return -1;
-		}
-
-	}else{ /* DNS_QUARY_PROTOCOL_TCP */
-		return SendAndReveiveRawMessageViaTCP(Sock, RequestEntity, RequestLength, ResultBuffer, NULL);
+	StateOfReceiving = SendAndReveiveRawMessageViaTCP(Sock, RequestEntity, RequestLength, ResultBuffer, &TCPLength);
+	if( StateOfReceiving > 2 )
+	{
+		ExtendableBuffer_Eliminate(ResultBuffer, CurrentOffset, 2);
+		return StateOfReceiving - 2;
+	} else {
+		return -1;
 	}
 }
 
@@ -152,32 +118,50 @@ int QueryDNSViaUDP(SOCKET			Sock,
 				   sa_family_t		AddressFamily,
 				   const void		*RequestEntity,
 				   int				RequestLength,
-				   DNSQuaryProtocol	OriginProtocol,
 				   ExtendableBuffer	*ResultBuffer
 				   )
 {
-	if(OriginProtocol == DNS_QUARY_PROTOCOL_UDP)
+	int		AddrLen;
+	char	*NewlyReceived;
+	static int	LengthOfNewlyAllocated = 2048;
+
+	int		StateOfReceiving = 0;
+
+	if(RequestLength == 0) return 0;
+	if(RequestLength < 0) return -1;
+
+	if( AddressFamily == AF_INET )
 	{
-		return SendAndReveiveRawMessageViaUDP(Sock, PeerAddr, AddressFamily, RequestEntity, RequestLength, ResultBuffer);
-	} else { /* DNS_QUARY_PROTOCOL_TCP */
-		int StateOfReceiving;
-
-		char *TCPLength = ExtendableBuffer_Expand(ResultBuffer, 2, NULL);
-
-		if( TCPLength == NULL )
-		{
-			return -1;
-		}
-
-		StateOfReceiving = SendAndReveiveRawMessageViaUDP(Sock, PeerAddr, AddressFamily, ((char *)RequestEntity) + 2, RequestLength - 2, ResultBuffer);
-		if( StateOfReceiving > 0 )
-		{
-			SET_16_BIT_U_INT(TCPLength, StateOfReceiving);
-			return StateOfReceiving + 2;
-		} else {
-			return -1;
-		}
+		AddrLen = sizeof(struct sockaddr);
+	} else {
+		AddrLen = sizeof(struct sockaddr_in6);
 	}
+
+	if(sendto(Sock, RequestEntity, RequestLength, 0, PeerAddr, AddrLen) < 1) return -2;
+
+	if( AddressFamily == AF_INET )
+	{
+		AddrLen = sizeof(struct sockaddr);
+	} else {
+		AddrLen = sizeof(struct sockaddr_in6);
+	}
+
+	NewlyReceived = ExtendableBuffer_Expand(ResultBuffer, LengthOfNewlyAllocated, NULL);
+
+	if( NewlyReceived == NULL )
+	{
+		return -1;
+	}
+
+	StateOfReceiving = recvfrom(Sock, NewlyReceived, LengthOfNewlyAllocated, 0, PeerAddr, (socklen_t *)&AddrLen);
+	if( StateOfReceiving <= 0 )
+	{
+		return -1;
+	}
+
+	ExtendableBuffer_Eliminate_Tail(ResultBuffer, LengthOfNewlyAllocated - StateOfReceiving);
+
+	return StateOfReceiving;
 }
 
 int SetSocketWait(SOCKET sock, BOOL Wait)
@@ -298,7 +282,6 @@ int QueryFromServerBase(SOCKET				*Socket,
 						DNSQuaryProtocol	ProtocolToServer,
 						char				*RequestEntity,
 						int					RequestLength,
-						DNSQuaryProtocol	ProtocolToSource,
 						ExtendableBuffer	*ResultBuffer,
 						const char			*RequestingDomain
 						)
@@ -337,9 +320,9 @@ int QueryFromServerBase(SOCKET				*Socket,
 	/* Querying from server */
 	if( ProtocolToServer == DNS_QUARY_PROTOCOL_UDP )
     {
-		StateOfReceiving = QueryDNSViaUDP(*Socket, (struct sockaddr *)ServerAddress, AddressFamily, RequestEntity, RequestLength, ProtocolToSource, ResultBuffer);
+		StateOfReceiving = QueryDNSViaUDP(*Socket, (struct sockaddr *)ServerAddress, AddressFamily, RequestEntity, RequestLength, ResultBuffer);
     } else {
-		StateOfReceiving = QueryDNSViaTCP(*Socket, RequestEntity, RequestLength, ProtocolToSource, ResultBuffer);
+		StateOfReceiving = QueryDNSViaTCP(*Socket, RequestEntity, RequestLength, ResultBuffer);
     }
 
 	if( StateOfReceiving > 0 ) /* Succeed  */
@@ -348,12 +331,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 		{
 			int StateOfCacheing;
 
-			if( ProtocolToSource == DNS_QUARY_PROTOCOL_UDP )
-			{
-				StateOfCacheing = DNSCache_AddItemsToCache(ExtendableBuffer_GetPositionByOffset(ResultBuffer, StartOffset));
-			} else {
-				StateOfCacheing = DNSCache_AddItemsToCache(ExtendableBuffer_GetPositionByOffset(ResultBuffer, StartOffset) + 2);
-			}
+			StateOfCacheing = DNSCache_AddItemsToCache(ExtendableBuffer_GetPositionByOffset(ResultBuffer, StartOffset));
 
 			if( StateOfCacheing != 0 )
 			{

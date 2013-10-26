@@ -6,13 +6,7 @@
 #include "dnscache.h"
 #include "common.h"
 
-int SendAndReveiveRawMessageViaUDP(SOCKET				Sock,
-								   struct	sockaddr	*PeerAddr,
-								   sa_family_t			AddressFamily,
-								   const void			*Content,
-								   int					ContentLength,
-							       ExtendableBuffer		*ResultBuffer
-								   );
+BOOL SocketIsStillReadable(SOCKET Sock);
 
 int SendAndReveiveRawMessageViaTCP(SOCKET			Sock,
 								   const void		*Content,
@@ -24,7 +18,6 @@ int SendAndReveiveRawMessageViaTCP(SOCKET			Sock,
 int QueryDNSViaTCP(SOCKET			Sock,
 				   const void		*RequestEntity,
 				   int				RequestLength,
-				   DNSQuaryProtocol	OriginProtocol,
 				   ExtendableBuffer	*ResultBuffer
 				   );
 
@@ -33,7 +26,6 @@ int QueryDNSViaUDP(SOCKET			Sock,
 				   sa_family_t		AddressFamily,
 				   const void		*RequestEntity,
 				   int				RequestLength,
-				   DNSQuaryProtocol	OriginProtocol,
 				   ExtendableBuffer	*ResultBuffer
 				   );
 
@@ -55,11 +47,8 @@ int QueryFromServerBase(SOCKET				*Socket,
 						DNSQuaryProtocol	ProtocolToServer,
 						char				*RequestEntity,
 						int					RequestLength,
-						DNSQuaryProtocol	ProtocolToSource,
 						ExtendableBuffer	*ResultBuffer,
 						const char			*RequestingDomain
 						);
-
-
 
 #endif // REQUEST_RESPONSE_H_INCLUDED

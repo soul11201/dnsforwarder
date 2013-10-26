@@ -47,20 +47,22 @@ int AddressList_Init(__in AddressList *a);
  *  0 on success, a non-zero value otherwise.
  */
 
-int AddressList_Add(__in	AddressList	*a,
-					__in	sa_family_t	family,
-					__in	void		*Addr);
+int AddressList_Add(__in	AddressList		*a,
+					__in	struct _Address	*Addr);
 /* Description:
- *  Add an address in the form of `struct sockaddr_in' or `struct sockaddr_in6'
- *  to an AddressList.
+ *  Add an address in the form of `struct _Address' to an AddressList.
  * Parameters:
  *  a      : The AddressList to be added in.
- *  family : Family of the address to be added.
  *  Addr   : The added adress, which is a pointer to a `struct sockaddr_in'
  *           or `struct sockaddr_in6'.
  * Return value:
  *  0 on success, a non-zero value otherwise.
  */
+
+sa_family_t AddressList_ConvertToAddressFromString(__out	struct _Address *Out,
+												   __in		const char		*Addr_Port,
+												   __in		int				DefaultPort
+												   );
 
 int AddressList_Add_From_String(__in	AddressList	*a,
 								__in	const char		*Addr_Port);

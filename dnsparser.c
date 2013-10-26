@@ -545,6 +545,8 @@ void DNSExpandCName(char *DNSBody)
 	}while( Itr <= AnswerCount );
 }
 
+#ifdef AAAAAAAAAAAA
+
 void DNSParser(char *dns_over_tcp, char *buffer){
 	char *dnsovertcp	=	dns_over_tcp;
 	char InnerBuffer[128]		=	{0};
@@ -618,8 +620,6 @@ void DNSParser(char *dns_over_tcp, char *buffer){
 		--ac;
 	}
 }
-
-#ifdef AAAAAAAAAAAA
 
 void DNSParser(const char *dns_over_tcp, char *buffer){
 	char *orig = buffer;

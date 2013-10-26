@@ -971,7 +971,7 @@ static int GenerateSingleRecord(DNSRecordType Type, void *HostsItem, ExtendableB
 	}
 }
 
-static int RecursivelyQuery(DNSRecordType Type, void *HostsItem, ExtendableBuffer *Buffer, int *AnswerCount, QueryContext *Context)
+static int RecursivelyQuery(DNSRecordType RequestingType, void *HostsItem, int *AnswerCount, ThreadContext *Context)
 {
 	char	*h = (char *)HostsItem;
 
@@ -979,7 +979,7 @@ static int RecursivelyQuery(DNSRecordType Type, void *HostsItem, ExtendableBuffe
 
 	int		State;
 
-	int		StartOffset = ExtendableBuffer_GetEndOffset(Buffer);
+	int		StartOffset = ExtendableBuffer_GetEndOffset(Context -> ResponseBuffer);
 	const char	*StartPos;
 	int		EndOffset;
 	const char	*AnswerPos;
@@ -987,7 +987,7 @@ static int RecursivelyQuery(DNSRecordType Type, void *HostsItem, ExtendableBuffe
 
 	char	*HereSaved;
 
-	HereSaved = ExtendableBuffer_Expand(Buffer, 2 + 2 + 2 + 4 + 2 + strlen(h) + 2, NULL);
+	HereSaved = ExtendableBuffer_Expand(Context -> ResponseBuffer, 2 + 2 + 2 + 4 + 2 + strlen(h) + 2, NULL);
 	if( HereSaved == NULL )
 	{
 		return -1;
@@ -1000,27 +1000,25 @@ static int RecursivelyQuery(DNSRecordType Type, void *HostsItem, ExtendableBuffe
 	HereSaved[0] = 0xC0;
 	HereSaved[1] = 0x0C;
 
-	Context -> ProtocolToSrc = DNS_QUARY_PROTOCOL_UDP;
+	StartOffset = ExtendableBuffer_GetEndOffset(Context -> ResponseBuffer);
 
-	StartOffset = ExtendableBuffer_GetEndOffset(Buffer);
-
-	State = GetAnswersByName(Context, h, Type, Buffer);
+	State = GetAnswersByName(Context, h, RequestingType);
 	if( State < 0 )
 	{
 		Context -> Compress = OriCompress;
 		return -1;
 	}
 
-	StartPos = ExtendableBuffer_GetPositionByOffset(Buffer, StartOffset);
+	StartPos = ExtendableBuffer_GetPositionByOffset(Context -> ResponseBuffer, StartOffset);
 
-	EndOffset = DNSJumpOverAnswerRecords(StartPos) - ExtendableBuffer_GetData(Buffer);
+	EndOffset = DNSJumpOverAnswerRecords(StartPos) - ExtendableBuffer_GetData(Context -> ResponseBuffer);
 
 	(*AnswerCount) = (int)DNSGetAnswerCount(StartPos) + 1;
 
-	ExtendableBuffer_Eliminate(Buffer, EndOffset, StartOffset + State - EndOffset);
+	ExtendableBuffer_Eliminate(Context -> ResponseBuffer, EndOffset, StartOffset + State - EndOffset);
 
 	MoreSpaceNeeded = DNSExpandCName_MoreSpaceNeeded(StartPos);
-	if( ExtendableBuffer_Expand(Buffer, MoreSpaceNeeded, NULL) == NULL )
+	if( ExtendableBuffer_Expand(Context -> ResponseBuffer, MoreSpaceNeeded, NULL) == NULL )
 	{
 		Context -> Compress = OriCompress;
 		return -1;
@@ -1028,34 +1026,34 @@ static int RecursivelyQuery(DNSRecordType Type, void *HostsItem, ExtendableBuffe
 
 	EndOffset += MoreSpaceNeeded;
 
-	StartPos = ExtendableBuffer_GetPositionByOffset(Buffer, StartOffset);
+	StartPos = ExtendableBuffer_GetPositionByOffset(Context -> ResponseBuffer, StartOffset);
 
 	DNSExpandCName(StartPos);
 
 	AnswerPos = DNSJumpOverQuestionRecords(StartPos);
 
-	ExtendableBuffer_Eliminate(Buffer, StartOffset, AnswerPos - StartPos);
+	ExtendableBuffer_Eliminate(Context -> ResponseBuffer, StartOffset, AnswerPos - StartPos);
 
 	Context -> Compress = OriCompress;
 	return EndOffset - StartOffset - (AnswerPos - StartPos) + (2 + 2 + 2 + 4 + 2 + strlen(h) + 2);
 }
 
-static int Hosts_GetByQuestion_Inner(char *Question, ExtendableBuffer *Buffer, int *AnswerCount, QueryContext *Context)
+static int Hosts_GetByQuestion_Inner(ThreadContext *Context, int *AnswerCount)
 {
 	char				Name[260];
 	DNSRecordType		Type;
 	DNSRecordClass		Class;
 	int					MatchState;
-	char				Result[DOMAIN_NAME_LENGTH_MAX + 1];
+	char				Result[DOMAIN_NAME_LENGTH_MAX + 1]; /* Either an IP address or a CName */
 
-	DNSGetHostName(Question, DNSJumpHeader(Question), Name);
+	DNSGetHostName(Context -> RequestEntity, DNSJumpHeader(Context -> RequestEntity), Name);
 
-	Class = (DNSRecordClass)DNSGetRecordClass(DNSJumpHeader(Question));
+	Class = (DNSRecordClass)DNSGetRecordClass(DNSJumpHeader(Context -> RequestEntity));
 
 	if( Class != DNS_CLASS_IN )
 		return -1;
 
-	Type = (DNSRecordType)DNSGetRecordType(DNSJumpHeader(Question));
+	Type = (DNSRecordType)DNSGetRecordType(DNSJumpHeader(Context -> RequestEntity));
 
 	RWLock_RdLock(HostsLock);
 	MatchState = Hosts_Match(Name, Type, Result);
@@ -1072,20 +1070,20 @@ static int Hosts_GetByQuestion_Inner(char *Question, ExtendableBuffer *Buffer, i
 	if( MatchState == MATCH_STATE_PERFECT )
 	{
 		*AnswerCount = 1;
-		return GenerateSingleRecord(Type, Result, Buffer);
+		return GenerateSingleRecord(Type, Result, Context -> ResponseBuffer);
 	} else if ( MatchState == MATCH_STATE_ONLY_CNAME )
 	{
-		return RecursivelyQuery(Type, Result, Buffer, AnswerCount, Context);
+		return RecursivelyQuery(Type, Result, AnswerCount, Context);
 	} else {
 		return -1;
 	}
 }
 
-int Hosts_GetByQuestion(char *Question, ExtendableBuffer *Buffer, int *AnswerCount, QueryContext *Context)
+int Hosts_GetByQuestion(ThreadContext *Context, int *AnswerCount)
 {
 	if( Inited == FALSE )
 		return -1;
 
-	return Hosts_GetByQuestion_Inner(Question, Buffer, AnswerCount, Context);
+	return Hosts_GetByQuestion_Inner(Context, AnswerCount);
 
 }

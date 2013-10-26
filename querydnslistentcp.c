@@ -21,9 +21,11 @@ static SOCKET		ListenSocketTCP;
 static sa_family_t	Family;
 
 typedef struct _RecvInfo{
-	SOCKET			Socket;
-	CompatibleAddr	Peer;
-}RecvInfo;
+	SOCKET				Socket;
+	CompatibleAddr		Peer;
+	DNSQuaryProtocol	PrimaryProtocolToServer;
+	BOOL				SecondaryExists;
+} RecvInfo;
 
 /* Functions */
 int QueryDNSListenTCPInit(void)
@@ -98,80 +100,54 @@ int QueryDNSListenTCPInit(void)
 	return 0;
 }
 
-static int Query(	SOCKET				*PrimarySocket,
-					SOCKET				*SecondarySocket,
-					DNSQuaryProtocol	PrimaryProtocol,
-					char				*QueryContent,
-					int					QueryContentLength,
-
-					SOCKET				*ClientSocket,
-					CompatibleAddr		*ClientAddr,
-					ExtendableBuffer	*Buffer
-					)
+static int Query(ThreadContext *Context, _16BIT_UINT TCPLength, SOCKET *ClientSocket, CompatibleAddr *ClientAddr)
 {
-	int					State;
+	int				State;
 
-	DNSRecordType		SourceType;
-	char				*DNSBody = DNSGetDNSBody(QueryContent);
+	char			ProtocolCharacter = ' ';
 
-	char				ProtocolCharacter = ' ';
-
-	char				QueryDomain[256];
-
-	char				DateAndTime[32];
-
-	QueryContext		Context;
+	char			DateAndTime[32];
 
 	GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
 
-	QueryDomain[0] = '\0';
-	DNSGetHostName(DNSBody, DNSJumpHeader(DNSBody), QueryDomain);
+	Context -> RequestingDomain[0] = '\0';
+	DNSGetHostName(Context -> RequestEntity,
+				   DNSJumpHeader(Context -> RequestEntity),
+				   Context -> RequestingDomain
+				   );
 
-	SourceType = (DNSRecordType)DNSGetRecordType(DNSJumpHeader(DNSBody));
+	Context -> RequestingType =
+		(DNSRecordType)DNSGetRecordType(DNSJumpHeader(Context -> RequestEntity));
 
-	Context.PrimarySocket = PrimarySocket;
-	Context.SecondarySocket = SecondarySocket;
-	Context.PrimaryProtocolToServer = PrimaryProtocol;
-	Context.ProtocolToSrc = DNS_QUARY_PROTOCOL_TCP;
-	Context.Compress = TRUE;
-
-	State = QueryBase(&Context,
-
-					  QueryContent,
-					  QueryContentLength,
-
-					  Buffer,
-					  QueryDomain,
-					  SourceType,
-					  &ProtocolCharacter
-					  );
+	State = QueryBase(Context, &ProtocolCharacter);
 
 	switch( State )
 	{
 		case QUERY_RESULT_DISABLE:
-			((DNSHeader *)DNSBody) -> Flags.Direction = 1;
-			((DNSHeader *)DNSBody) -> Flags.ResponseCode = 5;
-			send(*ClientSocket, QueryContent, QueryContentLength, 0);
+			((DNSHeader *)(Context -> RequestEntity)) -> Flags.Direction = 1;
+			((DNSHeader *)(Context -> RequestEntity)) -> Flags.ResponseCode = 5;
+			send(*ClientSocket, &TCPLength, 2, 0);
+			send(*ClientSocket, Context -> RequestEntity, Context -> RequestLength, 0);
 			if( Family == AF_INET )
 			{
 				PRINT("%s[R][%s:%d][%s][%s] Refused.\n",
 					  DateAndTime,
 					  inet_ntoa(ClientAddr -> Addr4.sin_addr),
 					  ClientAddr -> Addr4.sin_port,
-					  DNSGetTypeName(SourceType),
-					  QueryDomain
+					  DNSGetTypeName(Context -> RequestingType),
+					  Context -> RequestingDomain
 					  );
 			} else {
 				char Addr[LENGTH_OF_IPV6_ADDRESS_ASCII] = {0};
 
 				IPv6AddressToAsc(&(ClientAddr -> Addr6.sin6_addr), Addr);
 
-				PRINT("%s[R][%s:%d][%s][%s] Refused.\n",
+				PRINT("%s[R][[%s]:%d][%s][%s] Refused.\n",
 					  DateAndTime,
 					  Addr,
 					  ClientAddr -> Addr6.sin6_port,
-					  DNSGetTypeName(SourceType),
-					  QueryDomain
+					  DNSGetTypeName(Context -> RequestingType),
+					  Context -> RequestingDomain
 					  );
 
 			}
@@ -193,8 +169,8 @@ static int Query(	SOCKET				*PrimarySocket,
 						   DateAndTime,
 						   ProtocolCharacter,
 						   inet_ntoa(ClientAddr -> Addr4.sin_addr),
-						   DNSGetTypeName(SourceType),
-						   QueryDomain,
+						   DNSGetTypeName(Context -> RequestingType),
+						   Context -> RequestingDomain,
 						   ErrorNum,
 						   ErrorMessage
 						   );
@@ -207,8 +183,8 @@ static int Query(	SOCKET				*PrimarySocket,
 						   DateAndTime,
 						   ProtocolCharacter,
 						   Addr,
-						   DNSGetTypeName(SourceType),
-						   QueryDomain,
+						   DNSGetTypeName(Context -> RequestingType),
+						   Context -> RequestingDomain,
 						   ErrorNum,
 						   ErrorMessage
 						   );
@@ -218,115 +194,115 @@ static int Query(	SOCKET				*PrimarySocket,
 			break;
 
 		default: /* Succeed */
-			send(*ClientSocket, ExtendableBuffer_GetData(Buffer), State, 0);
-
-			if( ShowMassages == TRUE )
 			{
-				char InfoBuffer[3072];
-				InfoBuffer[0] = '\0';
-				GetAllAnswers(DNSGetDNSBody(ExtendableBuffer_GetData(Buffer)),
-							  InfoBuffer);
+				_16BIT_UINT ResponseLength;
+				SET_16_BIT_U_INT(&ResponseLength, State);
+				send(*ClientSocket, &ResponseLength, 2, 0);
+				send(*ClientSocket, ExtendableBuffer_GetData(Context -> ResponseBuffer), State, 0);
 
-				if( Family == AF_INET )
+				if( ShowMassages == TRUE )
 				{
-					PRINT("%s[%c][%s][%s][%s] :\n%s",
-						  DateAndTime,
-						  ProtocolCharacter,
-						  inet_ntoa(ClientAddr ->Addr4.sin_addr),
-						  DNSGetTypeName(SourceType),
-						  QueryDomain,
-						  InfoBuffer
-						  );
-				} else {
-					char Addr[LENGTH_OF_IPV6_ADDRESS_ASCII] = {0};
+					char InfoBuffer[3072];
+					InfoBuffer[0] = '\0';
+					GetAllAnswers(ExtendableBuffer_GetData(Context -> ResponseBuffer),
+								  InfoBuffer);
 
-					IPv6AddressToAsc(&(ClientAddr -> Addr6.sin6_addr), Addr);
+					if( Family == AF_INET )
+					{
+						PRINT("%s[%c][%s][%s][%s] :\n%s",
+							  DateAndTime,
+							  ProtocolCharacter,
+							  inet_ntoa(ClientAddr -> Addr4.sin_addr),
+							  DNSGetTypeName(Context -> RequestingType),
+							  Context -> RequestingDomain,
+							  InfoBuffer
+							  );
+					} else {
+						char Addr[LENGTH_OF_IPV6_ADDRESS_ASCII] = {0};
 
-					PRINT("%s[%c][%s][%s][%s] :\n%s",
-						  DateAndTime,
-						  ProtocolCharacter,
-						  Addr,
-						  DNSGetTypeName(SourceType),
-						  QueryDomain,
-						  InfoBuffer
-						  );
+						IPv6AddressToAsc(&(ClientAddr -> Addr6.sin6_addr), Addr);
+
+						PRINT("%s[%c][%s][%s][%s] :\n%s",
+							  DateAndTime,
+							  ProtocolCharacter,
+							  Addr,
+							  DNSGetTypeName(Context -> RequestingType),
+							  Context -> RequestingDomain,
+							  InfoBuffer
+							  );
+					}
 				}
+				return 0;
+				break;
 			}
-			return 0;
-			break;
-
 	}
 }
 
-static int TCPRecv(RecvInfo *Info)
+static int ReceiveFromClient(RecvInfo *Info)
 {
 	SOCKET				Socket	=	Info -> Socket;
 	CompatibleAddr		Peer	=	Info -> Peer;
 	int					state;
-	char				ResultBuffer[1024];
-	ExtendableBuffer	Buffer;
 
-	/* Sockets to server */
-	SOCKET				TCPSocket = INVALID_SOCKET;
-	SOCKET				UDPSocket = INVALID_SOCKET;
-	SOCKET				*PrimarySocketPtr;
-	SOCKET				*SecondarySocketPtr;
-	DNSQuaryProtocol	PrimaryProtocol;
+	_16BIT_UINT			TCPLength = 0; /* Big-endian */
 
-	char				ProtocolStr[8] = {0};
+	ThreadContext		Context;
 
-	strncpy(ProtocolStr, ConfigGetRawString(&ConfigInfo, "PrimaryServer"), 3);
-	StrToLower(ProtocolStr);
+	Context.TCPSocket = INVALID_SOCKET;
+	Context.UDPSocket = INVALID_SOCKET;
+	Context.LastServer = NULL;
+	Context.Compress = TRUE;
+	Context.ResponseBuffer = &(Context.ResponseBuffer_Entity);
+	ExtendableBuffer_Init(Context.ResponseBuffer, 512, 10240);
 
-	if( strcmp(ProtocolStr, "tcp") == 0 )
+	if( Info -> PrimaryProtocolToServer == DNS_QUARY_PROTOCOL_TCP )
 	{
-		PrimaryProtocol = DNS_QUARY_PROTOCOL_TCP;
-		PrimarySocketPtr = &TCPSocket;
+		Context.PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_TCP;
+		Context.PrimarySocket = &(Context.TCPSocket);
 
-		if( ConfigGetStringList(&ConfigInfo, "UDPServer") != NULL )
-			SecondarySocketPtr = &UDPSocket;
+		if( Info -> SecondaryExists == TRUE )
+			Context.SecondarySocket = &(Context.UDPSocket);
 		else
-			SecondarySocketPtr = NULL;
+			Context.SecondarySocket = NULL;
 
 	} else {
-		PrimaryProtocol = DNS_QUARY_PROTOCOL_UDP;
-		PrimarySocketPtr = &UDPSocket;
+		Context.PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_UDP;
+		Context.PrimarySocket = &(Context.UDPSocket);
 
-		if( ConfigGetStringList(&ConfigInfo, "TCPServer") != NULL )
-			SecondarySocketPtr = &TCPSocket;
+		if( Info -> SecondaryExists == TRUE )
+			Context.SecondarySocket = &(Context.TCPSocket);
 		else
-			SecondarySocketPtr = NULL;
+			Context.SecondarySocket = NULL;
 	}
 
-	ExtendableBuffer_Init(&Buffer, 512, 1024);
-
 	while(TRUE){
-		state = recv(Socket, ResultBuffer, sizeof(ResultBuffer), MSG_NOSIGNAL);
+		state = recv(Socket, Context.RequestEntity, sizeof(Context.RequestEntity), MSG_NOSIGNAL);
 		if(GET_LAST_ERROR() == TCP_TIME_OUT)
 		{
 			break;
 		}
 
-		if( state < 1 )
+		if( state <= 2 )
 		{
 			break;
 		}
 
-		Query(PrimarySocketPtr,
-			  SecondarySocketPtr,
-			  PrimaryProtocol,
-			  ResultBuffer,
-			  state,
+		memcpy(&TCPLength, Context.RequestEntity, sizeof(TCPLength));
+		Context.RequestLength = state - 2;
+		memmove(Context.RequestEntity, Context.RequestEntity + 2, Context.RequestLength);
+
+		Query(&Context,
+			  TCPLength,
 			  &Socket,
-			  &Peer,
-			  &Buffer
+			  &Peer
 			  );
-		ExtendableBuffer_Reset(&Buffer);
+
+		ExtendableBuffer_Reset(Context.ResponseBuffer);
 
 	}
 
-	CLOSE_SOCKET(TCPSocket);
-	CLOSE_SOCKET(UDPSocket);
+	CLOSE_SOCKET(Context.TCPSocket);
+	CLOSE_SOCKET(Context.UDPSocket);
 
 	CLOSE_SOCKET(Socket);
 
@@ -351,17 +327,50 @@ static int TCPRecv(RecvInfo *Info)
 
 static int QueryDNSListenTCP(void *Unused)
 {
-	static ThreadHandle	Unused2;
+	ThreadHandle		NewSpawnedThread;
 	RecvInfo			*Info = NULL;
 	CompatibleAddr		*Peer;
 	socklen_t			AddrLen;
 
+	DNSQuaryProtocol	PrimaryProtocolToServer;
+	BOOL				SecondaryExists;
+
+	char				ProtocolStr[8] = {0};
+
+	strncpy(ProtocolStr, ConfigGetRawString(&ConfigInfo, "PrimaryServer"), 3);
+	StrToLower(ProtocolStr);
+
+	if( strcmp(ProtocolStr, "tcp") == 0 )
+	{
+		PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_TCP;
+		if( ConfigGetStringList(&ConfigInfo, "UDPServer") == NULL )
+		{
+			SecondaryExists = FALSE;
+		} else {
+			SecondaryExists = TRUE;
+		}
+	} else {
+		PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_UDP;
+		if( ConfigGetStringList(&ConfigInfo, "TCPServer") == NULL )
+		{
+			SecondaryExists = FALSE;
+		} else {
+			SecondaryExists = TRUE;
+		}
+	}
+
 	while(TRUE){
 
 		Info = SafeMalloc(sizeof(RecvInfo));
+		if( Info == NULL )
+		{
+			break;
+		}
 
 		Peer = &(Info -> Peer);
 		memset(Info, 0, sizeof(CompatibleAddr));
+		Info -> PrimaryProtocolToServer = PrimaryProtocolToServer;
+		Info -> SecondaryExists = SecondaryExists;
 
 		if( Family == AF_INET )
 		{
@@ -398,16 +407,14 @@ static int QueryDNSListenTCP(void *Unused)
 
 			IPv6AddressToAsc(&(Peer -> Addr6.sin6_addr), Addr);
 
-			INFO("Established TCP connection to %s:%d\n",
+			INFO("Established TCP connection to [%s]:%d\n",
 				 Addr,
 				 Peer -> Addr6.sin6_port
 				 );
 		}
 
-		CREATE_THREAD(TCPRecv, (void *)Info, Unused2);
-#ifdef WIN32
-		CloseHandle(Unused2);
-#endif /* WIN32 */
+		CREATE_THREAD(ReceiveFromClient, (void *)Info, NewSpawnedThread);
+		DETACH_THREAD(NewSpawnedThread);
 	}
 	CLOSE_SOCKET(ListenSocketTCP);
 	return 0;

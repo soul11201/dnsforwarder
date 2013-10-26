@@ -108,61 +108,37 @@ int QueryDNSListenUDPInit(void)
 	return 0;
 }
 
-static int Query(	SOCKET				*PrimarySocket,
-					SOCKET				*SecondarySocket,
-					DNSQuaryProtocol	PrimaryProtocol,
-					char				*QueryContent,
-					int					QueryContentLength,
-					CompatibleAddr		*ClientAddr,
-					ExtendableBuffer	*Buffer
-					)
+static int Query(ThreadContext *Context, CompatibleAddr *ClientAddr)
 {
 	int					State;
 
-	DNSRecordType		SourceType;
-
 	char				ProtocolCharacter = ' ';
-
-	char				QueryDomain[256];
 
 	char				DateAndTime[32];
 
-	QueryContext		Context;
-
 	GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
 
-	QueryDomain[0] = '\0';
-	DNSGetHostName(QueryContent, DNSJumpHeader(QueryContent), QueryDomain);
+	Context -> RequestingDomain[0] = '\0';
+	DNSGetHostName(Context -> RequestEntity,
+				   DNSJumpHeader(Context -> RequestEntity),
+				   Context -> RequestingDomain
+				   );
 
-	SourceType = (DNSRecordType)DNSGetRecordType(DNSJumpHeader(QueryContent));
+	Context -> RequestingType =
+		(DNSRecordType)DNSGetRecordType(DNSJumpHeader(Context -> RequestEntity));
 
-	Context.PrimarySocket = PrimarySocket;
-	Context.SecondarySocket = SecondarySocket;
-	Context.PrimaryProtocolToServer = PrimaryProtocol;
-	Context.ProtocolToSrc = DNS_QUARY_PROTOCOL_UDP;
-	Context.Compress = TRUE;
-
-	State = QueryBase(&Context,
-
-					  QueryContent,
-					  QueryContentLength,
-
-					  Buffer,
-					  QueryDomain,
-					  SourceType,
-					  &ProtocolCharacter
-					  );
+	State = QueryBase(Context, &ProtocolCharacter);
 
 	switch( State )
 	{
 		case QUERY_RESULT_DISABLE:
-			((DNSHeader *)(QueryContent)) -> Flags.Direction = 1;
-			((DNSHeader *)(QueryContent)) -> Flags.ResponseCode = 5;
+			((DNSHeader *)(Context -> RequestEntity)) -> Flags.Direction = 1;
+			((DNSHeader *)(Context -> RequestEntity)) -> Flags.ResponseCode = 5;
 			if( Family == AF_INET )
 			{
 				_SendTo(ListenSocketUDP,
-						QueryContent,
-						QueryContentLength,
+						Context -> RequestEntity,
+						Context -> RequestLength,
 						0,
 						(struct sockaddr *)&(ClientAddr -> Addr4),
 						sizeof(struct sockaddr)
@@ -172,8 +148,8 @@ static int Query(	SOCKET				*PrimarySocket,
 					  DateAndTime,
 					  inet_ntoa(ClientAddr -> Addr4.sin_addr),
 					  ClientAddr -> Addr4.sin_port,
-					  DNSGetTypeName(SourceType),
-					  QueryDomain
+					  DNSGetTypeName(Context -> RequestingType),
+					  Context -> RequestingDomain
 					  );
 			} else {
 				char Addr[LENGTH_OF_IPV6_ADDRESS_ASCII] = {0};
@@ -181,18 +157,18 @@ static int Query(	SOCKET				*PrimarySocket,
 				IPv6AddressToAsc(&(ClientAddr -> Addr6.sin6_addr), Addr);
 
 				_SendTo(ListenSocketUDP,
-						QueryContent,
-						QueryContentLength,
+						Context -> RequestEntity,
+						Context -> RequestLength,
 						0,
 						(struct sockaddr *)&(ClientAddr -> Addr6),
 						sizeof(struct sockaddr_in6)
 						);
-				PRINT("%s[R][%s:%d][%s][%s] Refused.\n",
+				PRINT("%s[R][[%s]:%d][%s][%s] Refused.\n",
 					  DateAndTime,
 					  Addr,
 					  ClientAddr -> Addr6.sin6_port,
-					  DNSGetTypeName(SourceType),
-					  QueryDomain
+					  DNSGetTypeName(Context -> RequestingType),
+					  Context -> RequestingDomain
 					  );
 			}
 			return -1;
@@ -213,7 +189,8 @@ static int Query(	SOCKET				*PrimarySocket,
 						   DateAndTime,
 						   ProtocolCharacter,
 						   inet_ntoa(ClientAddr -> Addr4.sin_addr),
-						   DNSGetTypeName(SourceType), QueryDomain,
+						   DNSGetTypeName(Context -> RequestingType),
+						   Context -> RequestingDomain,
 						   ErrorNum,
 						   ErrorMessage
 						   );
@@ -226,7 +203,8 @@ static int Query(	SOCKET				*PrimarySocket,
 						   DateAndTime,
 						   ProtocolCharacter,
 						   Addr,
-						   DNSGetTypeName(SourceType), QueryDomain,
+						   DNSGetTypeName(Context -> RequestingType),
+						   Context -> RequestingDomain,
 						   ErrorNum,
 						   ErrorMessage
 						   );
@@ -239,13 +217,13 @@ static int Query(	SOCKET				*PrimarySocket,
 			if(State > MaximumMessageSize)
 			{
 				State = MaximumMessageSize;
-				((DNSHeader *)(QueryContent)) -> Flags.TrunCation = 1;
+				((DNSHeader *)(ExtendableBuffer_GetData(Context -> ResponseBuffer))) -> Flags.TrunCation = 1;
 			}
 
 			if( Family == AF_INET )
 			{
 				_SendTo(ListenSocketUDP,
-						ExtendableBuffer_GetData(Buffer),
+						ExtendableBuffer_GetData(Context -> ResponseBuffer),
 						State,
 						0,
 						(struct sockaddr *)&(ClientAddr -> Addr4),
@@ -253,7 +231,7 @@ static int Query(	SOCKET				*PrimarySocket,
 						);
 			} else {
 				_SendTo(ListenSocketUDP,
-						ExtendableBuffer_GetData(Buffer),
+						ExtendableBuffer_GetData(Context -> ResponseBuffer),
 						State,
 						0,
 						(struct sockaddr *)&(ClientAddr -> Addr6),
@@ -265,7 +243,7 @@ static int Query(	SOCKET				*PrimarySocket,
 			{
 				char InfoBuffer[3072];
 				InfoBuffer[0] = '\0';
-				GetAllAnswers(ExtendableBuffer_GetData(Buffer), InfoBuffer);
+				GetAllAnswers(ExtendableBuffer_GetData(Context -> ResponseBuffer), InfoBuffer);
 
 				if( Family == AF_INET )
 				{
@@ -273,8 +251,8 @@ static int Query(	SOCKET				*PrimarySocket,
 						  DateAndTime,
 						  ProtocolCharacter,
 						  inet_ntoa(ClientAddr -> Addr4.sin_addr),
-						  DNSGetTypeName(SourceType),
-						  QueryDomain,
+						  DNSGetTypeName(Context -> RequestingType),
+						  Context -> RequestingDomain,
 						  InfoBuffer
 						  );
 				} else {
@@ -286,8 +264,8 @@ static int Query(	SOCKET				*PrimarySocket,
 						  DateAndTime,
 						  ProtocolCharacter,
 						  Addr,
-						  DNSGetTypeName(SourceType),
-						  QueryDomain,
+						  DNSGetTypeName(Context -> RequestingType),
+						  Context -> RequestingDomain,
 						  InfoBuffer
 						  );
 				}
@@ -303,54 +281,55 @@ static int QueryDNSListenUDP(void *ID){
 	CompatibleAddr		ClientAddr;
 
 	int					State;
-	char				ResultBuffer[1024];
-	ExtendableBuffer	Buffer;
 
-	/* Sockets with server */
-	SOCKET				TCPSocket			=	INVALID_SOCKET;
-	SOCKET				UDPSocket			=	INVALID_SOCKET;
-	SOCKET				*PrimarySocketPtr;
-	SOCKET				*SecondarySocketPtr;
-	DNSQuaryProtocol	PrimaryProtocol;
+	ThreadContext		Context;
 
 	char				ProtocolStr[8] = {0};
 
-	/* Choose and fill Primary and Secondary */
+	Context.TCPSocket = INVALID_SOCKET;
+	Context.UDPSocket = INVALID_SOCKET;
+	Context.LastServer = NULL;
+	Context.Compress = TRUE;
+	Context.ResponseBuffer = &(Context.ResponseBuffer_Entity);
+	ExtendableBuffer_Init(Context.ResponseBuffer, 512, 10240);
+
+	/* Choose and fill default primary and secondary socket */
 	strncpy(ProtocolStr, ConfigGetRawString(&ConfigInfo, "PrimaryServer"), 3);
 	StrToLower(ProtocolStr);
 
 	if( strcmp(ProtocolStr, "tcp") == 0 )
 	{
-		PrimaryProtocol = DNS_QUARY_PROTOCOL_TCP;
-		PrimarySocketPtr = &TCPSocket;
+		Context.PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_TCP;
+		Context.PrimarySocket = &(Context.TCPSocket);
 
 		if( ConfigGetStringList(&ConfigInfo, "UDPServer") != NULL )
-			SecondarySocketPtr = &UDPSocket;
+			Context.SecondarySocket = &(Context.UDPSocket);
 		else
-			SecondarySocketPtr = NULL;
+			Context.SecondarySocket = NULL;
 
 	} else {
-		PrimaryProtocol = DNS_QUARY_PROTOCOL_UDP;
-		PrimarySocketPtr = &UDPSocket;
+		Context.PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_UDP;
+		Context.PrimarySocket = &(Context.UDPSocket);
 
 		if( ConfigGetStringList(&ConfigInfo, "TCPServer") != NULL )
-			SecondarySocketPtr = &TCPSocket;
+			Context.SecondarySocket = &(Context.TCPSocket);
 		else
-			SecondarySocketPtr = NULL;
+			Context.SecondarySocket = NULL;
 	}
 
-	ExtendableBuffer_Init(&Buffer, 512, 1024);
-
+	/* Listen and accept requests */
 	while(TRUE)
 	{
 		memset(&ClientAddr, 0, sizeof(ClientAddr));
+
 		GET_MUTEX(ListenMutex);
+
 		if( Family == AF_INET )
 		{
 			AddrLen = sizeof(struct sockaddr);
 			State = recvfrom(ListenSocketUDP,
-							 ResultBuffer,
-							 sizeof(ResultBuffer),
+							 Context.RequestEntity,
+							 sizeof(Context.RequestEntity),
 							 0,
 							 (struct sockaddr *)&(ClientAddr.Addr4),
 							 &AddrLen
@@ -359,8 +338,8 @@ static int QueryDNSListenUDP(void *ID){
 		} else {
 			AddrLen = sizeof(struct sockaddr_in6);
 			State = recvfrom(ListenSocketUDP,
-							 ResultBuffer,
-							 sizeof(ResultBuffer),
+							 Context.RequestEntity,
+							 sizeof(Context.RequestEntity),
 							 0,
 							 (struct sockaddr *)&(ClientAddr.Addr6),
 							 &AddrLen
@@ -402,15 +381,10 @@ static int QueryDNSListenUDP(void *ID){
 			continue;
 		}
 
-		Query(PrimarySocketPtr,
-			  SecondarySocketPtr,
-			  PrimaryProtocol,
-			  ResultBuffer,
-			  State,
-			  &ClientAddr,
-			  &Buffer
-			  );
-		ExtendableBuffer_Reset(&Buffer);
+		Context.RequestLength = State;
+
+		Query(&Context, &ClientAddr);
+		ExtendableBuffer_Reset(Context.ResponseBuffer);
 
 	}
 

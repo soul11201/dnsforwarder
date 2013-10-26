@@ -36,7 +36,6 @@ int Array_Init(__in Array *a, __in int DataLength, __in int InitialCount, __in B
 /* Subscript is always non-negative. */
 void *Array_GetBySubscript(__in Array *a, __in int Subscript)
 {
-
 	if( Subscript >= 0 && Subscript < a -> Used )
 	{
 		if( a -> Allocated < 0 )
@@ -60,7 +59,9 @@ int Array_PushBack(__in Array *a, __in_opt void *Data, __in_opt void *Boundary /
 			int NewCount = (a -> Allocated) < 2 ? 2 : (a -> Allocated) + (a -> Allocated) / 2;
 
 			if( SafeRealloc((void **)&(a -> Data), NewCount * (a -> DataLength)) != 0 )
+			{
 				return -1;
+			}
 
 			a -> Allocated = NewCount;
 		}

@@ -20,6 +20,18 @@
 
 #define PRINT(...)		if(ProgramArgs.ShowMassages == TRUE) printf(__VA_ARGS__);
 
+/* Global Variables */
+ConfigFileInfo	ConfigInfo;
+int				TimeToServer;
+BOOL			AllowFallBack;
+BOOL			ShowMassages;
+BOOL			ErrorMessages;
+
+#ifdef INTERNAL_DEBUG
+EFFECTIVE_LOCK	Debug_Mutex;
+FILE			*Debug_File;
+#endif
+
 struct _ProgramArgs
 {
 	char		*ConfigFile_ptr;

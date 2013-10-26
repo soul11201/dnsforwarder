@@ -618,3 +618,15 @@ int ELFHash(const char *str, int Unused)
 	}
 	return (h & 0x7FFFFFFF);
 }
+
+void HexDump(const char *Data, int Length)
+{
+	int Itr;
+
+	for( Itr = 0; Itr != Length; ++Itr )
+	{
+		printf("%x", (int)Data[Itr]);
+	}
+
+	putchar('\n');
+}

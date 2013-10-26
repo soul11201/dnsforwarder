@@ -14,8 +14,6 @@
 /* Handle DNS header*/
 #define DNSGetTCPLength(dns_over_tcp_ptr)	GET_16_BIT_U_INT(dns_over_tcp_ptr)
 
-#define DNSGetDNSBody(dns_over_tcp_ptr)		((char *)(dns_over_tcp_ptr) + 2)
-
 #define DNSGetQueryIdentifier(dns_body)		GET_16_BIT_U_INT((char *)(dns_body))
 
 #define DNSGetFlags(dns_body)				GET_16_BIT_U_INT((char *)(dns_body) + 2)

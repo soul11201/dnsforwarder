@@ -10,6 +10,6 @@ int Hosts_Init(void);
 
 BOOL Hosts_IsInited(void);
 
-int Hosts_GetByQuestion(char *Question, ExtendableBuffer *Buffer, int *AnswerCount, QueryContext *Context);
+int Hosts_GetByQuestion(ThreadContext *Context, int *AnswerCount);
 
 #endif // HOSTS_H_INCLUDED
