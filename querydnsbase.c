@@ -217,14 +217,28 @@ static void SelectSocketAndProtocol(ThreadContext		*Context,
 	}
 }
 
-static void SetAddressAndPrococolLetter(DNSQuaryProtocol	ProtocolUsed,
+static void SetAddressAndPrococolLetter(ThreadContext		*Context,
+										DNSQuaryProtocol	ProtocolUsed,
 										struct sockaddr		**Address,
 										sa_family_t			*Family,
-										char				*ProtocolCharacter,
-										const char			*RequestingDomain
+										char				*ProtocolCharacter
 										)
 {
-	*Address = AddressChunk_GetOne(&Addresses, Family, RequestingDomain, ProtocolUsed);
+	*Address = AddressChunk_GetOne(&Addresses, Family, Context -> RequestingDomain, ProtocolUsed);
+
+	if( *Address != Context -> LastServer )
+	{
+		if( Context -> LastProtocol == DNS_QUARY_PROTOCOL_UDP )
+		{
+			CLOSE_SOCKET(Context -> UDPSocket);
+			Context -> UDPSocket = INVALID_SOCKET;
+		} else {
+			CloseTCPConnection(&(Context -> TCPSocket));
+		}
+	}
+
+	Context -> LastServer = *Address;
+	Context -> LastProtocol = ProtocolUsed;
 
 	if( ProtocolUsed == DNS_QUARY_PROTOCOL_UDP )
 	{
@@ -265,15 +279,12 @@ static int QueryFromServer(ThreadContext *Context, char *ProtocolCharacter)
 
 	SelectSocketAndProtocol(Context, &SocketUsed, &ProtocolUsed, UseSecondary);
 
-	SetAddressAndPrococolLetter(ProtocolUsed,
+	SetAddressAndPrococolLetter(Context,
+								ProtocolUsed,
 								&ServerAddr,
 								&Family,
-								ProtocolCharacter,
-								Context -> RequestingDomain
+								ProtocolCharacter
 								);
-
-	Context -> LastServer = ServerAddr;
-	Context -> LastProtocol = ProtocolUsed;
 
 	StateOfReceiving = QueryFromServerBase(SocketUsed,
 										   ServerAddr,
@@ -291,7 +302,7 @@ static int QueryFromServer(ThreadContext *Context, char *ProtocolCharacter)
 		/* Move pointer to the next */
 		AddressChunk_Advance(&Addresses, ProtocolUsed);
 
-		if( AllowFallBack == TRUE )
+		if( Context -> SecondarySocket != NULL && AllowFallBack == TRUE )
 		{
 			if( ProtocolCharacter != NULL )
 			{
@@ -309,15 +320,12 @@ static int QueryFromServer(ThreadContext *Context, char *ProtocolCharacter)
 									!UseSecondary
 									);
 
-			SetAddressAndPrococolLetter(ProtocolUsed,
+			SetAddressAndPrococolLetter(Context,
+										ProtocolUsed,
 										&ServerAddr,
 										&Family,
-										ProtocolCharacter,
-										Context -> RequestingDomain
+										ProtocolCharacter
 										);
-
-			Context -> LastServer = ServerAddr;
-			Context -> LastProtocol = ProtocolUsed;
 
 			StateOfReceiving = QueryFromServerBase(SocketUsed,
 												   ServerAddr,
