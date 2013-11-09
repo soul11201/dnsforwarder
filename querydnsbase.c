@@ -493,6 +493,7 @@ int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Typ
 
 	memcpy(&RecursionContext, Context, sizeof(RecursionContext));
 
+	RecursionContext.Previous = Context;
 	RecursionContext.RequestLength = 12 + strlen(Name) + 2 + 4;
 	RecursionContext.RequestEntity = RequestEntity;
 	RecursionContext.RequestingDomain = Name;
