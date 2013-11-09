@@ -102,24 +102,35 @@ int QueryDNSListenTCPInit(void)
 
 static int Query(ThreadContext *Context, _16BIT_UINT TCPLength, SOCKET *ClientSocket, CompatibleAddr *ClientAddr)
 {
-	int				State;
+	int		State;
 
-	char			ProtocolCharacter = ' ';
+	char	RequestingDomain[256];
 
-	char			DateAndTime[32];
+	char	ClientIP[LENGTH_OF_IPV6_ADDRESS_ASCII + 1];
 
-	GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
+	if( Family == AF_INET )
+	{
+		strcpy(ClientIP, inet_ntoa(ClientAddr -> Addr4.sin_addr));
+		Context -> ClientPort = htons(ClientAddr -> Addr4.sin_port);
+	} else {
+		IPv6AddressToAsc(&(ClientAddr -> Addr6.sin6_addr), ClientIP);
+		Context -> ClientPort = htons(ClientAddr -> Addr6.sin6_port);
+	}
 
-	Context -> RequestingDomain[0] = '\0';
+	Context -> ClientIP = ClientIP;
+
+	RequestingDomain[0] = '\0';
 	DNSGetHostName(Context -> RequestEntity,
 				   DNSJumpHeader(Context -> RequestEntity),
-				   Context -> RequestingDomain
+				   RequestingDomain
 				   );
+
+	Context -> RequestingDomain = RequestingDomain;
 
 	Context -> RequestingType =
 		(DNSRecordType)DNSGetRecordType(DNSJumpHeader(Context -> RequestEntity));
 
-	State = QueryBase(Context, &ProtocolCharacter);
+	State = QueryBase(Context);
 
 	switch( State )
 	{
@@ -128,68 +139,10 @@ static int Query(ThreadContext *Context, _16BIT_UINT TCPLength, SOCKET *ClientSo
 			((DNSHeader *)(Context -> RequestEntity)) -> Flags.ResponseCode = 5;
 			send(*ClientSocket, &TCPLength, 2, 0);
 			send(*ClientSocket, Context -> RequestEntity, Context -> RequestLength, 0);
-			if( Family == AF_INET )
-			{
-				PRINT("%s[R][%s:%d][%s][%s] Refused.\n",
-					  DateAndTime,
-					  inet_ntoa(ClientAddr -> Addr4.sin_addr),
-					  ClientAddr -> Addr4.sin_port,
-					  DNSGetTypeName(Context -> RequestingType),
-					  Context -> RequestingDomain
-					  );
-			} else {
-				char Addr[LENGTH_OF_IPV6_ADDRESS_ASCII] = {0};
-
-				IPv6AddressToAsc(&(ClientAddr -> Addr6.sin6_addr), Addr);
-
-				PRINT("%s[R][[%s]:%d][%s][%s] Refused.\n",
-					  DateAndTime,
-					  Addr,
-					  ClientAddr -> Addr6.sin6_port,
-					  DNSGetTypeName(Context -> RequestingType),
-					  Context -> RequestingDomain
-					  );
-
-			}
 			return -1;
 			break;
 
 		case QUERY_RESULT_ERROR:
-			if( ErrorMessages == TRUE )
-			{
-				int		ErrorNum = GET_LAST_ERROR();
-				char	ErrorMessage[320];
-
-				ErrorMessage[0] ='\0';
-
-				GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
-				if( Family == AF_INET )
-				{
-					printf("%s[%c][%s][%s][%s] Error occured : %d : %s .\n",
-						   DateAndTime,
-						   ProtocolCharacter,
-						   inet_ntoa(ClientAddr -> Addr4.sin_addr),
-						   DNSGetTypeName(Context -> RequestingType),
-						   Context -> RequestingDomain,
-						   ErrorNum,
-						   ErrorMessage
-						   );
-				} else {
-					char Addr[LENGTH_OF_IPV6_ADDRESS_ASCII] = {0};
-
-					IPv6AddressToAsc(&(ClientAddr -> Addr6.sin6_addr), Addr);
-
-					printf("%s[%c][%s][%s][%s] Error occured : %d : %s .\n",
-						   DateAndTime,
-						   ProtocolCharacter,
-						   Addr,
-						   DNSGetTypeName(Context -> RequestingType),
-						   Context -> RequestingDomain,
-						   ErrorNum,
-						   ErrorMessage
-						   );
-				}
-			}
 			return -1;
 			break;
 
@@ -199,39 +152,6 @@ static int Query(ThreadContext *Context, _16BIT_UINT TCPLength, SOCKET *ClientSo
 				SET_16_BIT_U_INT(&ResponseLength, State);
 				send(*ClientSocket, &ResponseLength, 2, 0);
 				send(*ClientSocket, ExtendableBuffer_GetData(Context -> ResponseBuffer), State, 0);
-
-				if( ShowMassages == TRUE )
-				{
-					char InfoBuffer[3072];
-					InfoBuffer[0] = '\0';
-					GetAllAnswers(ExtendableBuffer_GetData(Context -> ResponseBuffer),
-								  InfoBuffer);
-
-					if( Family == AF_INET )
-					{
-						PRINT("%s[%c][%s][%s][%s] :\n%s",
-							  DateAndTime,
-							  ProtocolCharacter,
-							  inet_ntoa(ClientAddr -> Addr4.sin_addr),
-							  DNSGetTypeName(Context -> RequestingType),
-							  Context -> RequestingDomain,
-							  InfoBuffer
-							  );
-					} else {
-						char Addr[LENGTH_OF_IPV6_ADDRESS_ASCII] = {0};
-
-						IPv6AddressToAsc(&(ClientAddr -> Addr6.sin6_addr), Addr);
-
-						PRINT("%s[%c][%s][%s][%s] :\n%s",
-							  DateAndTime,
-							  ProtocolCharacter,
-							  Addr,
-							  DNSGetTypeName(Context -> RequestingType),
-							  Context -> RequestingDomain,
-							  InfoBuffer
-							  );
-					}
-				}
 				return 0;
 				break;
 			}
@@ -248,12 +168,17 @@ static int ReceiveFromClient(RecvInfo *Info)
 
 	ThreadContext		Context;
 
+	char				RequestEntity[1024];
+
+	Context.Head = &Context;
+	Context.Previous = NULL;
 	Context.TCPSocket = INVALID_SOCKET;
 	Context.UDPSocket = INVALID_SOCKET;
 	Context.LastServer = NULL;
 	Context.Compress = TRUE;
 	Context.ResponseBuffer = &(Context.ResponseBuffer_Entity);
 	ExtendableBuffer_Init(Context.ResponseBuffer, 512, 10240);
+	Context.RequestEntity = RequestEntity + 2;
 
 	if( Info -> PrimaryProtocolToServer == DNS_QUARY_PROTOCOL_TCP )
 	{
@@ -276,7 +201,7 @@ static int ReceiveFromClient(RecvInfo *Info)
 	}
 
 	while(TRUE){
-		state = recv(Socket, Context.RequestEntity, sizeof(Context.RequestEntity), MSG_NOSIGNAL);
+		state = recv(Socket, RequestEntity, sizeof(RequestEntity), MSG_NOSIGNAL);
 		if(GET_LAST_ERROR() == TCP_TIME_OUT)
 		{
 			break;
@@ -287,9 +212,8 @@ static int ReceiveFromClient(RecvInfo *Info)
 			break;
 		}
 
-		memcpy(&TCPLength, Context.RequestEntity, sizeof(TCPLength));
+		memcpy(&TCPLength, RequestEntity, sizeof(TCPLength));
 		Context.RequestLength = state - 2;
-		memmove(Context.RequestEntity, Context.RequestEntity + 2, Context.RequestLength);
 
 		Query(&Context,
 			  TCPLength,

@@ -45,7 +45,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 						struct	sockaddr	*ServerAddress,
 						sa_family_t			AddressFamily,
 						DNSQuaryProtocol	ProtocolToServer,
-						char				*RequestEntity,
+						const char			*RequestEntity,
 						int					RequestLength,
 						ExtendableBuffer	*ResultBuffer,
 						const char			*RequestingDomain

@@ -44,7 +44,12 @@ extern EFFECTIVE_LOCK	Debug_Mutex;
 extern FILE				*Debug_File;
 #endif
 
-typedef struct _QueryContext{
+typedef struct _QueryContext ThreadContext;
+
+struct _QueryContext{
+	ThreadContext	*Head;
+	ThreadContext	*Previous;
+
 	SOCKET	TCPSocket;
 	SOCKET	UDPSocket;
 
@@ -55,10 +60,13 @@ typedef struct _QueryContext{
 	struct sockaddr		*LastServer;
 	DNSQuaryProtocol	LastProtocol;
 
-	char				RequestEntity[1024];
+	const char			*RequestEntity;
 	int					RequestLength;
-	char				RequestingDomain[256];
+	const char			*RequestingDomain;
 	DNSRecordType		RequestingType;
+
+	const char			*ClientIP;
+	int					ClientPort; /* host's byte order */
 
 	BOOL	Compress;
 
@@ -68,19 +76,24 @@ typedef struct _QueryContext{
 	/* Do not refer this, let `ResponseBuffer' point to this and use `ResponseBuffer' instead */
 	ExtendableBuffer	ResponseBuffer_Entity;
 
-} ThreadContext;
+};
 
+void ShowRefusingMassage(ThreadContext *Context);
+
+void ShowErrorMassage(ThreadContext *Context, char ProtocolCharacter);
+
+void ShowNormalMassage(ThreadContext *Context, _32BIT_INT Offset, char ProtocolCharacter);
 
 int DNSFetchFromCache(__in ThreadContext *Context);
 
 int InitAddress(void);
 
-int FetchFromHostsAndCache(ThreadContext *Context, char *ProtocolCharacter);
+int FetchFromHostsAndCache(ThreadContext *Context);
 
 #define QUERY_RESULT_DISABLE	(-1)
 #define QUERY_RESULT_ERROR		(-2)
 
-int QueryBase(ThreadContext *Context, char *ProtocolCharacter);
+int QueryBase(ThreadContext *Context);
 
 int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Type);
 

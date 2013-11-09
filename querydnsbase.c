@@ -20,6 +20,74 @@
 
 static AddressChunk Addresses;
 
+void ShowRefusingMassage(ThreadContext *Context)
+{
+	char DateAndTime[32];
+
+	if( ErrorMessages == TRUE )
+	{
+		GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
+
+		printf("%s[R][%s:%d][%s][%s] Refused.\n",
+			  DateAndTime,
+			  Context -> ClientIP,
+			  Context -> ClientPort,
+			  DNSGetTypeName(Context -> RequestingType),
+			  Context -> RequestingDomain
+			  );
+	}
+}
+
+void ShowErrorMassage(ThreadContext *Context, char ProtocolCharacter)
+{
+	char	DateAndTime[32];
+
+	int		ErrorNum = GET_LAST_ERROR();
+	char	ErrorMessage[320];
+
+	if( ErrorMessages == TRUE )
+	{
+		GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
+
+		ErrorMessage[0] ='\0';
+
+		GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
+
+		printf("%s[%c][%s][%s][%s] Error occured : %d : %s .\n",
+			   DateAndTime,
+			   ProtocolCharacter,
+			   Context -> ClientIP,
+			   DNSGetTypeName(Context -> RequestingType),
+			   Context -> RequestingDomain,
+			   ErrorNum,
+			   ErrorMessage
+			   );
+	}
+}
+
+void ShowNormalMassage(ThreadContext *Context, _32BIT_INT Offset, char ProtocolCharacter)
+{
+	char DateAndTime[32];
+	char InfoBuffer[3072];
+
+	if( ErrorMessages == TRUE )
+	{
+		GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
+
+		InfoBuffer[0] = '\0';
+		GetAllAnswers(ExtendableBuffer_GetPositionByOffset(Context -> ResponseBuffer, Offset), InfoBuffer);
+
+		printf("%s[%c][%s][%s][%s] :\n%s",
+			  DateAndTime,
+			  ProtocolCharacter,
+			  Context -> ClientIP,
+			  DNSGetTypeName(Context -> RequestingType),
+			  Context -> RequestingDomain,
+			  InfoBuffer
+			  );
+	}
+}
+
 int DNSFetchFromHosts(__in ThreadContext *Context)
 {
 	char		*Header;
@@ -45,6 +113,8 @@ int DNSFetchFromHosts(__in ThreadContext *Context)
 		((DNSHeader *)Header) -> Flags.ResponseCode = 0;
 		((DNSHeader *)Header) -> Flags.Type = 0;
 		((DNSHeader *)Header) -> AnswerCount = htons(AnswerCount);
+
+		ShowNormalMassage(Context, HeaderOffset, 'H');
 
 		if( AnswerCount != 1 && Context -> Compress != FALSE )
 		{
@@ -88,6 +158,8 @@ int DNSFetchFromCache(__in ThreadContext *Context)
 
 		((DNSHeader *)Header) -> AnswerCount = htons(RecordsCount);
 
+		ShowNormalMassage(Context, HeaderOffset, 'C');
+
 		if(Context -> Compress != FALSE)
 		{
 			int UnCompressedLength = Context -> RequestLength + RecordsLength;
@@ -103,10 +175,10 @@ int DNSFetchFromCache(__in ThreadContext *Context)
 	}
 }
 
-int FetchFromHostsAndCache(ThreadContext *Context, char *ProtocolCharacter)
+int FetchFromHostsAndCache(ThreadContext *Context)
 {
-	int	StateOfReceiving = -1;
-	int	OriOffset = ExtendableBuffer_GetEndOffset(Context -> ResponseBuffer);
+	int			StateOfReceiving = -1;
+	_32BIT_INT	OriOffset = ExtendableBuffer_GetEndOffset(Context -> ResponseBuffer);
 
 	if( Hosts_IsInited() )
 	{
@@ -114,8 +186,6 @@ int FetchFromHostsAndCache(ThreadContext *Context, char *ProtocolCharacter)
 
 		if( StateOfReceiving > 0 ) /* Succeed to query from Hosts  */
 		{
-			if( ProtocolCharacter != NULL )
-				*ProtocolCharacter = 'H';
 
 			DomainStatistic_Add(Context -> RequestingDomain, STATISTIC_TYPE_HOSTS);
 
@@ -132,8 +202,6 @@ int FetchFromHostsAndCache(ThreadContext *Context, char *ProtocolCharacter)
 
 		if( StateOfReceiving > 0 ) /* Succeed  */
 		{
-			if( ProtocolCharacter != NULL )
-				*ProtocolCharacter = 'C';
 
 			DomainStatistic_Add(Context -> RequestingDomain, STATISTIC_TYPE_CACHE);
 
@@ -230,10 +298,10 @@ static void SetAddressAndPrococolLetter(ThreadContext		*Context,
 	{
 		if( Context -> LastProtocol == DNS_QUARY_PROTOCOL_UDP )
 		{
-			CLOSE_SOCKET(Context -> UDPSocket);
+			CLOSE_SOCKET(Context -> Head -> UDPSocket);
 			Context -> UDPSocket = INVALID_SOCKET;
 		} else {
-			CloseTCPConnection(&(Context -> TCPSocket));
+			CloseTCPConnection(&(Context -> Head -> TCPSocket));
 		}
 	}
 
@@ -255,8 +323,10 @@ static void SetAddressAndPrococolLetter(ThreadContext		*Context,
 	}
 }
 
-static int QueryFromServer(ThreadContext *Context, char *ProtocolCharacter)
+static int QueryFromServer(ThreadContext *Context)
 {
+	char		ProtocolCharacter;
+
 	int			StateOfReceiving;
 
 	SOCKET		*SocketUsed;
@@ -268,6 +338,8 @@ static int QueryFromServer(ThreadContext *Context, char *ProtocolCharacter)
 	sa_family_t	Family;
 
 	BOOL		UseSecondary;
+
+	_32BIT_INT	StartOffset = ExtendableBuffer_GetEndOffset(Context -> ResponseBuffer);
 
 	/* Determine whether the secondaries are used */
 	if( Context -> SecondarySocket != NULL && IsExcludedDomain(Context -> RequestingDomain) )
@@ -283,7 +355,7 @@ static int QueryFromServer(ThreadContext *Context, char *ProtocolCharacter)
 								ProtocolUsed,
 								&ServerAddr,
 								&Family,
-								ProtocolCharacter
+								&ProtocolCharacter
 								);
 
 	StateOfReceiving = QueryFromServerBase(SocketUsed,
@@ -298,21 +370,17 @@ static int QueryFromServer(ThreadContext *Context, char *ProtocolCharacter)
 
 	if(StateOfReceiving < 0) /* Failed */
 	{
+		ShowErrorMassage(Context, ProtocolCharacter);
 
 		/* Move pointer to the next */
 		AddressChunk_Advance(&Addresses, ProtocolUsed);
 
 		if( Context -> SecondarySocket != NULL && AllowFallBack == TRUE )
 		{
-			if( ProtocolCharacter != NULL )
-			{
-				INFO("Fallback from %c for %s .\n",
-					 *ProtocolCharacter,
-					 Context -> RequestingDomain
-					 );
-			} else {
-				INFO("Fallback for %s .\n", Context -> RequestingDomain);
-			}
+			INFO("Fallback from %c for %s .\n",
+				 ProtocolCharacter,
+				 Context -> RequestingDomain
+				 );
 
 			SelectSocketAndProtocol(Context,
 									&SocketUsed,
@@ -324,7 +392,7 @@ static int QueryFromServer(ThreadContext *Context, char *ProtocolCharacter)
 										ProtocolUsed,
 										&ServerAddr,
 										&Family,
-										ProtocolCharacter
+										&ProtocolCharacter
 										);
 
 			StateOfReceiving = QueryFromServerBase(SocketUsed,
@@ -339,6 +407,8 @@ static int QueryFromServer(ThreadContext *Context, char *ProtocolCharacter)
 
 			if( StateOfReceiving < 0 )
 			{
+				ShowErrorMassage(Context, ProtocolCharacter);
+
 				/* Move pointer to the next */
 				AddressChunk_Advance(&Addresses, ProtocolUsed);
 
@@ -349,11 +419,13 @@ static int QueryFromServer(ThreadContext *Context, char *ProtocolCharacter)
 		}
 	}
 
+	ShowNormalMassage(Context, StartOffset, ProtocolCharacter);
+
 	return StateOfReceiving;
 
 }
 
-int QueryBase(ThreadContext *Context, char *ProtocolCharacter)
+int QueryBase(ThreadContext *Context)
 {
 	int StateOfReceiving = -1;
 
@@ -372,7 +444,7 @@ int QueryBase(ThreadContext *Context, char *ProtocolCharacter)
 	if( QuestionCount == 1 )
 	{
 		/* First query from hosts and cache */
-		StateOfReceiving = FetchFromHostsAndCache(Context, ProtocolCharacter);
+		StateOfReceiving = FetchFromHostsAndCache(Context);
 	} else {
 		StateOfReceiving = -1;
 	}
@@ -380,7 +452,7 @@ int QueryBase(ThreadContext *Context, char *ProtocolCharacter)
 	/* If hosts or cache has no record, then query from server */
 	if( StateOfReceiving < 0 )
 	{
-		StateOfReceiving = QueryFromServer(Context, ProtocolCharacter);
+		StateOfReceiving = QueryFromServer(Context);
 	}
 
 	return StateOfReceiving;
@@ -389,6 +461,8 @@ int QueryBase(ThreadContext *Context, char *ProtocolCharacter)
 
 int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Type)
 {
+	static const char *RecursiveQuery = "RecursiveQuery";
+
 	ThreadContext RecursionContext;
 	int	StateOfReceiving;
 
@@ -420,11 +494,13 @@ int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Typ
 	memcpy(&RecursionContext, Context, sizeof(RecursionContext));
 
 	RecursionContext.RequestLength = 12 + strlen(Name) + 2 + 4;
-	memcpy(RecursionContext.RequestEntity, RequestEntity, RecursionContext.RequestLength);
-	strcpy(RecursionContext.RequestingDomain, Name);
+	RecursionContext.RequestEntity = RequestEntity;
+	RecursionContext.RequestingDomain = Name;
 	RecursionContext.RequestingType = Type;
+	RecursionContext.ClientIP = RecursiveQuery;
+	RecursionContext.ClientPort = 0;
 
-	StateOfReceiving = QueryBase(&RecursionContext, NULL);
+	StateOfReceiving = QueryBase(&RecursionContext);
 	if( StateOfReceiving <= 0 )
 	{
 		return -1;

@@ -280,15 +280,15 @@ int QueryFromServerBase(SOCKET				*Socket,
 						struct	sockaddr	*ServerAddress,
 						sa_family_t			AddressFamily,
 						DNSQuaryProtocol	ProtocolToServer,
-						char				*RequestEntity,
+						const char			*RequestEntity,
 						int					RequestLength,
 						ExtendableBuffer	*ResultBuffer,
 						const char			*RequestingDomain
 						)
 {
-	int StateOfReceiving;
+	int			StateOfReceiving;
 
-	int	StartOffset = ExtendableBuffer_GetEndOffset(ResultBuffer);
+	_32BIT_INT	StartOffset = ExtendableBuffer_GetEndOffset(ResultBuffer);
 
 	/* Connecting to Server */
 	if( ProtocolToServer == DNS_QUARY_PROTOCOL_UDP )
