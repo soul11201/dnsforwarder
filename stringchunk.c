@@ -92,7 +92,7 @@ int StringChunk_Add(StringChunk *dl,
 
 		if( NewEntry.OffsetOfString >= 0 )
 		{
-			HashTable_Add(&(dl -> List_Pos), Str, 0, &NewEntry);
+			HashTable_Add(&(dl -> List_Pos), Str, 0, &NewEntry, NULL);
 		} else {
 			return -2;
 		}
@@ -102,16 +102,17 @@ int StringChunk_Add(StringChunk *dl,
 
 }
 
-BOOL StringChunk_Match_NoWildCard(StringChunk *dl,
-								  const char *Str,
-								  char **Data
+BOOL StringChunk_Match_NoWildCard(StringChunk	*dl,
+								  const char	*Str,
+								  int			*HashValue,
+								  char			**Data
 								  )
 {
 	EntryForString *FoundEntry;
 
 	const char *FoundString;
 
-	FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, 0, NULL);
+	FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, 0, NULL, HashValue);
 	while( FoundEntry != NULL )
 	{
 		FoundString = StringList_GetByOffset(&(dl -> List),
@@ -130,16 +131,16 @@ BOOL StringChunk_Match_NoWildCard(StringChunk *dl,
 			return TRUE;
 		}
 
-		FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, 0, FoundEntry);
+		FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, 0, FoundEntry, HashValue);
 	}
 
 	return FALSE;
 
 }
 
-BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl,
-									const char *Str,
-									char **Data
+BOOL StringChunk_Match_OnlyWildCard(StringChunk	*dl,
+									const char	*Str,
+									char		**Data
 									)
 {
 	EntryForString *FoundEntry;
@@ -174,9 +175,10 @@ BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl,
 	return FALSE;
 }
 
-BOOL StringChunk_Match(StringChunk *dl, const char *Str, char **Data)
+BOOL StringChunk_Match(StringChunk *dl, const char *Str, int *HashValue, char **Data)
 {
-	if( StringChunk_Match_NoWildCard(dl, Str, Data) == TRUE ||
+	/*printf("--------StringChunk_Match------String : %s------HashValue_ptr : %d\n", Str, HashValue);*/
+	if( StringChunk_Match_NoWildCard(dl, Str, HashValue, Data) == TRUE ||
 		StringChunk_Match_OnlyWildCard(dl, Str, Data) == TRUE
 		)
 	{
@@ -202,7 +204,7 @@ const char *StringChunk_Enum(StringChunk *dl, const char *Start, char **Data)
 		return NULL;
 	}
 
-	StringChunk_Match(dl, str, Data);
+	StringChunk_Match(dl, str, NULL, Data);
 
 	return str;
 }

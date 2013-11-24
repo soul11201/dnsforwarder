@@ -67,6 +67,8 @@ int ConfigAddOption(ConfigFileInfo *Info, char *KeyName, MultilineStrategy Strat
 		*(Info -> Options[loop].Caption) = '\0';
 	}
 
+	Info -> Options[loop].Strategy = Strategy;
+
 	switch( Type )
 	{
 		case TYPE_INT32:
@@ -83,7 +85,6 @@ int ConfigAddOption(ConfigFileInfo *Info, char *KeyName, MultilineStrategy Strat
 				return 2;
 			}
 
-			Info -> Options[loop].Strategy = Strategy;
 			break;
 
 		default:

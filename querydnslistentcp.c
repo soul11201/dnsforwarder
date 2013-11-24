@@ -130,6 +130,8 @@ static int Query(ThreadContext *Context, _16BIT_UINT TCPLength, SOCKET *ClientSo
 	Context -> RequestingType =
 		(DNSRecordType)DNSGetRecordType(DNSJumpHeader(Context -> RequestEntity));
 
+	Context -> RequestingDomainHashValue = ELFHash(RequestingDomain, 0);
+
 	State = QueryBase(Context);
 
 	switch( State )

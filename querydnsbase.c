@@ -24,7 +24,7 @@ void ShowRefusingMassage(ThreadContext *Context)
 {
 	char DateAndTime[32];
 
-	if( ErrorMessages == TRUE )
+	if( ShowMassages == TRUE )
 	{
 		GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
 
@@ -70,7 +70,7 @@ void ShowNormalMassage(ThreadContext *Context, _32BIT_INT Offset, char ProtocolC
 	char DateAndTime[32];
 	char InfoBuffer[3072];
 
-	if( ErrorMessages == TRUE )
+	if( ShowMassages == TRUE )
 	{
 		GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
 
@@ -187,7 +187,7 @@ int FetchFromHostsAndCache(ThreadContext *Context)
 		if( StateOfReceiving > 0 ) /* Succeed to query from Hosts  */
 		{
 
-			DomainStatistic_Add(Context -> RequestingDomain, STATISTIC_TYPE_HOSTS);
+			DomainStatistic_Add(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue), STATISTIC_TYPE_HOSTS);
 
 			return StateOfReceiving;
 		}
@@ -203,7 +203,7 @@ int FetchFromHostsAndCache(ThreadContext *Context)
 		if( StateOfReceiving > 0 ) /* Succeed  */
 		{
 
-			DomainStatistic_Add(Context -> RequestingDomain, STATISTIC_TYPE_CACHE);
+			DomainStatistic_Add(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue), STATISTIC_TYPE_CACHE);
 
 			return StateOfReceiving;
 		}
@@ -292,7 +292,7 @@ static void SetAddressAndPrococolLetter(ThreadContext		*Context,
 										char				*ProtocolCharacter
 										)
 {
-	*Address = AddressChunk_GetOne(&Addresses, Family, Context -> RequestingDomain, ProtocolUsed);
+	*Address = AddressChunk_GetOne(&Addresses, Family, Context -> RequestingDomain, &(Context -> RequestingDomainHashValue), ProtocolUsed);
 
 	if( *Address != Context -> LastServer )
 	{
@@ -342,7 +342,7 @@ static int QueryFromServer(ThreadContext *Context)
 	_32BIT_INT	StartOffset = ExtendableBuffer_GetEndOffset(Context -> ResponseBuffer);
 
 	/* Determine whether the secondaries are used */
-	if( Context -> SecondarySocket != NULL && IsExcludedDomain(Context -> RequestingDomain) )
+	if( Context -> SecondarySocket != NULL && IsExcludedDomain(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue)) )
 	{
 		UseSecondary = TRUE;
 	} else {
@@ -432,9 +432,10 @@ int QueryBase(ThreadContext *Context)
 	int	QuestionCount;
 
 	/* Check if this domain or type is disabled */
-	if( IsDisabledType(Context -> RequestingType) || IsDisabledDomain(Context -> RequestingDomain) )
+	if( IsDisabledType(Context -> RequestingType) || IsDisabledDomain(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue)) )
 	{
-		DomainStatistic_Add(Context -> RequestingDomain, STATISTIC_TYPE_REFUSED);
+		DomainStatistic_Add(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue), STATISTIC_TYPE_REFUSED);
+		ShowRefusingMassage(Context);
 		return QUERY_RESULT_DISABLE;
 	}
 
@@ -498,6 +499,7 @@ int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Typ
 	RecursionContext.RequestEntity = RequestEntity;
 	RecursionContext.RequestingDomain = Name;
 	RecursionContext.RequestingType = Type;
+	RecursionContext.RequestingDomainHashValue = ELFHash(Name, 0);
 	RecursionContext.ClientIP = RecursiveQuery;
 	RecursionContext.ClientPort = 0;
 

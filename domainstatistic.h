@@ -11,7 +11,7 @@ typedef enum _StatisticType{
 
 int DomainStatistic_Init(int OutputInterval);
 
-int DomainStatistic_Add(const char *Domain, StatisticType Type);
+int DomainStatistic_Add(const char *Domain, int *HashValue, StatisticType Type);
 
 int DomainStatistic_Hold(void);
 

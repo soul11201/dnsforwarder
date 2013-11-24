@@ -3,7 +3,7 @@
 #include "common.h"
 #include "utils.h"
 
-#define	GET_SLOT_SUBSCRIPT(d)	(-1) * (d) - 1)
+#define	GET_SLOT_SUBSCRIPT(d)	((-1) * (d) - 1)
 
 int HashTable_CalculateAppropriateSlotCount(int ElementCount)
 {
@@ -198,7 +198,8 @@ int HashTable_AddByNode(HashTable	*h,
 						const char	*Key,
 						int			KeyLength,
 						int			Node_index,
-						NodeHead	*Node
+						NodeHead	*Node,
+						int			*HashValue
 						)
 {
 	int			Slot_i;
@@ -207,7 +208,13 @@ int HashTable_AddByNode(HashTable	*h,
 	if( h == NULL || Key == NULL || Node_index < 0 || Node == NULL )
 		return -1;
 
-	Slot_i = (h -> HashFunction)(Key, KeyLength) % (h -> Slots.Allocated - 1);
+	if( HashValue != NULL )
+	{
+		Slot_i = (*HashValue) % (h -> Slots.Allocated - 1);
+	} else {
+		Slot_i = (h -> HashFunction)(Key, KeyLength) % (h -> Slots.Allocated - 1);
+	}
+
 	Slot = (NodeHead *)Array_GetBySubscript(&(h -> Slots), Slot_i);
 	if( Slot == NULL )
 		return -2;
@@ -224,7 +231,7 @@ int HashTable_AddByNode(HashTable	*h,
 	return 0;
 }
 
-int HashTable_Add(HashTable *h, const char *Key, int KeyLength, void *Data)
+int HashTable_Add(HashTable *h, const char *Key, int KeyLength, void *Data, int *HashValue)
 {
 	_32BIT_INT	NewNode_i;
 	NodeHead	*NewNode = NULL;
@@ -238,7 +245,7 @@ int HashTable_Add(HashTable *h, const char *Key, int KeyLength, void *Data)
 
 	memcpy(NewNode + 1, Data, h -> NodeChunk.DataLength - sizeof(NodeHead));
 
-	return HashTable_AddByNode(h, Key, KeyLength, NewNode_i, NewNode);
+	return HashTable_AddByNode(h, Key, KeyLength, NewNode_i, NewNode, HashValue);
 }
 
 int HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *Node)
@@ -285,7 +292,7 @@ int HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *Nod
 			if( Node -> Prev < 0 )
 			{
 				/* Prev is a slot */
-				((NodeHead *)Array_GetBySubscript(&(h -> Slots), GET_SLOT_SUBSCRIPT(Node -> Prev)) -> Next = Node -> Next;
+				((NodeHead *)Array_GetBySubscript(&(h -> Slots), GET_SLOT_SUBSCRIPT(Node -> Prev))) -> Next = Node -> Next;
 			} else {
 				/* Prev is a node. */
 				((NodeHead *)Array_GetBySubscript(NodeChunk, Node -> Prev)) -> Next = Node -> Next;
@@ -323,7 +330,7 @@ int HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *Nod
 	return 0;
 }
 
-void *HashTable_Get(HashTable *h, const char *Key, int KeyLength, void *Start)
+void *HashTable_Get(HashTable *h, const char *Key, int KeyLength, void *Start, int *HashValue)
 {
 	NodeHead	*Head;
 
@@ -335,7 +342,13 @@ void *HashTable_Get(HashTable *h, const char *Key, int KeyLength, void *Start)
 		int			Slot_i;
 		NodeHead	*Slot;
 
-		Slot_i = (h -> HashFunction)(Key, KeyLength) % (h -> Slots.Allocated - 1);
+		if( HashValue != NULL )
+		{
+			Slot_i = (*HashValue) % (h -> Slots.Allocated - 1);
+		} else {
+			Slot_i = (h -> HashFunction)(Key, KeyLength) % (h -> Slots.Allocated - 1);
+		}
+
 		Slot = (NodeHead *)Array_GetBySubscript(&(h -> Slots), Slot_i);
 
 		Head = (NodeHead *)Array_GetBySubscript(&(h -> NodeChunk), Slot -> Next);

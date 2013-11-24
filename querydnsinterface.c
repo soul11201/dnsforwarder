@@ -285,7 +285,7 @@ void QueryDNSInterfaceWait(void)
 	ThreadHandle CurrentThread = GetCurrentThread();
 #endif /* WIN32 */
 
-	if( ConfigGetBoolean(&ConfigInfo, "DomainStatistic") == TRUE && ShowMassages == TRUE )
+	if( ConfigGetBoolean(&ConfigInfo, "DomainStatistic") == TRUE )
 	{
 		DomainStatistic_Hold();
 	} else {

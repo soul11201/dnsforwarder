@@ -382,7 +382,7 @@ static struct _CacheEntry *DNSCache_FindFromCache(char *Content, size_t Length, 
 	struct _CacheEntry	*Entry = Start;
 
 	do{
-		Entry = HashTable_Get(CacheInfo, Content, 0, Entry);
+		Entry = HashTable_Get(CacheInfo, Content, 0, Entry, NULL);
 		if( Entry == NULL )
 		{
 			return NULL;
@@ -509,7 +509,7 @@ static int DNSCache_AddAItemToCache(char *DNSBody, char *RecordBody)
 			}
 
 			/* Add the entry to the hash table */
-			HashTable_AddByNode(CacheInfo, Buffer + 1, 0, Subscript, Chunk);
+			HashTable_AddByNode(CacheInfo, Buffer + 1, 0, Subscript, Chunk, NULL);
 		} else {
 			return -1;
 		}

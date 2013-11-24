@@ -405,7 +405,7 @@ static int AddHosts(HostsContainer *Container, HostsRecord *MetaInfo)
 	switch( MetaInfo -> Type )
 	{
 		case HOSTS_TYPE_AAAA:
-			if( StringChunk_Match_NoWildCard(&(Container -> Ipv6Hosts), MetaInfo -> Domain, NULL) == TRUE )
+			if( StringChunk_Match_NoWildCard(&(Container -> Ipv6Hosts), MetaInfo -> Domain, NULL, NULL) == TRUE )
 			{
 				INFO("IPv6 Hosts is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
 				return 0;
@@ -432,7 +432,7 @@ static int AddHosts(HostsContainer *Container, HostsRecord *MetaInfo)
 			break;
 
 		case HOSTS_TYPE_A:
-			if( StringChunk_Match_NoWildCard(&(Container -> Ipv4Hosts), MetaInfo -> Domain, NULL) == TRUE )
+			if( StringChunk_Match_NoWildCard(&(Container -> Ipv4Hosts), MetaInfo -> Domain, NULL, NULL) == TRUE )
 			{
 				INFO("IPv4 Hosts domain is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
 				return 0;
@@ -459,7 +459,7 @@ static int AddHosts(HostsContainer *Container, HostsRecord *MetaInfo)
 			break;
 
 		case HOSTS_TYPE_CNAME:
-			if( StringChunk_Match_NoWildCard(&(Container -> CNameHosts), MetaInfo -> Domain, NULL) == TRUE )
+			if( StringChunk_Match_NoWildCard(&(Container -> CNameHosts), MetaInfo -> Domain, NULL, NULL) == TRUE )
 			{
 				INFO("CName Hosts domain is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
 				return 0;
@@ -484,7 +484,7 @@ static int AddHosts(HostsContainer *Container, HostsRecord *MetaInfo)
 			break;
 
 		case HOSTS_TYPE_EXCLUEDE:
-			if( StringChunk_Match_NoWildCard(&(Container -> ExcludedDomains), MetaInfo -> Domain, NULL) == TRUE )
+			if( StringChunk_Match_NoWildCard(&(Container -> ExcludedDomains), MetaInfo -> Domain, NULL, NULL) == TRUE )
 			{
 				INFO("Excluded Hosts domain is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
 				return 0;
@@ -793,7 +793,7 @@ static const char *FindFromA(char *Name)
 {
 	OffsetOfHosts *IP;
 
-	if( StringChunk_Match(&(MainContainer -> Ipv4Hosts), Name, (char **)&IP) == TRUE )
+	if( StringChunk_Match(&(MainContainer -> Ipv4Hosts), Name, NULL, (char **)&IP) == TRUE )
 	{
 		return ExtendableBuffer_GetPositionByOffset(&(MainContainer -> IPs), IP -> Offset);
 	} else {
@@ -805,7 +805,7 @@ static const char *FindFromAAAA(char *Name)
 {
 	OffsetOfHosts *IP;
 
-	if( StringChunk_Match(&(MainContainer -> Ipv6Hosts), Name, (char **)&IP) == TRUE )
+	if( StringChunk_Match(&(MainContainer -> Ipv6Hosts), Name, NULL, (char **)&IP) == TRUE )
 	{
 		return ExtendableBuffer_GetPositionByOffset(&(MainContainer -> IPs), IP -> Offset);
 	} else {
@@ -817,7 +817,7 @@ static const char *FindFromCName(char *Name)
 {
 	OffsetOfHosts *CName;
 
-	if( StringChunk_Match(&(MainContainer -> CNameHosts), Name, (char **)&CName) == TRUE )
+	if( StringChunk_Match(&(MainContainer -> CNameHosts), Name, NULL, (char **)&CName) == TRUE )
 	{
 		return ExtendableBuffer_GetPositionByOffset(&(MainContainer -> IPs), CName -> Offset);
 	} else {
@@ -827,7 +827,7 @@ static const char *FindFromCName(char *Name)
 
 static BOOL IsExcludedDomain(char *Name)
 {
-	return StringChunk_Match(&(MainContainer -> ExcludedDomains), Name, NULL);
+	return StringChunk_Match(&(MainContainer -> ExcludedDomains), Name, NULL, NULL);
 }
 
 
@@ -1040,23 +1040,17 @@ static int RecursivelyQuery(DNSRecordType RequestingType, void *HostsItem, int *
 
 static int Hosts_GetByQuestion_Inner(ThreadContext *Context, int *AnswerCount)
 {
-	char				Name[260];
-	DNSRecordType		Type;
 	DNSRecordClass		Class;
 	int					MatchState;
 	char				Result[DOMAIN_NAME_LENGTH_MAX + 1]; /* Either an IP address or a CName */
-
-	DNSGetHostName(Context -> RequestEntity, DNSJumpHeader(Context -> RequestEntity), Name);
 
 	Class = (DNSRecordClass)DNSGetRecordClass(DNSJumpHeader(Context -> RequestEntity));
 
 	if( Class != DNS_CLASS_IN )
 		return -1;
 
-	Type = (DNSRecordType)DNSGetRecordType(DNSJumpHeader(Context -> RequestEntity));
-
 	RWLock_RdLock(HostsLock);
-	MatchState = Hosts_Match(Name, Type, Result);
+	MatchState = Hosts_Match(Context -> RequestingDomain, Context -> RequestingType, Result);
 	RWLock_UnRLock(HostsLock);
 
 	if( MatchState == MATCH_STATE_NONE )
@@ -1070,10 +1064,10 @@ static int Hosts_GetByQuestion_Inner(ThreadContext *Context, int *AnswerCount)
 	if( MatchState == MATCH_STATE_PERFECT )
 	{
 		*AnswerCount = 1;
-		return GenerateSingleRecord(Type, Result, Context -> ResponseBuffer);
+		return GenerateSingleRecord(Context -> RequestingType, Result, Context -> ResponseBuffer);
 	} else if ( MatchState == MATCH_STATE_ONLY_CNAME )
 	{
-		return RecursivelyQuery(Type, Result, AnswerCount, Context);
+		return RecursivelyQuery(Context -> RequestingType, Result, AnswerCount, Context);
 	} else {
 		return -1;
 	}

@@ -53,7 +53,7 @@ int DomainStatistic_Init(int OutputInterval)
 	return 0;
 }
 
-int DomainStatistic_Add(const char *Domain, StatisticType Type)
+int DomainStatistic_Add(const char *Domain, int *HashValue, StatisticType Type)
 {
 	DomainInfo *ExistInfo;
 
@@ -64,7 +64,7 @@ int DomainStatistic_Add(const char *Domain, StatisticType Type)
 
 	EFFECTIVE_LOCK_GET(StatisticLock);
 
-	if( StringChunk_Match(&MainChunk, Domain, (const char **)&ExistInfo) == FALSE )
+	if( StringChunk_Match(&MainChunk, Domain, HashValue, (const char **)&ExistInfo) == FALSE )
 	{
 		DomainInfo NewInfo;
 

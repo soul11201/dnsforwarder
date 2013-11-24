@@ -44,14 +44,14 @@ BOOL IsDisabledType(int Type)
 	return FALSE;
 }
 
-static BOOL MatchDomain(StringChunk *List, const char *Domain)
+static BOOL MatchDomain(StringChunk *List, const char *Domain, int *HashValue)
 {
 	if( List == NULL )
 	{
 		return FALSE;
 	}
 
-	if( StringChunk_Match(List, Domain, NULL) == TRUE )
+	if( StringChunk_Match(List, Domain, HashValue, NULL) == TRUE )
 	{
 		return TRUE;
 	}
@@ -60,8 +60,8 @@ static BOOL MatchDomain(StringChunk *List, const char *Domain)
 
 	while( Domain != NULL )
 	{
-		if( StringChunk_Match_NoWildCard(List, Domain, NULL) == TRUE ||
-			StringChunk_Match_NoWildCard(List, Domain + 1, NULL) == TRUE
+		if( StringChunk_Match_NoWildCard(List, Domain, NULL, NULL) == TRUE ||
+			StringChunk_Match_NoWildCard(List, Domain + 1, NULL, NULL) == TRUE
 			)
 		{
 			return TRUE;
@@ -73,17 +73,17 @@ static BOOL MatchDomain(StringChunk *List, const char *Domain)
 	return FALSE;
 }
 
-BOOL IsDisabledDomain(const char *Domain){
-	return MatchDomain(&DisabledDomains, Domain);
+BOOL IsDisabledDomain(const char *Domain, int *HashValue){
+	return MatchDomain(&DisabledDomains, Domain, HashValue);
 }
 
-BOOL IsExcludedDomain(const char *Domain)
+BOOL IsExcludedDomain(const char *Domain, int *HashValue)
 {
 	BOOL Result;
 
 	RWLock_RdLock(ExcludedListLock);
 
-	Result = MatchDomain(&(MainExcludedContainer -> ExcludedDomains), Domain);
+	Result = MatchDomain(&(MainExcludedContainer -> ExcludedDomains), Domain, HashValue);
 
 	RWLock_UnRLock(ExcludedListLock);
 	return Result;
@@ -197,7 +197,7 @@ static BOOL ParseGfwListItem(char *Item, ExcludedContainer *Container)
 		return FALSE;
 	}
 
-	if( MatchDomain(&(Container -> ExcludedDomains), Item) == FALSE )
+	if( MatchDomain(&(Container -> ExcludedDomains), Item, NULL) == FALSE )
 	{
 		StringChunk_Add(&(Container -> ExcludedDomains), Item, NULL, 0);
 		return TRUE;

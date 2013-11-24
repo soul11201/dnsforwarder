@@ -48,11 +48,11 @@ int AddressChunk_AddADedicatedAddress_FromString(AddressChunk *ac, const char *D
 
 }
 
-struct sockaddr *AddressChunk_GetOne(AddressChunk *ac, sa_family_t *family, const char *RequestingDomain, DNSQuaryProtocol Protocol)
+struct sockaddr *AddressChunk_GetOne(AddressChunk *ac, sa_family_t *family, const char *RequestingDomain, int *HashValue, DNSQuaryProtocol Protocol)
 {
 	struct _Address *Result;
 
-	if( StringChunk_Match(&(ac -> Dedicated), RequestingDomain, &Result) == TRUE )
+	if( StringChunk_Match(&(ac -> Dedicated), RequestingDomain, HashValue, &Result) == TRUE )
 	{
 		if( Result -> family == AF_INET )
 		{

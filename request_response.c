@@ -299,7 +299,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 
 			if __STILL(*Socket == INVALID_SOCKET)
 			{
-				DomainStatistic_Add(RequestingDomain, STATISTIC_TYPE_REFUSED);
+				DomainStatistic_Add(RequestingDomain, NULL, STATISTIC_TYPE_REFUSED);
 				return -2; /* Failed */
 			}
 		}
@@ -310,7 +310,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 		{
 			if(ConnectToTCPServer(Socket, ServerAddress, AddressFamily, TimeToServer) == FALSE)
 			{
-				DomainStatistic_Add(RequestingDomain, STATISTIC_TYPE_REFUSED);
+				DomainStatistic_Add(RequestingDomain, NULL, STATISTIC_TYPE_REFUSED);
 				return -2; /* Failed */
 			} else {
 				INFO("(Connecting to server Successfully.)\n");
@@ -341,9 +341,9 @@ int QueryFromServerBase(SOCKET				*Socket,
 
 		if( ProtocolToServer == DNS_QUARY_PROTOCOL_UDP )
 		{
-			DomainStatistic_Add(RequestingDomain, STATISTIC_TYPE_UDP);
+			DomainStatistic_Add(RequestingDomain, NULL, STATISTIC_TYPE_UDP);
 		} else {
-			DomainStatistic_Add(RequestingDomain, STATISTIC_TYPE_TCP);
+			DomainStatistic_Add(RequestingDomain, NULL, STATISTIC_TYPE_TCP);
 		}
 
 		return StateOfReceiving;
@@ -365,7 +365,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 		 * CLOSE_SOCKET() or CloseTCPConnection() ), write it back */
 		SET_LAST_ERROR(OriginErrorCode);
 
-		DomainStatistic_Add(RequestingDomain, STATISTIC_TYPE_REFUSED);
+		DomainStatistic_Add(RequestingDomain, NULL, STATISTIC_TYPE_REFUSED);
 
 		return -1; /* Failed */
 	}

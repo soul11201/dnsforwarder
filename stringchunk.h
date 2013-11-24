@@ -35,9 +35,10 @@ int StringChunk_Add(StringChunk *dl,
 					);
 
 /* NOTICE : Data address always return, not offset. */
-BOOL StringChunk_Match_NoWildCard(StringChunk *dl,
-								  const char *Str,
-								  char **Data
+BOOL StringChunk_Match_NoWildCard(StringChunk	*dl,
+								  const char	*Str,
+								  int			*HashValue,
+								  char			**Data
 								  );
 
 BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl,
@@ -45,7 +46,7 @@ BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl,
 									char **Data
 									);
 
-BOOL StringChunk_Match(StringChunk *dl, const char *Str, char **Data);
+BOOL StringChunk_Match(StringChunk *dl, const char *Str, int *HashValue, char **Data);
 
 const char *StringChunk_Enum(StringChunk *dl, const char *Start, char **Data);
 

@@ -64,6 +64,7 @@ struct _QueryContext{
 	int					RequestLength;
 	const char			*RequestingDomain;
 	DNSRecordType		RequestingType;
+	int					RequestingDomainHashValue;
 
 	const char			*ClientIP;
 	int					ClientPort; /* host's byte order */
