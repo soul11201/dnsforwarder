@@ -883,6 +883,7 @@ static int Hosts_Match(char *Name, DNSRecordType Type, void *OutBuffer)
 			break;
 
 		default:
+			return MATCH_STATE_NONE;
 			break;
 	}
 

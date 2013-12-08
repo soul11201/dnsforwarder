@@ -5,6 +5,7 @@
 #include "extendablebuffer.h"
 #include "domainstatistic.h"
 #include "utils.h"
+#include "querydnsbase.h"
 
 typedef struct _DomainInfo{
 	int		Count;
@@ -36,11 +37,21 @@ int DomainStatistic_Init(int OutputInterval)
 {
 	char FilePath[1024];
 
+	if( OutputInterval < 1 )
+	{
+		return 1;
+	}
+
 	GetFileDirectory(FilePath);
 	strcat(FilePath, PATH_SLASH_STR);
 	strcat(FilePath, "statistic.txt");
 
 	MainFile = fopen(FilePath, "w");
+
+	if( MainFile == NULL )
+	{
+		return 2;
+	}
 
 	EFFECTIVE_LOCK_INIT(StatisticLock);
 	StringChunk_Init(&MainChunk, 512);

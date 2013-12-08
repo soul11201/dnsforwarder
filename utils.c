@@ -8,6 +8,7 @@
 #include "utils.h"
 #include "dnsgenerator.h"
 
+#ifndef NODOWNLOAD
 #ifdef WIN32
 	#include <wincrypt.h>
 	#ifndef CryptStringToBinary
@@ -18,6 +19,7 @@
 	#include <openssl/bio.h>
 	#include <openssl/evp.h>
 #endif /* WIN32 */
+#endif /* NODOWNLOAD */
 
 /* Safe Alloc & Free */
 #ifdef WIN32 /* we use critical section */
@@ -187,6 +189,7 @@ char *GetCurDateAndTime(char *Buffer, int BufferLength)
 
 int	Base64Decode(const char *File)
 {
+#ifndef NODOWNLOAD
 #ifdef WIN32
 	FILE *fp = fopen(File, "rb");
 	long FileSize;
@@ -381,6 +384,9 @@ int	Base64Decode(const char *File)
 	return 0;
 
 #endif /* WIN32 */
+#else /* NODOWNLOAD */
+	return -1;
+#endif /* NODOWNLOAD */
 }
 
 int IPv6AddressToNum(const char *asc, void *Buffer)
@@ -510,6 +516,7 @@ int	GetConfigDirectory(char *out)
 #ifdef WIN32
 
 #else /* WIN32 */
+#ifndef ARMVERSION
 	struct passwd *pw = getpwuid(getuid());
 	char *home = pw -> pw_dir;
 	*out = '\0';
@@ -520,6 +527,9 @@ int	GetConfigDirectory(char *out)
 	strcat(out, "/.dnsforwarder");
 
 	return 0;
+#else /* ARMVERSION */
+	strcpy(out, "/system/root/.dnsforwarder");
+#endif /* ARMVERSION */
 #endif /* WIN32 */
 }
 

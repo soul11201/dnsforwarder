@@ -1,26 +1,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifndef NODOWNLOAD
 #ifdef WIN32
 #include "common.h"
 #else
 #include <limits.h>
 #include <curl/curl.h>
 #endif
+#endif /* NODOWNLOAD */
 
 #include "downloader.h"
 
+#ifndef NODOWNLOAD
 #ifndef WIN32
 static size_t WriteFileCallback(void *Contents, size_t Size, size_t nmemb, void *FileDes)
 {
+
 	FILE *fp = (FILE *)FileDes;
 	fwrite(Contents, Size, nmemb, fp);
 	return Size * nmemb;
+	return 0;
 }
 #endif /* WIN32 */
+#endif /* NODOWNLOAD */
 
 int GetFromInternet(const char *URL, const char *File)
 {
+#ifndef NODOWNLOAD
 #ifdef WIN32
 	FILE		*fp;
 	HINTERNET	webopen		=	NULL,
@@ -123,7 +130,8 @@ int GetFromInternet(const char *URL, const char *File)
 		fclose(fp);
 		return 0;
 	}
-
+#endif /* WIN32 */
+#else /* NODOWNLOAD */
 /*
 	int	ret;
 	char Cmd[2048];
@@ -134,5 +142,6 @@ int GetFromInternet(const char *URL, const char *File)
 
 	return ret;
 */
-#endif
+	return -1;
+#endif /* NODOWNLOAD */
 }

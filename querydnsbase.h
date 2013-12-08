@@ -18,9 +18,9 @@
 #define	DEBUG(...)
 #endif
 
-#define	PRINT(...)		if(ShowMassages == TRUE){ printf(__VA_ARGS__); DEBUG_FILE(__VA_ARGS__); }
-#define	INFO(...)		if(ShowMassages == TRUE){ printf("[INFO] "__VA_ARGS__); DEBUG_FILE(__VA_ARGS__); }
-#define	ERRORMSG(...)	if(ErrorMessages == TRUE){ fprintf(stderr, "[ERROR] "__VA_ARGS__); DEBUG_FILE(__VA_ARGS__); }
+#define	PRINT(...)		if(ShowMassages == TRUE){ printf(__VA_ARGS__); } DEBUG_FILE(__VA_ARGS__);
+#define	INFO(...)		if(ShowMassages == TRUE){ printf("[INFO] "__VA_ARGS__); } DEBUG_FILE(__VA_ARGS__);
+#define	ERRORMSG(...)	if(ErrorMessages == TRUE){ fprintf(stderr, "[ERROR] "__VA_ARGS__); } DEBUG_FILE(__VA_ARGS__);
 
 typedef enum _DnsQuaryProtocol{
 	DNS_QUARY_PROTOCOL_UDP = 0,

@@ -40,6 +40,7 @@ static int CheckArgs(void)
             tmp.INT32 = 1;
             ConfigSetValue(&ConfigInfo, tmp, "MultipleTTL");
         }
+
     }
     else
     {
@@ -56,6 +57,27 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
 
 	ShowMassages = _ShowMassages;
 	ErrorMessages = OnlyErrorMessages;
+
+#ifdef INTERNAL_DEBUG
+	{
+		char	FilePath[1024];
+
+		GetFileDirectory(FilePath);
+		strcat(FilePath, PATH_SLASH_STR);
+		strcat(FilePath, "Debug.log");
+
+		EFFECTIVE_LOCK_INIT(Debug_Mutex);
+
+		Debug_File = fopen(FilePath, "a");
+		if( Debug_File == NULL )
+		{
+			return -1;
+		}
+
+		DEBUG_FILE("\n\n\n\n\nNew session\n");
+		INFO("Debug mode.\n");
+	}
+#endif
 
 	ConfigInitInfo(&ConfigInfo);
 
@@ -200,32 +222,9 @@ int QueryDNSInterfaceStart(void)
 		putchar('\n');
 	}
 
-#ifdef INTERNAL_DEBUG
-	{
-		char	FilePath[1024];
-
-		GetFileDirectory(FilePath);
-		strcat(FilePath, PATH_SLASH_STR);
-		strcat(FilePath, "Debug.log");
-
-
-		Debug_File = fopen(FilePath, "a");
-		if( Debug_File == NULL )
-		{
-			ERRORMSG("Cannot open debug file : %s\n", FilePath);
-			return -1;
-		}
-
-		EFFECTIVE_LOCK_INIT(Debug_Mutex);
-
-		DEBUG_FILE("\n\n\n\n\nNew session\n");
-		INFO("Debug mode.\n");
-	}
-#endif
-
 	InitAddress();
 
-	if( ConfigGetBoolean(&ConfigInfo, "DomainStatistic") == TRUE && ShowMassages == TRUE )
+	if( ConfigGetBoolean(&ConfigInfo, "DomainStatistic") == TRUE )
 	{
 		DomainStatistic_Init(ConfigGetInt32(&ConfigInfo, "StatisticFlushInterval"));
 	}

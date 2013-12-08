@@ -460,9 +460,24 @@ int QueryBase(ThreadContext *Context)
 
 }
 
+static BOOL DefinitionLoop(ThreadContext *Context, const char *Name)
+{
+	while( Context != NULL )
+	{
+		if( strcmp(Name, Context -> RequestingDomain) == 0 )
+		{
+			return TRUE;
+		}
+
+		Context = Context -> Previous;
+	}
+
+	return FALSE;
+}
+
 int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Type)
 {
-	static const char *RecursiveQuery = "RecursiveQuery";
+	static const char *RecursiveQuery = "CNameRedirect";
 
 	ThreadContext RecursionContext;
 	int	StateOfReceiving;
@@ -479,6 +494,12 @@ int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Typ
 
 	char *NamePos = RequestEntity + 0x0C;
 	char *Itr;
+
+	if( DefinitionLoop(Context, Name) == TRUE )
+	{
+		ERRORMSG("Definition loop for %s.\n", Name);
+		return -1;
+	}
 
 	strcpy(NamePos, Name);
 

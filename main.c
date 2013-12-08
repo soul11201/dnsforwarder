@@ -4,11 +4,13 @@
 #include <stdlib.h> /* exit() */
 #include <ctype.h> /* isspace() */
 
+#ifndef NODOWNLOAD
 #ifndef WIN32
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <curl/curl.h>
 #endif /* WIN32 */
+#endif /* NODOWNLOAD */
 
 #include "dnsrelated.h"
 #include "common.h"
@@ -16,7 +18,7 @@
 #include "readconfig.h"
 #include "querydnsinterface.h"
 
-#define VERSION "2.5 Beta 1"
+#define VERSION "2.5 Beta 2"
 
 #define PRINT(...)		if(ProgramArgs.ShowMassages == TRUE) printf(__VA_ARGS__);
 
@@ -37,11 +39,14 @@ struct _ProgramArgs
 	char		*ConfigFile_ptr;
 	char		ConfigFile[320];
 
+	BOOL		DeamonMode;
+
 	BOOL		ShowMassages;
 	BOOL		ErrorMessages;
 
 } ProgramArgs = {
 	NULL, {0},
+	FALSE,
 	TRUE, TRUE,
 };
 
@@ -174,12 +179,7 @@ int ArgParse(int argc, char *argv_ori[])
 
         if(strcmp("-d", *argv) == 0)
         {
-            if(DaemonInit() == 0)
-            {
-                ProgramArgs.ShowMassages = FALSE;
-            } else {
-            	printf("Daemon init failed, continuing non-daemon mode.\n");
-            }
+			ProgramArgs.DeamonMode = TRUE;
             ++argv;
             continue;
         }
@@ -218,14 +218,17 @@ int main(int argc, char *argv[])
 
     int ret = 0;
 
+#ifndef NODOWNLOAD
 #ifdef WIN32
     if(WSAStartup(MAKEWORD(2, 2), &wdata) != 0)
         return -1;
 
 	SetConsoleTitle("dnsforwarder");
 #else
+
 	curl_global_init(CURL_GLOBAL_ALL);
-#endif
+#endif /* WIN32 */
+#endif /* NODOWNLOAD */
 
 	SafeMallocInit();
 
@@ -240,6 +243,16 @@ int main(int argc, char *argv[])
     PRINT("DNSforwarder by holmium. Free for non-commercial use. Version "VERSION" .\n\n");
 
     PRINT("Configure File : %s\n\n", ProgramArgs.ConfigFile_ptr);
+
+	if( ProgramArgs.DeamonMode == TRUE )
+	{
+		if( DaemonInit() == 0 )
+		{
+			ProgramArgs.ShowMassages = FALSE;
+		} else {
+			printf("Daemon init failed, continuing on non-daemon mode.\n");
+		}
+	}
 
 	if( QueryDNSInterfaceInit(ProgramArgs.ConfigFile_ptr, ProgramArgs.ShowMassages, ProgramArgs.ErrorMessages) != 0 )
 		goto JustEnd;
