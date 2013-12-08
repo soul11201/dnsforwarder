@@ -81,6 +81,49 @@
 					<Add option="-s" />
 				</Linker>
 			</Target>
+			<Target title="Release_ARM">
+				<Option platforms="Windows;" />
+				<Option output="./bin/Release_ARM/dnsforwarder" prefix_auto="0" extension_auto="0" />
+				<Option object_output="./obj/Release_ARM/" />
+				<Option type="1" />
+				<Option compiler="gnu_gcc_compiler_arm" />
+				<Option projectCompilerOptionsRelation="1" />
+				<Option projectLinkerOptionsRelation="1" />
+				<Option projectIncludeDirsRelation="1" />
+				<Compiler>
+					<Add option="-fexpensive-optimizations" />
+					<Add option="-Os" />
+					<Add option="-O3" />
+					<Add option="-DNODOWNLOAD" />
+					<Add option="-DARMVERSION" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add option="-lpthread" />
+				</Linker>
+			</Target>
+			<Target title="Release_ARM Internal_Debug">
+				<Option platforms="Windows;" />
+				<Option output="./bin/Release_ARM_id/dnsforwarder" prefix_auto="0" extension_auto="0" />
+				<Option object_output="./obj/Release_ARM_id/" />
+				<Option type="1" />
+				<Option compiler="gnu_gcc_compiler_arm" />
+				<Option projectCompilerOptionsRelation="1" />
+				<Option projectLinkerOptionsRelation="1" />
+				<Option projectIncludeDirsRelation="1" />
+				<Compiler>
+					<Add option="-fexpensive-optimizations" />
+					<Add option="-Os" />
+					<Add option="-O3" />
+					<Add option="-DNODOWNLOAD" />
+					<Add option="-DARMVERSION" />
+					<Add option="-DINTERNAL_DEBUG" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add option="-lpthread" />
+				</Linker>
+			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wunreachable-code" />
