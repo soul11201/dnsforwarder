@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include "stringlist.h"
+#include "stringchunk.h"
 #include "common.h"
 
 /* A valid line of a configuration file has the following structure:
@@ -44,6 +45,8 @@ typedef union _VType{
 } VType;
 
 typedef enum _OptionStatus{
+	STATUS_DEPRECATED = -2,
+	STATUS_ALIAS = -1,
 	STATUS_UNUSED = 0,
 	STATUS_DEFAULT_VALUE,
 	STATUS_SPECIAL_VALUE
@@ -95,6 +98,8 @@ int ConfigOpenFile(ConfigFileInfo *Info, const char *File);
 int ConfigCloseFile(ConfigFileInfo *Info);
 
 int ConfigAddOption(ConfigFileInfo *Info, char *KeyName, MultilineStrategy Strategy, OptionType Type, VType Initial, char *Caption);
+
+int ConfigAddAlias(ConfigFileInfo *Info, char *Alias, char *Target);
 
 int ConfigRead(ConfigFileInfo *Info);
 

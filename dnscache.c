@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 #include "dnscache.h"
 #include "dnsparser.h"
 #include "dnsgenerator.h"
@@ -9,7 +10,7 @@
 #include "rwlock.h"
 #include "hashtable.h"
 
-#define	CACHE_VERSION		7
+#define	CACHE_VERSION		10
 
 #define	CACHE_END	'\x0A'
 #define	CACHE_START	'\xFF'
@@ -30,10 +31,12 @@ static int				TTLMultiple;
 
 static _32BIT_INT		*CacheCount;
 
+static BOOL				StaticTTLCountdown;
+
 struct _CacheEntry{
 	_32BIT_INT	Offset;
 	_32BIT_UINT	TTL;
-	_32BIT_UINT	OriginalTTL;
+	time_t		TimeAdded;
 	_32BIT_UINT	Length;
 };
 
@@ -50,7 +53,7 @@ struct _Header{
 	char		Comment[128 - sizeof(_32BIT_UINT) - sizeof(_32BIT_INT) - sizeof(_32BIT_INT) - sizeof(HashTable)];
 };
 
-static void DNSCacheTTLMinusOne_Thread(void)
+static void DNSCacheTTLCountdown_Thread(void)
 {
 	register	int			loop;
 	register	BOOL		GotMutex	=	FALSE;
@@ -61,52 +64,109 @@ static void DNSCacheTTLMinusOne_Thread(void)
 	register	char		*ChunkList	=	CacheInfo -> NodeChunk.Data;
 	register	int			DataLength	=	CacheInfo -> NodeChunk.DataLength;
 
-	while(Inited)
+	if( StaticTTLCountdown == FALSE )
 	{
-		ChunkCount = CacheInfo -> NodeChunk.Used;
-
-		for(loop = ((-1) * ChunkCount) + 1; loop <= 0; ++loop)
+		while(Inited)
 		{
-			Node = (NodeHead *)(ChunkList + loop * DataLength);
-			Entry = HashTable_GetDataByNode(Node);
+			ChunkCount = CacheInfo -> NodeChunk.Used;
 
-			if( Node -> Next >= HASHTABLE_NODE_TAIL && Entry -> TTL > 0 )
+			for(loop = ((-1) * ChunkCount) + 1; loop <= 0; ++loop)
 			{
-				if(--(Entry -> TTL) < 1)
+				Node = (NodeHead *)(ChunkList + loop * DataLength);
+				Entry = HashTable_GetDataByNode(Node);
+
+				if( Entry -> TTL > 0 )
 				{
-
-					if(GotMutex == FALSE)
+					if(--(Entry -> TTL) < 1)
 					{
-						RWLock_WrLock(CacheLock);
-						GotMutex = TRUE;
+
+						if(GotMutex == FALSE)
+						{
+							RWLock_WrLock(CacheLock);
+							GotMutex = TRUE;
+						}
+
+						*(char *)(MapStart + Entry -> Offset) = 0xFD;
+
+						HashTable_RemoveNode(CacheInfo, -1, Node);
+
+						--(*CacheCount);
+
 					}
-
-					*(char *)(MapStart + Entry -> Offset) = 0xFD;
-
-					HashTable_RemoveNode(CacheInfo, -1, Node);
-
-					--(*CacheCount);
-
 				}
 			}
-		}
 
-		if(GotMutex == TRUE)
-		{
-			if( CacheInfo -> NodeChunk.Used == 0 )
+			if(GotMutex == TRUE)
 			{
-				(*CacheEnd) = sizeof(struct _Header);
-			} else {
-				Node = (NodeHead *)((CacheInfo -> NodeChunk.Data) + (-1) * (CacheInfo -> NodeChunk.Used - 1) * DataLength);
-				Entry = HashTable_GetDataByNode(Node);
-				(*CacheEnd) = Entry -> Offset + Entry -> Length;
+				if( CacheInfo -> NodeChunk.Used == 0 )
+				{
+					(*CacheEnd) = sizeof(struct _Header);
+				} else {
+					Node = (NodeHead *)((CacheInfo -> NodeChunk.Data) + (-1) * (CacheInfo -> NodeChunk.Used - 1) * DataLength);
+					Entry = HashTable_GetDataByNode(Node);
+					(*CacheEnd) = Entry -> Offset + Entry -> Length;
+				}
+
+				RWLock_UnWLock(CacheLock);
+				GotMutex = FALSE;
 			}
 
-			RWLock_UnWLock(CacheLock);
-			GotMutex = FALSE;
+			SLEEP(1000);
 		}
+	} else {
+		register	time_t	CurrentTime;
 
-		SLEEP(1000);
+		while( Inited )
+		{
+			CurrentTime = time(NULL);
+
+			ChunkCount = CacheInfo -> NodeChunk.Used;
+
+			for(loop = ((-1) * ChunkCount) + 1; loop <= 0; ++loop)
+			{
+				Node = (NodeHead *)(ChunkList + loop * DataLength);
+				Entry = HashTable_GetDataByNode(Node);
+
+				if( Entry -> TTL > 0 )
+				{
+					if( CurrentTime - Entry -> TimeAdded >= Entry -> TTL )
+					{
+
+						if(GotMutex == FALSE)
+						{
+							RWLock_WrLock(CacheLock);
+							GotMutex = TRUE;
+						}
+
+						Entry -> TTL = 0;
+
+						*(char *)(MapStart + Entry -> Offset) = 0xFD;
+
+						HashTable_RemoveNode(CacheInfo, -1, Node);
+
+						--(*CacheCount);
+
+					}
+				}
+			}
+
+			if(GotMutex == TRUE)
+			{
+				if( CacheInfo -> NodeChunk.Used == 0 )
+				{
+					(*CacheEnd) = sizeof(struct _Header);
+				} else {
+					Node = (NodeHead *)((CacheInfo -> NodeChunk.Data) + (-1) * (CacheInfo -> NodeChunk.Used - 1) * DataLength);
+					Entry = HashTable_GetDataByNode(Node);
+					(*CacheEnd) = Entry -> Offset + Entry -> Length;
+				}
+
+				RWLock_UnWLock(CacheLock);
+				GotMutex = FALSE;
+			}
+
+			SLEEP(59000);
+		}
 	}
 
 	TTLMinusOne_Thread = INVALID_THREAD;
@@ -320,12 +380,14 @@ int DNSCache_Init(void)
 		return 6;
 	}
 
+	StaticTTLCountdown = ConfigGetBoolean(&ConfigInfo, "StaticTTLCountdown");
+
 	RWLock_Init(CacheLock);
 
 	Inited = TRUE;
 
 	if(IgnoreTTL == FALSE)
-		CREATE_THREAD(DNSCacheTTLMinusOne_Thread, NULL, TTLMinusOne_Thread);
+		CREATE_THREAD(DNSCacheTTLCountdown_Thread, NULL, TTLMinusOne_Thread);
 
 	return 0;
 }
@@ -377,7 +439,7 @@ static _32BIT_INT DNSCache_GetAviliableChunk(_32BIT_UINT Length, NodeHead **Out)
 	return Itr;
 }
 
-static struct _CacheEntry *DNSCache_FindFromCache(char *Content, size_t Length, struct _CacheEntry *Start)
+static struct _CacheEntry *DNSCache_FindFromCache(char *Content, size_t Length, struct _CacheEntry *Start, time_t CurrentTime)
 {
 	struct _CacheEntry	*Entry = Start;
 
@@ -387,10 +449,15 @@ static struct _CacheEntry *DNSCache_FindFromCache(char *Content, size_t Length, 
 		{
 			return NULL;
 		}
-		if( memcmp(Content, MapStart + Entry -> Offset + 1, Length) == 0 )
+
+		if( StaticTTLCountdown == FALSE || (StaticTTLCountdown == TRUE && (CurrentTime - Entry -> TimeAdded < Entry -> TTL)) )
 		{
-			return Entry;
+			if( memcmp(Content, MapStart + Entry -> Offset + 1, Length) == 0 )
+			{
+				return Entry;
+			}
 		}
+
 	} while( TRUE );
 
 }
@@ -437,7 +504,7 @@ static char *DNSCache_GenerateTextFromRawRecord(char *DNSBody, char *DataBody, c
 	return Buffer;
 }
 
-static int DNSCache_AddAItemToCache(char *DNSBody, char *RecordBody)
+static int DNSCache_AddAItemToCache(char *DNSBody, char *RecordBody, time_t CurrentTime)
 {
 	/* Store generated cache, there is no bounds checking */
 	char			Buffer[512];
@@ -474,7 +541,7 @@ static int DNSCache_AddAItemToCache(char *DNSBody, char *RecordBody)
 	/* Add the cache item to the main cache zone */
 
 	/* Determine whether the cache item has existed in the main cache zone */
-	if(DNSCache_FindFromCache(Buffer + 1, BufferItr - Buffer, NULL) == NULL)
+	if(DNSCache_FindFromCache(Buffer + 1, BufferItr - Buffer, NULL, CurrentTime) == NULL)
 	{
 		/* If not, add it */
 
@@ -508,6 +575,8 @@ static int DNSCache_AddAItemToCache(char *DNSBody, char *RecordBody)
 				Entry -> TTL = ForceTTL;
 			}
 
+			Entry -> TimeAdded = CurrentTime;
+
 			/* Add the entry to the hash table */
 			HashTable_AddByNode(CacheInfo, Buffer + 1, 0, Subscript, Chunk, NULL);
 		} else {
@@ -520,7 +589,7 @@ static int DNSCache_AddAItemToCache(char *DNSBody, char *RecordBody)
 	return 0;
 }
 
-int DNSCache_AddItemsToCache(char *DNSBody)
+int DNSCache_AddItemsToCache(char *DNSBody, time_t CurrentTime)
 {
 	int loop;
 	int AnswerCount;
@@ -531,7 +600,7 @@ int DNSCache_AddItemsToCache(char *DNSBody)
 
 	for(loop = 1; loop != AnswerCount + 1; ++loop)
 	{
-		if( DNSCache_AddAItemToCache(DNSBody, DNSGetAnswerRecordPosition(DNSBody, loop)) != 0 )
+		if( DNSCache_AddAItemToCache(DNSBody, DNSGetAnswerRecordPosition(DNSBody, loop), CurrentTime) != 0 )
 			return -1;
 	}
 
@@ -577,7 +646,8 @@ static int DNSCache_GetRawRecordsFromCache(	__in	char				*Name,
 											__in	DNSRecordType		Type,
 											__in	DNSRecordClass		Class,
 											__inout ExtendableBuffer	*Buffer,
-											__out	int					*RecordsLength
+											__out	int					*RecordsLength,
+											__in	time_t				CurrentTime
 											)
 {
 	char	*HereSaved = NULL;
@@ -600,7 +670,7 @@ static int DNSCache_GetRawRecordsFromCache(	__in	char				*Name,
 
 	do
 	{
-		Entry = DNSCache_FindFromCache(Name_Type_Class, strlen(Name_Type_Class) + 1, Entry);
+		Entry = DNSCache_FindFromCache(Name_Type_Class, strlen(Name_Type_Class) + 1, Entry, CurrentTime);
 		if( Entry == NULL )
 		{
 			break;
@@ -619,10 +689,12 @@ static int DNSCache_GetRawRecordsFromCache(	__in	char				*Name,
 
 				HereSaved = ExtendableBuffer_Expand((ExtendableBuffer *)Buffer, SingleLength, NULL);
 
-				if(ForceTTL < 0)
-					DNSGenResourceRecord(HereSaved, SingleLength, Name, Type, Class, Entry -> TTL / TTLMultiple, NULL, 0, FALSE);
-				else
+				if( StaticTTLCountdown == FALSE )
+				{
 					DNSGenResourceRecord(HereSaved, SingleLength, Name, Type, Class, Entry -> TTL, NULL, 0, FALSE);
+				} else {
+					DNSGenResourceRecord(HereSaved, SingleLength, Name, Type, Class, Entry -> TTL - (CurrentTime - Entry -> TimeAdded), NULL, 0, FALSE);
+				}
 
 				for(; *CacheItr != '\0'; ++CacheItr);
 				/* Then *CacheItr == '\0' */
@@ -641,7 +713,7 @@ static int DNSCache_GetRawRecordsFromCache(	__in	char				*Name,
 	return RecordCount;
 }
 
-static struct _CacheEntry *DNSCache_GetCNameFromCache(__in char *Name, __out char *Buffer)
+static struct _CacheEntry *DNSCache_GetCNameFromCache(__in char *Name, __out char *Buffer, __in time_t CurrentTime)
 {
 	char Name_Type_Class[256];
 	struct _CacheEntry *Entry = NULL;
@@ -650,7 +722,7 @@ static struct _CacheEntry *DNSCache_GetCNameFromCache(__in char *Name, __out cha
 
 	do
 	{
-		Entry = DNSCache_FindFromCache(Name_Type_Class, strlen(Name_Type_Class) + 1, Entry);
+		Entry = DNSCache_FindFromCache(Name_Type_Class, strlen(Name_Type_Class) + 1, Entry, CurrentTime);
 		if( Entry == NULL )
 		{
 			return NULL;
@@ -665,7 +737,7 @@ static struct _CacheEntry *DNSCache_GetCNameFromCache(__in char *Name, __out cha
 
 }
 
-int DNSCache_GetByQuestion(__in char *Question, __inout ExtendableBuffer *Buffer, __out int *RecordsLength)
+int DNSCache_GetByQuestion(__in char *Question, __inout ExtendableBuffer *Buffer, __out int *RecordsLength, __in time_t CurrentTime)
 {
 	int		SingleLength	=	0;
 	char	Name[260];
@@ -695,7 +767,7 @@ int DNSCache_GetByQuestion(__in char *Question, __inout ExtendableBuffer *Buffer
 	/* If the intended type is not DNS_TYPE_CNAME, then first find its cname */
 	if(Type != DNS_TYPE_CNAME)
 	{
-		while( (Entry = DNSCache_GetCNameFromCache(Name, CName)) != NULL )
+		while( (Entry = DNSCache_GetCNameFromCache(Name, CName, CurrentTime)) != NULL )
 		{
 			++RecordsCount;
 
@@ -704,13 +776,13 @@ int DNSCache_GetByQuestion(__in char *Question, __inout ExtendableBuffer *Buffer
 
 			HereSaved = ExtendableBuffer_Expand(Buffer, SingleLength, NULL);
 
-			DNSGenResourceRecord(HereSaved, SingleLength, Name, DNS_TYPE_CNAME, 1, Entry -> TTL, CName, strlen(CName) + 1, TRUE);
+			DNSGenResourceRecord(HereSaved, SingleLength, Name, DNS_TYPE_CNAME, 1, Entry -> TTL - (CurrentTime - Entry -> TimeAdded), CName, strlen(CName) + 1, TRUE);
 
 			strcpy(Name, CName);
 		}
 	}
 
-	RecordsCount += DNSCache_GetRawRecordsFromCache(Name, Type, Class, Buffer, &SingleLength);
+	RecordsCount += DNSCache_GetRawRecordsFromCache(Name, Type, Class, Buffer, &SingleLength, CurrentTime);
 
 	RWLock_UnRLock(CacheLock);
 

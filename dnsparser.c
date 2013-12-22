@@ -394,40 +394,60 @@ char *GetAnswer(char *DNSBody, char *DataBody, char *Buffer, DNSRecordType Resou
 			if(Type_Descriptor_DCount[loop].Descriptor[loop2].description != NULL)
 				Buffer += sprintf(Buffer, "\n");
 		}
+	} else {
+		Buffer += sprintf(Buffer, "   Unparsable type : %d : %s\n", ResourceType, DNSGetTypeName(ResourceType));
 	}
 	return Buffer;
 }
 
-char *GetAllAnswers(char *DNSBody, char *Buffer)
+char *GetAllAnswers(char *DNSBody, char *Buffer, int BufferLength)
 {
 	int		AnswerCount;
 	char	*Itr;
-	int		loop	=	0;
 	int		UsedCount;
 	DNSRecordType	ResourceType;
 
-	AnswerCount = DNSGetAnswerCount(DNSBody);
+	char TempBuffer[1024];
+	int RecordLength;
+
+	if( BufferLength < strlen("   And       More ...\n") )
+	{
+		return NULL;
+	}
+
+	AnswerCount = DNSGetAnswerCount(DNSBody) + DNSGetNameServerCount(DNSBody) + DNSGetAdditionalCount(DNSBody);
 
 	if( AnswerCount == 0 )
 	{
 		strcpy(Buffer, "   Nothing.\n");
-		return Buffer + 12;
+		return Buffer + strlen("   Nothing.\n");
 	}
 
-	UsedCount = AnswerCount > 6 ? 6 : AnswerCount;
+	BufferLength -= strlen("   And       More ...\n");
 
-	while(loop != UsedCount){
-		Itr = DNSGetAnswerRecordPosition(DNSBody, loop + 1);
+	UsedCount = 0;
+
+	while(UsedCount != AnswerCount){
+		Itr = DNSGetAnswerRecordPosition(DNSBody, UsedCount + 1);
 
 		ResourceType = (DNSRecordType)DNSGetRecordType(Itr);
 
-		Buffer = GetAnswer(DNSBody, DNSGetResourceDataPos(Itr), Buffer, ResourceType);
+		RecordLength = GetAnswer(DNSBody, DNSGetResourceDataPos(Itr), TempBuffer, ResourceType) - TempBuffer;
 
-		++loop;
+		if( RecordLength < BufferLength )
+		{
+			strcpy(Buffer, TempBuffer);
+			BufferLength -= RecordLength;
+			Buffer += RecordLength;
+		} else {
+			break;
+		}
+
+		++UsedCount;
 	}
-	if( AnswerCount > 6 )
+	if( UsedCount < AnswerCount )
 	{
-		Buffer += sprintf(Buffer, "   And %d More ...\n", AnswerCount - 6);
+		Buffer += sprintf(Buffer, "   And %d More ...\n", AnswerCount - UsedCount);
 	}
 	return Buffer;
 }

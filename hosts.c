@@ -708,13 +708,6 @@ static int InitAppendedHostsContainer(void)
 {
 	AppendedHosts = ConfigGetStringList(&ConfigInfo, "AppendHosts");
 
-	if( AppendedHosts == NULL )
-	{
-		AppendedHosts = ConfigGetStringList(&ConfigInfo, "address");
-	} else {
-		StringList_Catenate(AppendedHosts, ConfigGetStringList(&ConfigInfo, "address"));
-	}
-
 	AppendedNum = StringList_Count(AppendedHosts);
 
 	return AppendedNum;

@@ -28,6 +28,16 @@ BOOL SocketIsStillReadable(SOCKET Sock)
 	}
 }
 
+void ClearSocketBuffer(SOCKET Sock)
+{
+	char BlackHole[128];
+
+	while( SocketIsStillReadable(Sock) )
+	{
+		recvfrom(Sock, BlackHole, sizeof(BlackHole), 0, NULL, NULL);
+	}
+}
+
 int SendAndReveiveRawMessageViaTCP(SOCKET			Sock,
 								   const void		*Content,
 								   int				ContentLength,
@@ -114,8 +124,8 @@ int QueryDNSViaTCP(SOCKET			Sock,
 }
 
 int QueryDNSViaUDP(SOCKET			Sock,
-				   struct sockaddr	*PeerAddr,
-				   sa_family_t		AddressFamily,
+				   struct sockaddr	**PeerAddr_List,
+				   int				NumberOfAddresses,
 				   const void		*RequestEntity,
 				   int				RequestLength,
 				   ExtendableBuffer	*ResultBuffer
@@ -127,23 +137,33 @@ int QueryDNSViaUDP(SOCKET			Sock,
 
 	int		StateOfReceiving = 0;
 
+	int		StateOfSending = 0;
+
+	sa_family_t	Family;
+
 	if(RequestLength == 0) return 0;
 	if(RequestLength < 0) return -1;
 
-	if( AddressFamily == AF_INET )
+	Family = (*PeerAddr_List) -> sa_family;
+
+	if( Family == AF_INET )
 	{
 		AddrLen = sizeof(struct sockaddr);
 	} else {
 		AddrLen = sizeof(struct sockaddr_in6);
 	}
 
-	if(sendto(Sock, RequestEntity, RequestLength, 0, PeerAddr, AddrLen) < 1) return -2;
-
-	if( AddressFamily == AF_INET )
+	while( NumberOfAddresses != 0 )
 	{
-		AddrLen = sizeof(struct sockaddr);
-	} else {
-		AddrLen = sizeof(struct sockaddr_in6);
+		StateOfSending |= (sendto(Sock, RequestEntity, RequestLength, 0, *PeerAddr_List, AddrLen) > 0);
+
+		++PeerAddr_List;
+		--NumberOfAddresses;
+	}
+
+	if( StateOfSending == 0 )
+	{
+		return -1;
 	}
 
 	NewlyReceived = ExtendableBuffer_Expand(ResultBuffer, LengthOfNewlyAllocated, NULL);
@@ -153,10 +173,28 @@ int QueryDNSViaUDP(SOCKET			Sock,
 		return -1;
 	}
 
-	StateOfReceiving = recvfrom(Sock, NewlyReceived, LengthOfNewlyAllocated, 0, PeerAddr, (socklen_t *)&AddrLen);
-	if( StateOfReceiving <= 0 )
+	while( TRUE )
 	{
-		return -1;
+		StateOfReceiving = recvfrom(Sock, NewlyReceived, LengthOfNewlyAllocated, 0, NULL, NULL);
+
+		if( StateOfReceiving <= 0 )
+		{
+			break;
+		}
+
+		if( *(_16BIT_UINT *)RequestEntity != *(_16BIT_UINT *)NewlyReceived )
+		{
+			continue;
+		}
+
+		if( ((DNSHeader *)NewlyReceived) -> Flags.ResponseCode != 0 )
+		{
+			continue;
+		}
+
+		ClearSocketBuffer(Sock);
+
+		break;
 	}
 
 	ExtendableBuffer_Eliminate_Tail(ResultBuffer, LengthOfNewlyAllocated - StateOfReceiving);
@@ -277,8 +315,8 @@ void CloseTCPConnection(SOCKET *sock)
 }
 
 int QueryFromServerBase(SOCKET				*Socket,
-						struct	sockaddr	*ServerAddress,
-						sa_family_t			AddressFamily,
+						struct	sockaddr	**ServerAddress_List,
+						int					NumberOfAddresses,
 						DNSQuaryProtocol	ProtocolToServer,
 						const char			*RequestEntity,
 						int					RequestLength,
@@ -295,7 +333,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 	{
 		if(*Socket == INVALID_SOCKET)
 		{
-			*Socket = socket(AddressFamily, SOCK_DGRAM, IPPROTO_UDP);
+			*Socket = socket((*ServerAddress_List) -> sa_family, SOCK_DGRAM, IPPROTO_UDP);
 
 			if __STILL(*Socket == INVALID_SOCKET)
 			{
@@ -308,7 +346,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 	} else {
 		if(TCPSocketIsHealthy(Socket) == FALSE)
 		{
-			if(ConnectToTCPServer(Socket, ServerAddress, AddressFamily, TimeToServer) == FALSE)
+			if(ConnectToTCPServer(Socket, *ServerAddress_List, (*ServerAddress_List) -> sa_family, TimeToServer) == FALSE)
 			{
 				DomainStatistic_Add(RequestingDomain, NULL, STATISTIC_TYPE_REFUSED);
 				return -2; /* Failed */
@@ -320,7 +358,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 	/* Querying from server */
 	if( ProtocolToServer == DNS_QUARY_PROTOCOL_UDP )
     {
-		StateOfReceiving = QueryDNSViaUDP(*Socket, (struct sockaddr *)ServerAddress, AddressFamily, RequestEntity, RequestLength, ResultBuffer);
+		StateOfReceiving = QueryDNSViaUDP(*Socket, ServerAddress_List, NumberOfAddresses, RequestEntity, RequestLength, ResultBuffer);
     } else {
 		StateOfReceiving = QueryDNSViaTCP(*Socket, RequestEntity, RequestLength, ResultBuffer);
     }
@@ -331,7 +369,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 		{
 			int StateOfCacheing;
 
-			StateOfCacheing = DNSCache_AddItemsToCache(ExtendableBuffer_GetPositionByOffset(ResultBuffer, StartOffset));
+			StateOfCacheing = DNSCache_AddItemsToCache(ExtendableBuffer_GetPositionByOffset(ResultBuffer, StartOffset), time(NULL));
 
 			if( StateOfCacheing != 0 )
 			{

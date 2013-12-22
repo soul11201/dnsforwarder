@@ -94,6 +94,44 @@ int ConfigAddOption(ConfigFileInfo *Info, char *KeyName, MultilineStrategy Strat
 	return 0;
 }
 
+int ConfigAddAlias(ConfigFileInfo *Info, char *Alias, char *Target)
+{
+	int loop;
+
+	if( strlen(Alias) > sizeof(Info -> Options -> KeyName) - 1 )
+	{
+		return -1;
+	}
+
+	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
+	{
+		if(Info -> Options[loop].Status == STATUS_UNUSED)
+			break;
+	}
+
+	if(loop == Info -> NumOfOptions)
+	{
+		int loop2;
+
+		if( SafeRealloc((void *)&(Info -> Options), (Info -> NumOfOptions + 10) * sizeof(ConfigOption)) != 0)
+		{
+			return 1;
+		}
+
+		(Info -> NumOfOptions) += 10;
+
+		for(loop2 = loop; loop2 != Info -> NumOfOptions; ++loop2)
+			Info -> Options[loop2].Status = STATUS_UNUSED;
+	}
+
+	strcpy(Info -> Options[loop].KeyName, Alias);
+	Info -> Options[loop].Status = STATUS_ALIAS;
+	strncpy(Info -> Options[loop].Caption, Target, CAPTION_MAX_SIZE);
+	Info -> Options[loop].Caption[CAPTION_MAX_SIZE] = '\0';
+
+	return 0;
+}
+
 static ConfigOption *GetOptionOfAInfo(const ConfigFileInfo *Info, const char *KeyName)
 {
 	int	loop;
@@ -101,7 +139,14 @@ static ConfigOption *GetOptionOfAInfo(const ConfigFileInfo *Info, const char *Ke
 	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
 	{
 		if(strcmp(KeyName, Info -> Options[loop].KeyName) == 0)
-			return Info -> Options + loop;
+		{
+			if( Info -> Options[loop].Status == STATUS_ALIAS )
+			{
+				return GetOptionOfAInfo(Info, Info -> Options[loop].Caption);
+			} else {
+				return Info -> Options + loop;
+			}
+		}
 	}
 	return NULL;
 }
@@ -337,17 +382,15 @@ int ConfigRead(ConfigFileInfo *Info)
 
 const char *ConfigGetRawString(ConfigFileInfo *Info, char *KeyName)
 {
-	int loop;
-	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
+	ConfigOption *Option = GetOptionOfAInfo(Info, KeyName);
+
+	if( Option != NULL )
 	{
-		if( Info -> Options[loop].Type == TYPE_STRING && strncmp(Info -> Options[loop].KeyName, KeyName, KEY_NAME_MAX_SIZE) == 0 )
+		if( Option -> Holder.str.Used == 0 )
 		{
-			if( Info -> Options[loop].Holder.str.Used == 0 )
-			{
-				return NULL;
-			} else {
-				return Info -> Options[loop].Holder.str.Data;
-			}
+			return NULL;
+		} else {
+			return Option -> Holder.str.Data;
 		}
 	}
 
@@ -356,85 +399,81 @@ const char *ConfigGetRawString(ConfigFileInfo *Info, char *KeyName)
 
 StringList *ConfigGetStringList(ConfigFileInfo *Info, char *KeyName)
 {
-	int loop;
-	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
-	{
-		if( Info -> Options[loop].Type == TYPE_STRING && strncmp(Info -> Options[loop].KeyName, KeyName, KEY_NAME_MAX_SIZE) == 0 )
-		{
-			if( Info -> Options[loop].Holder.str.Used == 0 )
-			{
-				return NULL;
-			} else {
-				return &(Info -> Options[loop].Holder.str);
-			}
-		}
+	ConfigOption *Option = GetOptionOfAInfo(Info, KeyName);
 
+	if( Option != NULL )
+	{
+		if( Option -> Holder.str.Used == 0 )
+		{
+			return NULL;
+		} else {
+			return &(Option -> Holder.str);
+		}
 	}
+
 	return NULL;
 }
 
 _32BIT_INT ConfigGetNumberOfStrings(ConfigFileInfo *Info, char *KeyName)
 {
-	int loop;
-	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
+	ConfigOption *Option = GetOptionOfAInfo(Info, KeyName);
+
+	if( Option != NULL )
 	{
-		if( Info -> Options[loop].Type == TYPE_STRING && strncmp(Info -> Options[loop].KeyName, KeyName, KEY_NAME_MAX_SIZE) == 0 )
-		{
-			return StringList_Count(&(Info -> Options[loop].Holder.str));
-		}
+		return StringList_Count(&(Option -> Holder.str));
 	}
+
 	return 0;
 }
 
 _32BIT_INT ConfigGetInt32(ConfigFileInfo *Info, char *KeyName)
 {
-	int loop;
-	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
+	ConfigOption *Option = GetOptionOfAInfo(Info, KeyName);
+
+	if( Option != NULL )
 	{
-		if( Info -> Options[loop].Type == TYPE_INT32 && strncmp(Info -> Options[loop].KeyName, KeyName, KEY_NAME_MAX_SIZE) == 0 )
-			return Info -> Options[loop].Holder.INT32;
+		return Option -> Holder.INT32;
 	}
+
 	return 0;
 }
 
 BOOL ConfigGetBoolean(ConfigFileInfo *Info, char *KeyName)
 {
-	int loop;
-	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
+	ConfigOption *Option = GetOptionOfAInfo(Info, KeyName);
+
+	if( Option != NULL )
 	{
-		if( Info -> Options[loop].Type == TYPE_BOOLEAN && strncmp(Info -> Options[loop].KeyName, KeyName, KEY_NAME_MAX_SIZE) == 0 )
-			return Info -> Options[loop].Holder.boolean;
+		return Option -> Holder.boolean;
 	}
+
 	return FALSE;
 }
 
 void ConfigSetValue(ConfigFileInfo *Info, VType Value, char *KeyName)
 {
-	int loop;
-	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
+	ConfigOption *Option = GetOptionOfAInfo(Info, KeyName);
+
+	if( Option != NULL )
 	{
-		if( strncmp(Info -> Options[loop].KeyName, KeyName, KEY_NAME_MAX_SIZE) == 0 )
+		Option -> Status = STATUS_SPECIAL_VALUE;
+		switch( Option -> Type )
 		{
-			Info -> Options[loop].Status = STATUS_SPECIAL_VALUE;
-			switch( Info -> Options[loop].Type )
-			{
-				case TYPE_INT32:
-					Info -> Options[loop].Holder.INT32 = Value.INT32;
-					break;
+			case TYPE_INT32:
+				Option -> Holder.INT32 = Value.INT32;
+				break;
 
-				case TYPE_BOOLEAN:
-					Info -> Options[loop].Holder.boolean = Value.boolean;
-					break;
+			case TYPE_BOOLEAN:
+				Option -> Holder.boolean = Value.boolean;
+				break;
 
-				case TYPE_STRING:
-					StringList_Clear(&(Info -> Options[loop].Holder.str));
-					StringList_Add(&(Info -> Options[loop].Holder.str), Value.str, ',');
-					break;
+			case TYPE_STRING:
+				StringList_Clear(&(Option -> Holder.str));
+				StringList_Add(&(Option -> Holder.str), Value.str, ',');
+				break;
 
-				default:
-					break;
-			}
-			break;
+			default:
+				break;
 		}
 	}
 }

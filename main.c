@@ -18,7 +18,7 @@
 #include "readconfig.h"
 #include "querydnsinterface.h"
 
-#define VERSION "2.5 Beta 2"
+#define VERSION "2.5 Beta 5"
 
 #define PRINT(...)		if(ProgramArgs.ShowMassages == TRUE) printf(__VA_ARGS__);
 

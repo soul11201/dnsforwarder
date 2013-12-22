@@ -53,7 +53,7 @@ void ShowErrorMassage(ThreadContext *Context, char ProtocolCharacter)
 
 		GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
 
-		printf("%s[%c][%s][%s][%s] Error occured : %d : %s .\n",
+		printf("%s[%c][%s][%s][%s] An error occured : %d : %s .\n",
 			   DateAndTime,
 			   ProtocolCharacter,
 			   Context -> ClientIP,
@@ -68,14 +68,14 @@ void ShowErrorMassage(ThreadContext *Context, char ProtocolCharacter)
 void ShowNormalMassage(ThreadContext *Context, _32BIT_INT Offset, char ProtocolCharacter)
 {
 	char DateAndTime[32];
-	char InfoBuffer[3072];
+	char InfoBuffer[1024];
 
 	if( ShowMassages == TRUE )
 	{
 		GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
 
 		InfoBuffer[0] = '\0';
-		GetAllAnswers(ExtendableBuffer_GetPositionByOffset(Context -> ResponseBuffer, Offset), InfoBuffer);
+		GetAllAnswers(ExtendableBuffer_GetPositionByOffset(Context -> ResponseBuffer, Offset), InfoBuffer, sizeof(InfoBuffer));
 
 		printf("%s[%c][%s][%s][%s] :\n%s",
 			  DateAndTime,
@@ -151,7 +151,7 @@ int DNSFetchFromCache(__in ThreadContext *Context)
 	((DNSHeader *)Header) -> Flags.ResponseCode = 0;
 	((DNSHeader *)Header) -> Flags.Type = 0;
 
-	RecordsCount = DNSCache_GetByQuestion(Context -> RequestEntity, Context -> ResponseBuffer, &RecordsLength);
+	RecordsCount = DNSCache_GetByQuestion(Context -> RequestEntity, Context -> ResponseBuffer, &RecordsLength, Context -> CurrentTime);
 	if( RecordsCount > 0 )
 	{
 		Header = ExtendableBuffer_GetData(Context -> ResponseBuffer) + HeaderOffset;
@@ -341,6 +341,8 @@ static int QueryFromServer(ThreadContext *Context)
 
 	_32BIT_INT	StartOffset = ExtendableBuffer_GetEndOffset(Context -> ResponseBuffer);
 
+	int			AnswerCount;
+
 	/* Determine whether the secondaries are used */
 	if( Context -> SecondarySocket != NULL && IsExcludedDomain(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue)) )
 	{
@@ -359,8 +361,8 @@ static int QueryFromServer(ThreadContext *Context)
 								);
 
 	StateOfReceiving = QueryFromServerBase(SocketUsed,
-										   ServerAddr,
-										   Family,
+										   &ServerAddr,
+										   1,
 										   ProtocolUsed,
 										   Context -> RequestEntity,
 										   Context -> RequestLength,
@@ -396,8 +398,8 @@ static int QueryFromServer(ThreadContext *Context)
 										);
 
 			StateOfReceiving = QueryFromServerBase(SocketUsed,
-												   ServerAddr,
-												   Family,
+												   &ServerAddr,
+												   1,
 												   ProtocolUsed,
 												   Context -> RequestEntity,
 												   Context -> RequestLength,
@@ -419,7 +421,15 @@ static int QueryFromServer(ThreadContext *Context)
 		}
 	}
 
+	AnswerCount = DNSGetAnswerCount(ExtendableBuffer_GetPositionByOffset(Context -> ResponseBuffer, StartOffset));
+
+	if( AnswerCount < 1 )
+	{
+		AddressChunk_Advance(&Addresses, ProtocolUsed);
+	}
+
 	ShowNormalMassage(Context, StartOffset, ProtocolCharacter);
+
 
 	return StateOfReceiving;
 
@@ -497,7 +507,7 @@ int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Typ
 
 	if( DefinitionLoop(Context, Name) == TRUE )
 	{
-		ERRORMSG("Definition loop for %s.\n", Name);
+		ERRORMSG("Cricular definition for %s.\n", Name);
 		return -1;
 	}
 

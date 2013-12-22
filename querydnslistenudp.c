@@ -140,13 +140,14 @@ static int Query(ThreadContext *Context, CompatibleAddr *ClientAddr)
 
 	Context -> RequestingDomainHashValue = ELFHash(RequestingDomain, 0);
 
+	Context -> CurrentTime = time(NULL);
+
 	State = QueryBase(Context);
 
 	switch( State )
 	{
 		case QUERY_RESULT_DISABLE:
 			((DNSHeader *)(Context -> RequestEntity)) -> Flags.Direction = 1;
-			((DNSHeader *)(Context -> RequestEntity)) -> Flags.ResponseCode = 5;
 			if( Family == AF_INET )
 			{
 				_SendTo(ListenSocketUDP,

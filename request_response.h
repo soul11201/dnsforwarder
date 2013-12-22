@@ -8,6 +8,8 @@
 
 BOOL SocketIsStillReadable(SOCKET Sock);
 
+void ClearSocketBuffer(SOCKET Sock);
+
 int SendAndReveiveRawMessageViaTCP(SOCKET			Sock,
 								   const void		*Content,
 								   int				ContentLength,
@@ -22,8 +24,8 @@ int QueryDNSViaTCP(SOCKET			Sock,
 				   );
 
 int QueryDNSViaUDP(SOCKET			Sock,
-				   struct sockaddr	*PeerAddr,
-				   sa_family_t		AddressFamily,
+				   struct sockaddr	**PeerAddr_List,
+				   int				NumberOfAddresses,
 				   const void		*RequestEntity,
 				   int				RequestLength,
 				   ExtendableBuffer	*ResultBuffer
@@ -42,8 +44,8 @@ BOOL ConnectToTCPServer(SOCKET *sock, struct sockaddr *addr, sa_family_t Family,
 void CloseTCPConnection(SOCKET *sock);
 
 int QueryFromServerBase(SOCKET				*Socket,
-						struct	sockaddr	*ServerAddress,
-						sa_family_t			AddressFamily,
+						struct	sockaddr	**ServerAddress_List,
+						int					NumberOfAddresses,
 						DNSQuaryProtocol	ProtocolToServer,
 						const char			*RequestEntity,
 						int					RequestLength,

@@ -132,13 +132,14 @@ static int Query(ThreadContext *Context, _16BIT_UINT TCPLength, SOCKET *ClientSo
 
 	Context -> RequestingDomainHashValue = ELFHash(RequestingDomain, 0);
 
+	Context -> CurrentTime = time(NULL);
+
 	State = QueryBase(Context);
 
 	switch( State )
 	{
 		case QUERY_RESULT_DISABLE:
 			((DNSHeader *)(Context -> RequestEntity)) -> Flags.Direction = 1;
-			((DNSHeader *)(Context -> RequestEntity)) -> Flags.ResponseCode = 5;
 			send(*ClientSocket, &TCPLength, 2, 0);
 			send(*ClientSocket, Context -> RequestEntity, Context -> RequestLength, 0);
 			return -1;

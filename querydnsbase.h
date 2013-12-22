@@ -27,6 +27,7 @@ typedef enum _DnsQuaryProtocol{
 	DNS_QUARY_PROTOCOL_TCP = 1
 } DNSQuaryProtocol;
 
+#include <time.h>
 #include "common.h"
 #include "dnscache.h"
 #include "readconfig.h"
@@ -70,6 +71,8 @@ struct _QueryContext{
 	int					ClientPort; /* host's byte order */
 
 	BOOL	Compress;
+
+	time_t	CurrentTime;
 
 
 	ExtendableBuffer	*ResponseBuffer;
