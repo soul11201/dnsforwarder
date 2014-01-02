@@ -20,6 +20,8 @@ static SOCKET		ListenSocketTCP;
 
 static sa_family_t	Family;
 
+static int			RefusingResponseCode = 0;
+
 typedef struct _RecvInfo{
 	SOCKET				Socket;
 	CompatibleAddr		Peer;
@@ -36,6 +38,8 @@ int QueryDNSListenTCPInit(void)
 	int			LocalPort = ConfigGetInt32(&ConfigInfo, "LocalPort");
 
 	int			AddrLen;
+
+	RefusingResponseCode = ConfigGetInt32(&ConfigInfo, "RefusingResponseCode");
 
 	Family = GetAddressFamily(LocalAddr);
 
@@ -140,6 +144,8 @@ static int Query(ThreadContext *Context, _16BIT_UINT TCPLength, SOCKET *ClientSo
 	{
 		case QUERY_RESULT_DISABLE:
 			((DNSHeader *)(Context -> RequestEntity)) -> Flags.Direction = 1;
+			((DNSHeader *)(Context -> RequestEntity)) -> Flags.RecursionAvailable = 1;
+			((DNSHeader *)(Context -> RequestEntity)) -> Flags.ResponseCode = RefusingResponseCode;
 			send(*ClientSocket, &TCPLength, 2, 0);
 			send(*ClientSocket, Context -> RequestEntity, Context -> RequestLength, 0);
 			return -1;

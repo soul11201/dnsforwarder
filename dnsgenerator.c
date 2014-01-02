@@ -196,6 +196,21 @@ int DNSGenerateData(__in			char				*Data,
 			}
 			return strlen(Data) + 2;
 			break;
+
+		case DNS_PLANT_TEXT:
+			if( Buffer != NULL )
+			{
+				if( BufferLength < strlen(Data) + 1 )
+				{
+					return -1;
+				}
+
+				*(unsigned char *)Buffer = strlen(Data);
+				memcpy(Buffer + 1, Data, strlen(Data));
+			}
+			return strlen(Data) + 1;
+			break;
+
 		case DNS_32BIT_UINT:
 			if( Buffer != NULL )
 			{

@@ -34,6 +34,15 @@ const ElementDescriptor DNS_RECORD_NAME_SERVER[] = {
 	{DNS_LABELED_NAME,	"Name Server"}
 };
 
+const ElementDescriptor DNS_RECORD_MX[] = {
+	{DNS_16BIT_UINT,	"Preference"},
+	{DNS_LABELED_NAME,	"Mail Exchanger"}
+};
+
+const ElementDescriptor DNS_RECORD_TXT[] = {
+	{DNS_PLANT_TEXT,	"TXT"}
+};
+
 static const struct _Type_Descriptor_DCount
 {
 	DNSRecordType			Type;
@@ -45,7 +54,9 @@ static const struct _Type_Descriptor_DCount
 	{DNS_TYPE_CNAME,	DNS_RECORD_CNAME,	NUM_OF_DNS_RECORD_CNAME},
 	{DNS_TYPE_SOA,		DNS_RECORD_SOA,		NUM_OF_DNS_RECORD_SOA},
 	{DNS_TYPE_PTR,		DNS_RECORD_DOMAIN_POINTER,	NUM_OF_DNS_RECORD_DOMAIN_POINTER},
-	{DNS_TYPE_NS,		DNS_RECORD_NAME_SERVER,	NUM_OF_DNS_RECORD_NAME_SERVER}
+	{DNS_TYPE_NS,		DNS_RECORD_NAME_SERVER,	NUM_OF_DNS_RECORD_NAME_SERVER},
+	{DNS_TYPE_MX,		DNS_RECORD_MX,		NUM_OF_DNS_RECORD_MX},
+	{DNS_TYPE_TXT,		DNS_RECORD_TXT,		NUM_OF_DNS_RECORD_TXT}
 
 };
 
@@ -210,6 +221,10 @@ DNSDataInfo DNSParseData(char *DNSBody,
 				DataBody = DNSJumpOverName(DataBody);
 				break;
 
+			case DNS_PLANT_TEXT:
+				DataBody += strlen(DataBody) + 1;
+				break;
+
 			case DNS_IPV6_ADDR:
 				DataBody += 16;
 				break;
@@ -245,6 +260,20 @@ DNSDataInfo DNSParseData(char *DNSBody,
 			Result.DataLength = DNSGetHostNameLength(DNSBody, DataBody);
 			DNSGetHostName(DNSBody, DataBody, (char *)Buffer);
 			Result.DataType = DNS_DATA_TYPE_STRING;
+			break;
+
+		case DNS_PLANT_TEXT:
+			if( BufferLength < GET_8_BIT_U_INT(DataBody) + 1 )
+			{
+				break;
+			}
+
+			memcpy(Buffer, DataBody + 1, GET_8_BIT_U_INT(DataBody));
+			((char *)Buffer)[GET_8_BIT_U_INT(DataBody)] = '\0';
+
+			Result.DataLength = GET_8_BIT_U_INT(DataBody) + 1;
+			Result.DataType = DNS_DATA_TYPE_STRING;
+
 			break;
 
 		case DNS_32BIT_UINT:

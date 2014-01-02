@@ -41,12 +41,15 @@ typedef enum _DNSRecordType{
 	DNS_TYPE_ANY	=	255,
 	DNS_TYPE_AXFR	=	252,
 	DNS_TYPE_IXFR	=	251,
+	DNS_TYPE_HINFO	=	13,
 	DNS_TYPE_OPT	=	41,
 }DNSRecordType;
 
 typedef enum _DNSRecordClass{
 	DNS_CLASS_UNKNOEN	=	0,
-	DNS_CLASS_IN		=	1
+	DNS_CLASS_IN		=	1,
+	DNS_CLASS_CH		=	3,
+	DNS_CLASS_ANY		=	255,
 }DNSRecordClass;
 
 

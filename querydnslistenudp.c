@@ -25,6 +25,8 @@ static ThreadHandle	*Threads;
 
 static int			MaximumMessageSize;
 
+static int			RefusingResponseCode = 0;
+
 #define _SendTo(...)	EFFECTIVE_LOCK_GET(LockOfSendBack); \
 						sendto(__VA_ARGS__); \
 						EFFECTIVE_LOCK_RELEASE(LockOfSendBack);
@@ -39,6 +41,8 @@ int QueryDNSListenUDPInit(void)
 	int			LocalPort = ConfigGetInt32(&ConfigInfo, "LocalPort");
 
 	int			AddrLen;
+
+	RefusingResponseCode = ConfigGetInt32(&ConfigInfo, "RefusingResponseCode");
 
 	Family = GetAddressFamily(LocalAddr);
 
@@ -148,6 +152,8 @@ static int Query(ThreadContext *Context, CompatibleAddr *ClientAddr)
 	{
 		case QUERY_RESULT_DISABLE:
 			((DNSHeader *)(Context -> RequestEntity)) -> Flags.Direction = 1;
+			((DNSHeader *)(Context -> RequestEntity)) -> Flags.RecursionAvailable = 1;
+			((DNSHeader *)(Context -> RequestEntity)) -> Flags.ResponseCode = RefusingResponseCode;
 			if( Family == AF_INET )
 			{
 				_SendTo(ListenSocketUDP,

@@ -90,14 +90,12 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     TmpTypeDescriptor.boolean = FALSE;
     ConfigAddOption(&ConfigInfo, "OpenLocalTCP", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "Local TCP is opened");
 
+
     TmpTypeDescriptor.str = "TCP";
     ConfigAddOption(&ConfigInfo, "PrimaryServer", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Primary server");
 
     TmpTypeDescriptor.INT32 = 3;
     ConfigAddOption(&ConfigInfo, "UDPThreads", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
-
-    TmpTypeDescriptor.str = NULL;
-    ConfigAddOption(&ConfigInfo, "DisabledType", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = "8.8.4.4";
     ConfigAddOption(&ConfigInfo, "TCPServer", STRATEGY_APPEND_DISCARD_DEFAULT, TYPE_STRING, TmpTypeDescriptor, "TCP Server");
@@ -105,20 +103,28 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "UDPServer", STRATEGY_APPEND_DISCARD_DEFAULT, TYPE_STRING, TmpTypeDescriptor, "UDP Server");
 
-    TmpTypeDescriptor.boolean = FALSE;
-    ConfigAddOption(&ConfigInfo, "DomainStatistic", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
-
-    TmpTypeDescriptor.INT32 = 60;
-    ConfigAddOption(&ConfigInfo, "StatisticFlushInterval", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+    TmpTypeDescriptor.str = NULL;
+    ConfigAddOption(&ConfigInfo, "ExcludedDomain", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.boolean = FALSE;
     ConfigAddOption(&ConfigInfo, "AllowFallBack", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
+
+    TmpTypeDescriptor.boolean = FALSE;
+    ConfigAddOption(&ConfigInfo, "ParallelQuery", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "UDP Parallel Query");
 
     TmpTypeDescriptor.INT32 = 3000;
     ConfigAddOption(&ConfigInfo, "TimeToServer", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "DedicatedServer", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
+
+
+    TmpTypeDescriptor.boolean = FALSE;
+    ConfigAddOption(&ConfigInfo, "DomainStatistic", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
+
+    TmpTypeDescriptor.INT32 = 60;
+    ConfigAddOption(&ConfigInfo, "StatisticFlushInterval", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "Hosts", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Hosts File");
@@ -132,7 +138,6 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
 	GetFileDirectory(TmpStr);
 	strcat(TmpStr, PATH_SLASH_STR);
 	strcat(TmpStr, "hosts.txt");
-
     TmpTypeDescriptor.str = TmpStr;
     ConfigAddOption(&ConfigInfo, "HostsDownloadPath", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Download Hosts to");
 
@@ -142,23 +147,25 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "AppendHosts", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
 
+	ConfigAddAlias(&ConfigInfo, "address", "AppendHosts");
+
+
+	TmpTypeDescriptor.boolean = TRUE;
+    ConfigAddOption(&ConfigInfo, "UseCache", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "Use cache");
+
     TmpTypeDescriptor.INT32 = 1048576;
     ConfigAddOption(&ConfigInfo, "CacheSize", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
 	GetFileDirectory(TmpStr);
 	strcat(TmpStr, PATH_SLASH_STR);
 	strcat(TmpStr, "cache");
+    TmpTypeDescriptor.str = TmpStr;
+    ConfigAddOption(&ConfigInfo, "CacheFile", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Cache File");
 
     TmpTypeDescriptor.boolean = FALSE;
     ConfigAddOption(&ConfigInfo, "MemoryCache", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "Memory Cache");
 
     ConfigAddAlias(&ConfigInfo, "MemeryCache", "MemoryCache");
-
-    TmpTypeDescriptor.str = TmpStr;
-    ConfigAddOption(&ConfigInfo, "CacheFile", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Cache File");
-
-    TmpTypeDescriptor.boolean = TRUE;
-    ConfigAddOption(&ConfigInfo, "UseCache", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "Use cache");
 
     TmpTypeDescriptor.boolean = FALSE;
     ConfigAddOption(&ConfigInfo, "IgnoreTTL", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "Ignore TTL");
@@ -169,7 +176,7 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     TmpTypeDescriptor.INT32 = 1;
     ConfigAddOption(&ConfigInfo, "MultipleTTL", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
-    TmpTypeDescriptor.boolean = FALSE;
+    TmpTypeDescriptor.boolean = TRUE;
     ConfigAddOption(&ConfigInfo, "StaticTTLCountdown", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.boolean = FALSE;
@@ -178,11 +185,13 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     TmpTypeDescriptor.boolean = FALSE;
     ConfigAddOption(&ConfigInfo, "OverwriteCache", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
 
+
     TmpTypeDescriptor.str = NULL;
-    ConfigAddOption(&ConfigInfo, "ExcludedDomain", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "DisabledType", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "DisabledDomain", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
+
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "GfwList", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "GFW List");
@@ -199,11 +208,12 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
 	GetFileDirectory(TmpStr);
 	strcat(TmpStr, PATH_SLASH_STR);
 	strcat(TmpStr, "gfwlist.txt");
-
     TmpTypeDescriptor.str = TmpStr;
     ConfigAddOption(&ConfigInfo, "GfwListDownloadPath", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, NULL);
 
-    ConfigAddAlias(&ConfigInfo, "address", "AppendHosts");
+
+    TmpTypeDescriptor.INT32 = 0;
+    ConfigAddOption(&ConfigInfo, "RefusingResponseCode", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
 	if( ConfigOpenFile(&ConfigInfo, ConfigFile) == 0 )
 	{

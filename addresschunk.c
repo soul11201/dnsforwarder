@@ -48,7 +48,7 @@ int AddressChunk_AddADedicatedAddress_FromString(AddressChunk *ac, const char *D
 
 }
 
-struct sockaddr *AddressChunk_GetOne(AddressChunk *ac, sa_family_t *family, const char *RequestingDomain, int *HashValue, DNSQuaryProtocol Protocol)
+struct sockaddr *AddressChunk_GetDedicated(AddressChunk *ac, sa_family_t *family, const char *RequestingDomain, int *HashValue, DNSQuaryProtocol Protocol)
 {
 	struct _Address *Result;
 
@@ -63,14 +63,24 @@ struct sockaddr *AddressChunk_GetOne(AddressChunk *ac, sa_family_t *family, cons
 			return &(Result -> Addr.Addr6);
 		}
 
+	} else {
+		return NULL;
 	}
+}
 
+struct sockaddr *AddressChunk_GetOne(AddressChunk *ac, sa_family_t *family, DNSQuaryProtocol Protocol)
+{
 	if( Protocol == DNS_QUARY_PROTOCOL_UDP )
 	{
 		return AddressList_GetOne(&(ac -> UDPAddresses), family);
 	} else {
 		return AddressList_GetOne(&(ac -> TCPAddresses), family);
 	}
+}
+
+struct sockaddr *AddressChunk_GetOneUDPBySubscript(AddressChunk *ac, sa_family_t *family, int Subscript)
+{
+	return AddressList_GetOneBySubscript(&(ac -> UDPAddresses), family, Subscript);
 }
 
 int AddressChunk_Advance(AddressChunk *ac, DNSQuaryProtocol Protocol)

@@ -40,6 +40,7 @@ const DNSTypeAndName DNSTypeList[] = {
 	{252,	"AXFR"},
 	{251,	"IXFR"},
 	{41,	"OPT"},
+	{13,	"Host Information"},
 	{0,		NULL}
 };
 

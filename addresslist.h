@@ -88,6 +88,10 @@ int AddressList_Advance(__in AddressList *a);
  *  The a -> Counter before it increased.
  */
 
+struct sockaddr *AddressList_GetOneBySubscript(__in			AddressList	*a,
+											   __out_opt	sa_family_t	*family,
+											   __in			int			Subscript);
+
 struct sockaddr *AddressList_GetOne(__in		AddressList	*a,
 									__out_opt	sa_family_t	*family);
 /* Description:

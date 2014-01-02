@@ -124,7 +124,7 @@ int QueryDNSViaTCP(SOCKET			Sock,
 }
 
 int QueryDNSViaUDP(SOCKET			Sock,
-				   struct sockaddr	**PeerAddr_List,
+				   struct sockaddr	*PeerAddr_List,
 				   int				NumberOfAddresses,
 				   const void		*RequestEntity,
 				   int				RequestLength,
@@ -144,7 +144,7 @@ int QueryDNSViaUDP(SOCKET			Sock,
 	if(RequestLength == 0) return 0;
 	if(RequestLength < 0) return -1;
 
-	Family = (*PeerAddr_List) -> sa_family;
+	Family = PeerAddr_List -> sa_family;
 
 	if( Family == AF_INET )
 	{
@@ -155,9 +155,10 @@ int QueryDNSViaUDP(SOCKET			Sock,
 
 	while( NumberOfAddresses != 0 )
 	{
-		StateOfSending |= (sendto(Sock, RequestEntity, RequestLength, 0, *PeerAddr_List, AddrLen) > 0);
+		StateOfSending |= (sendto(Sock, RequestEntity, RequestLength, 0, PeerAddr_List, AddrLen) > 0);
 
-		++PeerAddr_List;
+		PeerAddr_List = (struct sockaddr *)(((char *)PeerAddr_List) + AddrLen);
+
 		--NumberOfAddresses;
 	}
 
@@ -315,7 +316,7 @@ void CloseTCPConnection(SOCKET *sock)
 }
 
 int QueryFromServerBase(SOCKET				*Socket,
-						struct	sockaddr	**ServerAddress_List,
+						struct	sockaddr	*ServerAddress_List,
 						int					NumberOfAddresses,
 						DNSQuaryProtocol	ProtocolToServer,
 						const char			*RequestEntity,
@@ -333,7 +334,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 	{
 		if(*Socket == INVALID_SOCKET)
 		{
-			*Socket = socket((*ServerAddress_List) -> sa_family, SOCK_DGRAM, IPPROTO_UDP);
+			*Socket = socket(ServerAddress_List -> sa_family, SOCK_DGRAM, IPPROTO_UDP);
 
 			if __STILL(*Socket == INVALID_SOCKET)
 			{
@@ -346,7 +347,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 	} else {
 		if(TCPSocketIsHealthy(Socket) == FALSE)
 		{
-			if(ConnectToTCPServer(Socket, *ServerAddress_List, (*ServerAddress_List) -> sa_family, TimeToServer) == FALSE)
+			if(ConnectToTCPServer(Socket, ServerAddress_List, ServerAddress_List -> sa_family, TimeToServer) == FALSE)
 			{
 				DomainStatistic_Add(RequestingDomain, NULL, STATISTIC_TYPE_REFUSED);
 				return -2; /* Failed */

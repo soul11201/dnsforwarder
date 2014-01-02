@@ -18,7 +18,11 @@
 #include "domainstatistic.h"
 #include "request_response.h"
 
-static AddressChunk Addresses;
+static AddressChunk	Addresses;
+
+static BOOL			ParallelQuery;
+static sa_family_t	MainFamily;
+static Array		Addresses_Array;
 
 void ShowRefusingMassage(ThreadContext *Context)
 {
@@ -95,6 +99,13 @@ int DNSFetchFromHosts(__in ThreadContext *Context)
 	_32BIT_INT	HeaderOffset;
 	int			AnswerCount;
 
+	if( DNSGetAdditionalCount(Context -> RequestEntity) > 0 )
+	{
+		DNSSetAdditionalCount(Context -> RequestEntity, 0);
+
+		Context -> RequestLength = DNSGetQuestionRecordPosition(Context -> RequestEntity, DNSGetQuestionCount(Context -> RequestEntity) + 1) - Context -> RequestEntity;
+	}
+
 	Header = ExtendableBuffer_Expand(Context -> ResponseBuffer, Context -> RequestLength, &HeaderOffset);
 	if( Header == NULL )
 	{
@@ -109,9 +120,8 @@ int DNSFetchFromHosts(__in ThreadContext *Context)
 		memcpy(Header, Context -> RequestEntity, Context -> RequestLength);
 		((DNSHeader *)Header) -> Flags.Direction = 1;
 		((DNSHeader *)Header) -> Flags.AuthoritativeAnswer = 0;
-		((DNSHeader *)Header) -> Flags.RecursionAvailable = 1;
+		((DNSHeader *)Header) -> Flags.RecursionAvailable = 0;
 		((DNSHeader *)Header) -> Flags.ResponseCode = 0;
-		((DNSHeader *)Header) -> Flags.Type = 0;
 		((DNSHeader *)Header) -> AnswerCount = htons(AnswerCount);
 
 		ShowNormalMassage(Context, HeaderOffset, 'H');
@@ -265,6 +275,48 @@ int InitAddress(void)
 		Itr = StringList_GetNext(udpaddrs, Itr);
 	}
 
+	ParallelQuery = ConfigGetBoolean(&ConfigInfo, "ParallelQuery");
+	if( ParallelQuery == TRUE )
+	{
+		int NumberOfAddr;
+
+		int AddrLen;
+
+		sa_family_t SubFamily;
+
+		struct sockaddr *OneAddr;
+
+		NumberOfAddr = StringList_Count(udpaddrs);
+		if( NumberOfAddr <= 0 )
+		{
+			ERRORMSG("No UDP server specified, cannot use parallel query.\n")
+			ParallelQuery == FALSE;
+		} else {
+
+			AddressChunk_GetOneUDPBySubscript(&Addresses, &MainFamily, 0);
+
+			if( MainFamily == AF_INET )
+			{
+				AddrLen = sizeof(struct sockaddr);
+			} else {
+				AddrLen = sizeof(struct sockaddr_in6);
+			}
+
+			Array_Init(&Addresses_Array, AddrLen, NumberOfAddr, FALSE, NULL);
+
+			while( NumberOfAddr != 0 )
+			{
+				OneAddr = AddressChunk_GetOneUDPBySubscript(&Addresses, &SubFamily, NumberOfAddr - 1);
+				if( OneAddr != NULL && SubFamily == MainFamily )
+				{
+					Array_PushBack(&Addresses_Array, OneAddr, NULL);
+				}
+
+				--NumberOfAddr;
+			}
+		}
+	}
+
 	return LoadDedicatedServer();
 
 }
@@ -287,16 +339,32 @@ static void SelectSocketAndProtocol(ThreadContext		*Context,
 
 static void SetAddressAndPrococolLetter(ThreadContext		*Context,
 										DNSQuaryProtocol	ProtocolUsed,
-										struct sockaddr		**Address,
+										struct sockaddr		**Addresses_List,
+										int					*NumberOfAddresses,
 										sa_family_t			*Family,
 										char				*ProtocolCharacter
 										)
 {
-	*Address = AddressChunk_GetOne(&Addresses, Family, Context -> RequestingDomain, &(Context -> RequestingDomainHashValue), ProtocolUsed);
+	*Addresses_List = AddressChunk_GetDedicated(&Addresses, Family, Context -> RequestingDomain, &(Context -> RequestingDomainHashValue), ProtocolUsed);
 
-	if( *Address != Context -> LastServer )
+	if( *Addresses_List == NULL )
 	{
-		if( Context -> LastProtocol == DNS_QUARY_PROTOCOL_UDP )
+		if( ProtocolUsed == DNS_QUARY_PROTOCOL_UDP && ParallelQuery == TRUE )
+		{
+			*Addresses_List = Addresses_Array.Data;
+			*NumberOfAddresses = Addresses_Array.Used;
+			*Family = MainFamily;
+		} else {
+			*Addresses_List = AddressChunk_GetOne(&Addresses, Family, ProtocolUsed);
+			*NumberOfAddresses = 1;
+		}
+	} else {
+		*NumberOfAddresses = 1;
+	}
+
+	if( *Addresses_List != Context -> LastServer )
+	{
+		if( Context -> LastProtocol == DNS_QUARY_PROTOCOL_UDP && ParallelQuery == FALSE )
 		{
 			CLOSE_SOCKET(Context -> Head -> UDPSocket);
 			Context -> UDPSocket = INVALID_SOCKET;
@@ -305,7 +373,7 @@ static void SetAddressAndPrococolLetter(ThreadContext		*Context,
 		}
 	}
 
-	Context -> LastServer = *Address;
+	Context -> LastServer = *Addresses_List;
 	Context -> LastProtocol = ProtocolUsed;
 
 	if( ProtocolUsed == DNS_QUARY_PROTOCOL_UDP )
@@ -334,6 +402,7 @@ static int QueryFromServer(ThreadContext *Context)
 	DNSQuaryProtocol	ProtocolUsed;
 
 	struct	sockaddr	*ServerAddr;
+	int					NumberOfAddresses;
 
 	sa_family_t	Family;
 
@@ -356,13 +425,14 @@ static int QueryFromServer(ThreadContext *Context)
 	SetAddressAndPrococolLetter(Context,
 								ProtocolUsed,
 								&ServerAddr,
+								&NumberOfAddresses,
 								&Family,
 								&ProtocolCharacter
 								);
 
 	StateOfReceiving = QueryFromServerBase(SocketUsed,
-										   &ServerAddr,
-										   1,
+										   ServerAddr,
+										   NumberOfAddresses,
 										   ProtocolUsed,
 										   Context -> RequestEntity,
 										   Context -> RequestLength,
@@ -393,13 +463,14 @@ static int QueryFromServer(ThreadContext *Context)
 			SetAddressAndPrococolLetter(Context,
 										ProtocolUsed,
 										&ServerAddr,
+										&NumberOfAddresses,
 										&Family,
 										&ProtocolCharacter
 										);
 
 			StateOfReceiving = QueryFromServerBase(SocketUsed,
-												   &ServerAddr,
-												   1,
+												   ServerAddr,
+												   NumberOfAddresses,
 												   ProtocolUsed,
 												   Context -> RequestEntity,
 												   Context -> RequestLength,

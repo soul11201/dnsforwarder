@@ -24,7 +24,7 @@ int QueryDNSViaTCP(SOCKET			Sock,
 				   );
 
 int QueryDNSViaUDP(SOCKET			Sock,
-				   struct sockaddr	**PeerAddr_List,
+				   struct sockaddr	*PeerAddr_List,
 				   int				NumberOfAddresses,
 				   const void		*RequestEntity,
 				   int				RequestLength,
@@ -44,7 +44,7 @@ BOOL ConnectToTCPServer(SOCKET *sock, struct sockaddr *addr, sa_family_t Family,
 void CloseTCPConnection(SOCKET *sock);
 
 int QueryFromServerBase(SOCKET				*Socket,
-						struct	sockaddr	**ServerAddress_List,
+						struct	sockaddr	*ServerAddress_List,
 						int					NumberOfAddresses,
 						DNSQuaryProtocol	ProtocolToServer,
 						const char			*RequestEntity,

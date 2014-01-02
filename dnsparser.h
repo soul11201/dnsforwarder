@@ -96,6 +96,12 @@ extern const ElementDescriptor DNS_RECORD_DOMAIN_POINTER[];
 extern const ElementDescriptor DNS_RECORD_NAME_SERVER[];
 #define	NUM_OF_DNS_RECORD_NAME_SERVER	1
 
+extern const ElementDescriptor DNS_RECORD_MX[];
+#define	NUM_OF_DNS_RECORD_MX	2
+
+extern const ElementDescriptor DNS_RECORD_TXT[];
+#define	NUM_OF_DNS_RECORD_TXT	1
+
 int DNSGetDescriptor(DNSRecordType Type, const ElementDescriptor **Buffer);
 
 #ifdef HOST_BIG_ENDIAN

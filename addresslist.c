@@ -139,7 +139,7 @@ int AddressList_Advance(AddressList *a)
 	return (a -> Counter)++;
 }
 
-struct sockaddr *AddressList_GetOne(AddressList *a, sa_family_t *family)
+struct sockaddr *AddressList_GetOneBySubscript(AddressList *a, sa_family_t *family, int Subscript)
 {
 	struct _Address *Result;
 
@@ -148,7 +148,7 @@ struct sockaddr *AddressList_GetOne(AddressList *a, sa_family_t *family)
 		return 0;
 	}
 
-	Result = (struct _Address *)Array_GetBySubscript(&(a -> AddressList), a -> Counter % Array_GetUsed(&(a -> AddressList)));
+	Result = (struct _Address *)Array_GetBySubscript(&(a -> AddressList), Subscript);
 	if( Result == NULL )
 	{
 		return NULL;
@@ -159,5 +159,9 @@ struct sockaddr *AddressList_GetOne(AddressList *a, sa_family_t *family)
 		}
 		return (struct sockaddr *)&(Result -> Addr);
 	}
+}
 
+struct sockaddr *AddressList_GetOne(AddressList *a, sa_family_t *family)
+{
+	return AddressList_GetOneBySubscript(a, family, a -> Counter % Array_GetUsed(&(a -> AddressList)));
 }

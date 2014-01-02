@@ -1,3 +1,4 @@
+#include <string.h>
 #include "stringchunk.h"
 #include "utils.h"
 
@@ -177,7 +178,6 @@ BOOL StringChunk_Match_OnlyWildCard(StringChunk	*dl,
 
 BOOL StringChunk_Match(StringChunk *dl, const char *Str, int *HashValue, char **Data)
 {
-	/*printf("--------StringChunk_Match------String : %s------HashValue_ptr : %d\n", Str, HashValue);*/
 	if( StringChunk_Match_NoWildCard(dl, Str, HashValue, Data) == TRUE ||
 		StringChunk_Match_OnlyWildCard(dl, Str, Data) == TRUE
 		)
