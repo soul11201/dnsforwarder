@@ -28,6 +28,7 @@ static ThreadHandle		TTLCountdown_Thread;
 static _32BIT_INT		CacheSize;
 static int				OverrideTTL;
 static int				TTLMultiple;
+static BOOL				IgnoreTTL;
 
 static _32BIT_INT		*CacheCount;
 
@@ -249,13 +250,14 @@ static int InitCacheInfo(BOOL Reload)
 int DNSCache_Init(void)
 {
 	int			_CacheSize = ConfigGetInt32(&ConfigInfo, "CacheSize");
-	BOOL		IgnoreTTL = ConfigGetBoolean(&ConfigInfo, "IgnoreTTL");
 	const char	*CacheFile = ConfigGetRawString(&ConfigInfo, "CacheFile");
 	int			InitCacheInfoState;
 
 	OverrideTTL = ConfigGetInt32(&ConfigInfo, "OverrideTTL");
 
 	TTLMultiple = ConfigGetInt32(&ConfigInfo, "MultipleTTL");
+
+	IgnoreTTL = ConfigGetBoolean(&ConfigInfo, "IgnoreTTL");
 
 	if(TTLMultiple == 0) return 1;
 
@@ -405,7 +407,7 @@ static struct _CacheEntry *DNSCache_FindFromCache(char *Content, size_t Length, 
 			return NULL;
 		}
 
-		if( CurrentTime - Entry -> TimeAdded < Entry -> TTL )
+		if( IgnoreTTL == TRUE || (CurrentTime - Entry -> TimeAdded < Entry -> TTL) )
 		{
 			if( memcmp(Content, MapStart + Entry -> Offset + 1, Length) == 0 )
 			{
