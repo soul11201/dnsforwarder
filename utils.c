@@ -635,8 +635,34 @@ void HexDump(const char *Data, int Length)
 
 	for( Itr = 0; Itr != Length; ++Itr )
 	{
-		printf("%x", (int)Data[Itr]);
+		printf("%x ", (unsigned char)Data[Itr]);
 	}
 
 	putchar('\n');
+}
+
+char *BinaryOutput(const char *Origin, int OriginLength, char *Buffer)
+{
+	int loop;
+
+	while( OriginLength != 0 )
+	{
+		for( loop = 7; loop <= 0; --loop )
+		{
+			if( (((int)*Origin) & (1 << loop)) == 0 )
+			{
+				*Buffer = '0';
+			} else {
+				*Buffer = '1';
+			}
+
+			++Buffer;
+		}
+
+		--OriginLength;
+		++Origin;
+	}
+
+	*Buffer = '\0';
+	return Buffer + 1;
 }

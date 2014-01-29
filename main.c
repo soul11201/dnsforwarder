@@ -17,10 +17,12 @@
 #include "utils.h"
 #include "readconfig.h"
 #include "querydnsinterface.h"
+#include "request_response.h"
+#include "debug.h"
 
-#define VERSION "2.5 Beta 5"
+#define VERSION "2.6 Beta 1"
 
-#define PRINT(...)		if(ProgramArgs.ShowMassages == TRUE) printf(__VA_ARGS__);
+#define PRINTM(...)		if(ProgramArgs.ShowMassages == TRUE) printf(__VA_ARGS__);
 
 /* Global Variables */
 ConfigFileInfo	ConfigInfo;
@@ -28,11 +30,6 @@ int				TimeToServer;
 BOOL			AllowFallBack;
 BOOL			ShowMassages;
 BOOL			ErrorMessages;
-
-#ifdef INTERNAL_DEBUG
-EFFECTIVE_LOCK	Debug_Mutex;
-FILE			*Debug_File;
-#endif
 
 struct _ProgramArgs
 {
@@ -139,6 +136,66 @@ int DaemonInit()
 #endif /* WIN32 */
 }
 
+void Probe(int Threshold)
+{
+	static const char *Domains[] = {
+		"www.youtube.com",
+		"www.googlevideo.com",
+		"twitter.com",
+		"www.facebook.com"
+	};
+
+	int	Pass = 0;
+
+	StringList	l;
+
+	StringChunk	s;
+
+	StringList_Init(&l, NULL, ',');
+	StringChunk_Init(&s, 100);
+
+	while( Threshold > 0 )
+	{
+		printf("; Pass %d:\n", Pass + 1);
+
+		if( ProbeFakeAddresses("8.8.8.8", Domains[Pass % (sizeof(Domains) / sizeof(const char *))], &l) > 0 )
+		{
+			const char *Itr = NULL;
+			int NumberOfNew = 0;
+
+			Itr = StringList_GetNext(&l, NULL);
+
+			while( Itr != NULL )
+			{
+				if( StringChunk_Match_NoWildCard(&s, Itr, NULL, NULL) == FALSE )
+				{
+					StringChunk_Add(&s, Itr, NULL, 0);
+					printf("%s\n", Itr);
+					++NumberOfNew;
+				}
+
+				Itr = StringList_GetNext(&l, Itr);
+			}
+
+			if( NumberOfNew == 0 )
+			{
+				--Threshold;
+			} else {
+				Threshold += 2;
+			}
+		} else {
+			--Threshold;
+		}
+
+		StringList_Clear(&l);
+
+		++Pass;
+	}
+
+	StringList_Free(&l);
+	StringChunk_Free(&s);
+}
+
 int ArgParse(int argc, char *argv_ori[])
 {
 	char **argv = argv_ori;
@@ -152,12 +209,13 @@ int ArgParse(int argc, char *argv_ori[])
 			printf(" [args] is case sensitivity and can be zero or more (in any order) of:\n"
 				  "  -f <FILE>  Use configuration <FILE> instead of the default one.\n"
 				  "  -q         Quiet mode. Do not print any information.\n"
-				  "  -e         Only show error messages.\n"
+				  "  -e         Show only error messages.\n"
 				  "  -d         Daemon mode. Running at background.\n"
+				  "  -P         Try to probe all the fake IP addresses held in false DNS responses,\n"
 				  "  -h         Show this help.\n"
 				  "\n"
 				  "Output format:\n"
-				  " Date & Time [Udp|Tcp|Cache|Hosts|Refused][Client IP][Type in querying][Domain in querying] :\n"
+				  " Date & Time [Udp|Tcp|Cache|Hosts|Refused|Blocked][Client IP][Type in querying][Domain in querying] : Message size\n"
 				  "    Results\n"
 				  );
 			exit(0);
@@ -191,7 +249,22 @@ int ArgParse(int argc, char *argv_ori[])
             continue;
         }
 
-		PRINT("Unrecognisable arg `%s'\n", *argv);
+        if( strcmp("-P", *argv) == 0 )
+        {
+			ShowMassages = FALSE;
+			ErrorMessages = FALSE;
+#ifdef WIN32
+			SetConsoleTitle("dnsforwarder - probing");
+#endif
+			Probe(100);
+
+			exit(0);
+
+			++argv;
+            continue;
+        }
+
+		PRINTM("Unrecognisable arg `%s'\n", *argv);
         ++argv;
     }
 
@@ -240,9 +313,9 @@ int main(int argc, char *argv[])
 		ProgramArgs.ConfigFile_ptr = ProgramArgs.ConfigFile;
 	}
 
-    PRINT("DNSforwarder by holmium. Free for non-commercial use. Version "VERSION" .\nTime of compilation : %s %s.\n\n", __DATE__, __TIME__);
+    PRINTM("DNSforwarder by holmium. Free for non-commercial use. Version "VERSION" .\nTime of compilation : %s %s.\n\n", __DATE__, __TIME__);
 
-    PRINT("Configure File : %s\n\n", ProgramArgs.ConfigFile_ptr);
+    PRINTM("Configure File : %s\n\n", ProgramArgs.ConfigFile_ptr);
 
 	if( ProgramArgs.DeamonMode == TRUE )
 	{
@@ -256,6 +329,11 @@ int main(int argc, char *argv[])
 
 	if( QueryDNSInterfaceInit(ProgramArgs.ConfigFile_ptr, ProgramArgs.ShowMassages, ProgramArgs.ErrorMessages) != 0 )
 		goto JustEnd;
+
+	if( ConfigGetBoolean(&ConfigInfo, "Debug") == TRUE )
+	{
+		Debug_Init(ConfigGetInt32(&ConfigInfo, "DebugFileThresholdLength"));
+	}
 
 	putchar('\n');
 

@@ -3,6 +3,7 @@
 #include <string.h>
 #include "dnsparser.h"
 #include "dnsgenerator.h"
+#include "utils.h"
 
 const ElementDescriptor DNS_RECORD_A[] = {
 	{DNS_IPV4_ADDR, "IPv4 Address"}
@@ -40,7 +41,26 @@ const ElementDescriptor DNS_RECORD_MX[] = {
 };
 
 const ElementDescriptor DNS_RECORD_TXT[] = {
-	{DNS_PLANT_TEXT,	"TXT"}
+	{DNS_CHARACTER_STRING,	"TXT"}
+};
+
+const ElementDescriptor DNS_RECORD_DNSKEY[] = {
+	{DNS_DNSKEY_FLAGS,		"Flags"},
+	{DNS_DNSKEY_PROTOCOL,	"Protocol"},
+	{DNS_DNSKEY_ALGORITHM,	"Algorithm"},
+	{DNS_DNSKEY_PUBLIC_KEY,	"Public Key"}
+};
+
+const ElementDescriptor DNS_RECORD_RRSIG[] = {
+	{DNS_16BIT_UINT,		"Type Covered"},
+	{DNS_DNSKEY_ALGORITHM,	"Algorithm"},
+	{DNS_8BIT_UINT,			"Labels"},
+	{DNS_32BIT_UINT,		"Original TTL"},
+	{DNS_32BIT_UINT,		"Signature Expiration"},
+	{DNS_32BIT_UINT,		"Signature Inception"},
+	{DNS_16BIT_UINT,		"Key Tag"},
+	{DNS_LABELED_NAME,		"Signer's Name"},
+	{DNS_DNSSIG_SIGNATURE,	"Signature"}
 };
 
 static const struct _Type_Descriptor_DCount
@@ -48,27 +68,37 @@ static const struct _Type_Descriptor_DCount
 	DNSRecordType			Type;
 	const ElementDescriptor	*Descriptor;
 	int						DCount;
+	BOOL					Cached;
 }Type_Descriptor_DCount[] = {
-	{DNS_TYPE_A,		DNS_RECORD_A,		NUM_OF_DNS_RECORD_A},
-	{DNS_TYPE_AAAA,		DNS_RECORD_AAAA,	NUM_OF_DNS_RECORD_AAAA},
-	{DNS_TYPE_CNAME,	DNS_RECORD_CNAME,	NUM_OF_DNS_RECORD_CNAME},
-	{DNS_TYPE_SOA,		DNS_RECORD_SOA,		NUM_OF_DNS_RECORD_SOA},
-	{DNS_TYPE_PTR,		DNS_RECORD_DOMAIN_POINTER,	NUM_OF_DNS_RECORD_DOMAIN_POINTER},
-	{DNS_TYPE_NS,		DNS_RECORD_NAME_SERVER,	NUM_OF_DNS_RECORD_NAME_SERVER},
-	{DNS_TYPE_MX,		DNS_RECORD_MX,		NUM_OF_DNS_RECORD_MX},
-	{DNS_TYPE_TXT,		DNS_RECORD_TXT,		NUM_OF_DNS_RECORD_TXT}
+	{DNS_TYPE_A,		DNS_RECORD_A,		NUM_OF_DNS_RECORD_A,		TRUE},
+	{DNS_TYPE_CNAME,	DNS_RECORD_CNAME,	NUM_OF_DNS_RECORD_CNAME,	TRUE},
+	{DNS_TYPE_AAAA,		DNS_RECORD_AAAA,	NUM_OF_DNS_RECORD_AAAA,		TRUE},
+	{DNS_TYPE_SOA,		DNS_RECORD_SOA,		NUM_OF_DNS_RECORD_SOA,		TRUE},
+	{DNS_TYPE_PTR,		DNS_RECORD_DOMAIN_POINTER,	NUM_OF_DNS_RECORD_DOMAIN_POINTER, TRUE},
+	{DNS_TYPE_NS,		DNS_RECORD_NAME_SERVER,	NUM_OF_DNS_RECORD_NAME_SERVER, TRUE},
+	{DNS_TYPE_MX,		DNS_RECORD_MX,		NUM_OF_DNS_RECORD_MX,		TRUE},
+	{DNS_TYPE_TXT,		DNS_RECORD_TXT,		NUM_OF_DNS_RECORD_TXT,		TRUE},
+	{DNS_TYPE_DNSKEY,	DNS_RECORD_DNSKEY,	NUM_OF_DNS_RECORD_DNSKEY,	TRUE},
+	{DNS_TYPE_RRSIG,	DNS_RECORD_RRSIG,	NUM_OF_DNS_RECORD_RRSIG,	FALSE}
 
 };
 
-int DNSGetDescriptor(DNSRecordType Type, const ElementDescriptor **Buffer)
+int DNSGetDescriptor(DNSRecordType Type, BOOL NeededCache, const ElementDescriptor **Buffer)
 {
 	int loop;
+
 	for(loop = 0; loop != sizeof(Type_Descriptor_DCount) / sizeof(struct _Type_Descriptor_DCount); ++loop)
 	{
-		if(Type_Descriptor_DCount[loop].Type == Type)
+		if( Type_Descriptor_DCount[loop].Type == Type )
 		{
-			*Buffer = Type_Descriptor_DCount[loop].Descriptor;
-			return Type_Descriptor_DCount[loop].DCount;
+			if( NeededCache == TRUE && Type_Descriptor_DCount[loop].Cached == FALSE )
+			{
+				*Buffer = NULL;
+				return 0;
+			} else {
+				*Buffer = Type_Descriptor_DCount[loop].Descriptor;
+				return Type_Descriptor_DCount[loop].DCount;
+			}
 		}
 	}
 
@@ -81,14 +111,14 @@ BOOL DNSIsLabeledName(char *DNSBody, char *Start)
 
 }
 
-char *DNSJumpOverName(char *NameStart)
+const char *DNSJumpOverName(const char *NameStart)
 {
 	while(1)
 	{
-		if((*(unsigned char *)NameStart) == 0)
+		if((*(const unsigned char *)NameStart) == 0)
 			return NameStart + 1;
 
-		if((*(unsigned char *)NameStart) == 192 /* 0x1100 0000 */)
+		if((*(const unsigned char *)NameStart) == 192 /* 0x1100 0000 */)
 			return NameStart + 2;
 
 		++NameStart;
@@ -97,9 +127,9 @@ char *DNSJumpOverName(char *NameStart)
 	return NULL;
 }
 
-char *DNSGetQuestionRecordPosition(char *DNSBody, int Num)
+const char *DNSGetQuestionRecordPosition(const char *DNSBody, int Num)
 {
-	char *QR = DNSJumpHeader(DNSBody);
+	const char *QR = DNSJumpHeader(DNSBody);
 
 	if(Num > DNSGetQuestionCount(DNSBody))
 		Num = DNSGetQuestionCount(DNSBody) + 1;
@@ -113,7 +143,7 @@ char *DNSGetQuestionRecordPosition(char *DNSBody, int Num)
 	return QR;
 }
 
-char *DNSGetAnswerRecordPosition(char *DNSBody, int Num)
+const char *DNSGetAnswerRecordPosition(const char *DNSBody, int Num)
 {
 	const char *SR = DNSJumpOverQuestionRecords(DNSBody);
 
@@ -175,7 +205,7 @@ int DNSGetHostName(const char *DNSBody, const char *NameStart, char *buffer)
 }
 
 
-int DNSGetHostNameLength /* include terminated-zero */ (char *DNSBody, char *NameStart)
+int DNSGetHostNameLength /* include terminated-zero */ (const char *DNSBody, const char *NameStart)
 {
 	int NameLen = 0;
 	unsigned char LabelLen;
@@ -200,8 +230,9 @@ int DNSGetHostNameLength /* include terminated-zero */ (char *DNSBody, char *Nam
 		return NameLen;
 }
 
-DNSDataInfo DNSParseData(char *DNSBody,
-						char *DataBody,
+DNSDataInfo DNSParseData(const char *DNSBody,
+						const char *DataBody,
+						int DataLength,
 						void *Buffer,
 						int BufferLength,
 						const ElementDescriptor *Descriptor,
@@ -210,7 +241,9 @@ DNSDataInfo DNSParseData(char *DNSBody,
 {
 	DNSDataInfo Result = {DNS_DATA_TYPE_UNKNOWN, 0};
 
-	if(Num > CountOfDescriptor)
+	const char *PendingData = DataBody;
+
+	if( Num > CountOfDescriptor || DataLength <= 0 )
 		return Result;
 
 	while(Num != 1)
@@ -218,28 +251,31 @@ DNSDataInfo DNSParseData(char *DNSBody,
 		switch(Descriptor -> element)
 		{
 			case DNS_LABELED_NAME:
-				DataBody = DNSJumpOverName(DataBody);
+				PendingData = DNSJumpOverName(PendingData);
 				break;
 
-			case DNS_PLANT_TEXT:
-				DataBody += strlen(DataBody) + 1;
+			case DNS_CHARACTER_STRING:
+				PendingData += strlen(PendingData) + 1;
 				break;
 
 			case DNS_IPV6_ADDR:
-				DataBody += 16;
+				PendingData += 16;
 				break;
 
 			case DNS_IPV4_ADDR:
 			case DNS_32BIT_UINT:
-				DataBody += 4;
+				PendingData += 4;
 				break;
 
+			case DNS_DNSKEY_FLAGS:
 			case DNS_16BIT_UINT:
-				DataBody += 2;
+				PendingData += 2;
 				break;
 
+			case DNS_DNSKEY_PROTOCOL:
+			case DNS_DNSKEY_ALGORITHM:
 			case DNS_8BIT_UINT:
-				DataBody += 1;
+				PendingData += 1;
 				break;
 
 			default:
@@ -254,31 +290,31 @@ DNSDataInfo DNSParseData(char *DNSBody,
 	switch(Descriptor -> element)
 	{
 		case DNS_LABELED_NAME:
-			if(BufferLength < DNSGetHostNameLength(DNSBody, DataBody))
+			if(BufferLength < DNSGetHostNameLength(DNSBody, PendingData))
 				break;
 
-			Result.DataLength = DNSGetHostNameLength(DNSBody, DataBody);
-			DNSGetHostName(DNSBody, DataBody, (char *)Buffer);
+			Result.DataLength = DNSGetHostNameLength(DNSBody, PendingData);
+			DNSGetHostName(DNSBody, PendingData, (char *)Buffer);
 			Result.DataType = DNS_DATA_TYPE_STRING;
 			break;
 
-		case DNS_PLANT_TEXT:
-			if( BufferLength < GET_8_BIT_U_INT(DataBody) + 1 )
+		case DNS_CHARACTER_STRING:
+			if( BufferLength < GET_8_BIT_U_INT(PendingData) + 1 )
 			{
 				break;
 			}
 
-			memcpy(Buffer, DataBody + 1, GET_8_BIT_U_INT(DataBody));
-			((char *)Buffer)[GET_8_BIT_U_INT(DataBody)] = '\0';
+			memcpy(Buffer, PendingData + 1, GET_8_BIT_U_INT(PendingData));
+			((char *)Buffer)[GET_8_BIT_U_INT(PendingData)] = '\0';
 
-			Result.DataLength = GET_8_BIT_U_INT(DataBody) + 1;
+			Result.DataLength = GET_8_BIT_U_INT(PendingData) + 1;
 			Result.DataType = DNS_DATA_TYPE_STRING;
 
 			break;
 
 		case DNS_32BIT_UINT:
 			{
-				_32BIT_UINT Tmp = GET_32_BIT_U_INT(DataBody);
+				_32BIT_UINT Tmp = GET_32_BIT_U_INT(PendingData);
 				if(BufferLength < 4)
 					break;
 				memcpy(Buffer, &Tmp, 4);
@@ -289,7 +325,7 @@ DNSDataInfo DNSParseData(char *DNSBody,
 
 		case DNS_16BIT_UINT:
 			{
-				_16BIT_UINT Tmp = GET_16_BIT_U_INT(DataBody);
+				_16BIT_UINT Tmp = GET_16_BIT_U_INT(PendingData);
 				if(BufferLength < 2)
 					break;
 				memcpy(Buffer, &Tmp, 2);
@@ -298,23 +334,73 @@ DNSDataInfo DNSParseData(char *DNSBody,
 			}
 			break;
 
+		case DNS_DNSKEY_PROTOCOL:
 		case DNS_8BIT_UINT:
 			if(BufferLength < 1)
 				break;
-			*(char *)Buffer = *DataBody;
+			*(char *)Buffer = *PendingData;
 			Result.DataLength = 1;
 			Result.DataType = DNS_DATA_TYPE_UINT;
 			break;
 
+		case DNS_DNSKEY_FLAGS:
+			if( BufferLength < 17 )
+			{
+				break;
+			}
+
+			Result.DataLength = 17;
+			BinaryOutput(PendingData, 2, Buffer);
+			Result.DataType = DNS_DATA_TYPE_STRING;
+			break;
+
+		case DNS_DNSKEY_ALGORITHM:
+			{
+				const char *Name;
+
+				Name = DNSSECGetAlgorithmName(*PendingData);
+
+				if( BufferLength < strlen(Name) + 1 + 4 )
+				{
+					break;
+				}
+
+				Result.DataLength = sprintf(Buffer, "%d %s", (unsigned char)*PendingData, Name) + 1;
+				Result.DataType = DNS_DATA_TYPE_STRING;
+			}
+			break;
+
+		case DNS_DNSKEY_PUBLIC_KEY:
+			if( BufferLength < DataLength - 4 + 1 )
+			{
+				break;
+			}
+
+			Result.DataLength = DataLength - 4 + 1;
+			memcpy(Buffer, PendingData, DataLength - 4);
+			((char *)Buffer)[DataLength - 4] = '\0';
+			Result.DataType = DNS_DATA_TYPE_STRING;
+			break;
+
+		case DNS_DNSSIG_SIGNATURE:
+			if( BufferLength < sizeof("(      bytes binary object)") )
+			{
+				break;
+			}
+
+			Result.DataLength = sprintf(Buffer, "(%d bytes binary object)", (int)(DataLength - (PendingData - DataBody)));
+			Result.DataType = DNS_DATA_TYPE_STRING;
+
+			break;
 
 		case DNS_IPV4_ADDR:
 			if(BufferLength < 16)
 				break;
 			Result.DataLength =
-			sprintf((char *)Buffer, "%u.%u.%u.%u",	GET_8_BIT_U_INT(DataBody),
-											GET_8_BIT_U_INT(DataBody + 1),
-											GET_8_BIT_U_INT(DataBody + 2),
-											GET_8_BIT_U_INT(DataBody + 3)
+			sprintf((char *)Buffer, "%u.%u.%u.%u",	GET_8_BIT_U_INT(PendingData),
+											GET_8_BIT_U_INT(PendingData + 1),
+											GET_8_BIT_U_INT(PendingData + 2),
+											GET_8_BIT_U_INT(PendingData + 3)
 				);
 			Result.DataType = DNS_DATA_TYPE_STRING;
 			break;
@@ -323,14 +409,14 @@ DNSDataInfo DNSParseData(char *DNSBody,
 			if(BufferLength < 40)
 				break;
 			Result.DataLength =
-			sprintf((char *)Buffer, "%x:%x:%x:%x:%x:%x:%x:%x",	GET_16_BIT_U_INT(DataBody),
-														GET_16_BIT_U_INT(DataBody + 2),
-														GET_16_BIT_U_INT(DataBody + 4),
-														GET_16_BIT_U_INT(DataBody + 6),
-														GET_16_BIT_U_INT(DataBody + 8),
-														GET_16_BIT_U_INT(DataBody + 10),
-														GET_16_BIT_U_INT(DataBody + 12),
-														GET_16_BIT_U_INT(DataBody + 14)
+			sprintf((char *)Buffer, "%x:%x:%x:%x:%x:%x:%x:%x",	GET_16_BIT_U_INT(PendingData),
+														GET_16_BIT_U_INT(PendingData + 2),
+														GET_16_BIT_U_INT(PendingData + 4),
+														GET_16_BIT_U_INT(PendingData + 6),
+														GET_16_BIT_U_INT(PendingData + 8),
+														GET_16_BIT_U_INT(PendingData + 10),
+														GET_16_BIT_U_INT(PendingData + 12),
+														GET_16_BIT_U_INT(PendingData + 14)
 
 				);
 			Result.DataType = DNS_DATA_TYPE_STRING;
@@ -342,48 +428,50 @@ DNSDataInfo DNSParseData(char *DNSBody,
 	return Result;
 }
 
-char *GetAnswer(char *DNSBody, char *DataBody, char *Buffer, DNSRecordType ResourceType)
+char *GetAnswer(const char *DNSBody, const char *DataBody, int DataLength, char *Buffer, DNSRecordType ResourceType)
 {
-	int loop, loop2;
+	int loop2;
+
+	int DCount = 0;
+
+	const ElementDescriptor	*Descriptor;
 
 	if( Buffer == NULL )
 		return NULL;
 
-	for(loop = 0;
-		loop != sizeof(Type_Descriptor_DCount) / sizeof(struct _Type_Descriptor_DCount);
-		++loop
-		)
-	{
-		if( Type_Descriptor_DCount[loop].Type == ResourceType )
-			break;
-	}
+	DCount = DNSGetDescriptor(ResourceType, FALSE, &Descriptor);
 
-	if(loop < sizeof(Type_Descriptor_DCount) / sizeof(struct _Type_Descriptor_DCount))
+	if( Descriptor == NULL )
 	{
+		Buffer += sprintf(Buffer, "   Unparsable type : %d : %s\n", ResourceType, DNSGetTypeName(ResourceType));
+	} else {
 		char		InnerBuffer[512];
 		DNSDataInfo	Data;
 
 		Buffer += sprintf(Buffer, "   %s:", DNSGetTypeName(ResourceType));
 
-		if(Type_Descriptor_DCount[loop].DCount != 1)
+		if( DCount != 1 )
 		{
 			Buffer += sprintf(Buffer, "\n");
 		}
 
-		for(loop2 = 0; loop2 != Type_Descriptor_DCount[loop].DCount; ++loop2)
+		for(loop2 = 0; loop2 != DCount; ++loop2)
 		{
 			Data = DNSParseData(DNSBody,
 								DataBody,
+								DataLength,
 								InnerBuffer,
 								sizeof(InnerBuffer),
-								Type_Descriptor_DCount[loop].Descriptor,
-								Type_Descriptor_DCount[loop].DCount,
+								Descriptor,
+								DCount,
 								loop2 + 1);
 
-			if( Type_Descriptor_DCount[loop].DCount != 1 )
+			if( DCount != 1 )
 			{
-				if( Type_Descriptor_DCount[loop].Descriptor[loop2].description != NULL )
-					Buffer += sprintf(Buffer, "      %s:", Type_Descriptor_DCount[loop].Descriptor[loop2].description);
+				if( Descriptor[loop2].description != NULL )
+				{
+					Buffer += sprintf(Buffer, "      %s:", Descriptor[loop2].description);
+				}
 			}
 
 			switch(Data.DataType)
@@ -420,19 +508,20 @@ char *GetAnswer(char *DNSBody, char *DataBody, char *Buffer, DNSRecordType Resou
 					break;
 			}
 
-			if(Type_Descriptor_DCount[loop].Descriptor[loop2].description != NULL)
+			if( Descriptor[loop2].description != NULL )
+			{
 				Buffer += sprintf(Buffer, "\n");
+			}
 		}
-	} else {
-		Buffer += sprintf(Buffer, "   Unparsable type : %d : %s\n", ResourceType, DNSGetTypeName(ResourceType));
 	}
+
 	return Buffer;
 }
 
-char *GetAllAnswers(char *DNSBody, char *Buffer, int BufferLength)
+char *GetAllAnswers(const char *DNSBody, char *Buffer, size_t BufferLength)
 {
 	int		AnswerCount;
-	char	*Itr;
+	const char	*Itr;
 	int		UsedCount;
 	DNSRecordType	ResourceType;
 
@@ -444,7 +533,7 @@ char *GetAllAnswers(char *DNSBody, char *Buffer, int BufferLength)
 		return NULL;
 	}
 
-	AnswerCount = DNSGetAnswerCount(DNSBody) + DNSGetNameServerCount(DNSBody) + DNSGetAdditionalCount(DNSBody);
+	AnswerCount = DNSGetAnswerCount(DNSBody) + DNSGetNameServerCount(DNSBody);
 
 	if( AnswerCount == 0 )
 	{
@@ -461,7 +550,7 @@ char *GetAllAnswers(char *DNSBody, char *Buffer, int BufferLength)
 
 		ResourceType = (DNSRecordType)DNSGetRecordType(Itr);
 
-		RecordLength = GetAnswer(DNSBody, DNSGetResourceDataPos(Itr), TempBuffer, ResourceType) - TempBuffer;
+		RecordLength = GetAnswer(DNSBody, DNSGetResourceDataPos(Itr), DNSGetResourceDataLength(Itr), TempBuffer, ResourceType) - TempBuffer;
 
 		if( RecordLength < BufferLength )
 		{
@@ -486,7 +575,7 @@ int DNSExpand(char *DNSBody, int BufferLength)
 
 }
 
-void DNSCopyLable(char *DNSBody, char *here, char *src)
+void DNSCopyLable(const char *DNSBody, char *here, const char *src)
 {
 	while( 1 )
 	{
@@ -513,9 +602,9 @@ int DNSExpandCName_MoreSpaceNeeded(const char *DNSBody)
 	int				AnswerCount	=	DNSGetAnswerCount(DNSBody);
 	int				Itr	=	1;
 	int				MoreSpaceNeeded = 0;
-	char			*Answer;
+	const char		*Answer;
 	DNSRecordType	Type;
-	char			*Resource;
+	const char		*Resource;
 	int				ResourceLength;
 
 	int				NameLength;
@@ -547,11 +636,11 @@ int DNSExpandCName_MoreSpaceNeeded(const char *DNSBody)
 }
 
 /* You should meke sure there is no additional record and nameserver record */
-void DNSExpandCName(char *DNSBody)
+void DNSExpandCName(const char *DNSBody)
 {
 	int				AnswerCount	=	DNSGetAnswerCount(DNSBody);
 	int				Itr	=	1;
-	char			*Answer;
+	const char		*Answer;
 	DNSRecordType	Type;
 	char			*Resource;
 	int				ResourceLength;
@@ -575,12 +664,12 @@ void DNSExpandCName(char *DNSBody)
 		if( Type == DNS_TYPE_CNAME )
 		{
 			ResourceLength = DNSGetResourceDataLength(Answer);
-			Resource = DNSGetResourceDataPos(Answer);
+			Resource = (char *)DNSGetResourceDataPos(Answer);
 			NameLength = DNSGetHostNameLength(DNSBody, Resource);
 
 			NameEnd = Resource + ResourceLength;
 
-			DNSEnd = DNSGetAnswerRecordPosition(DNSBody, AnswerCount + 1);
+			DNSEnd = (char *)DNSGetAnswerRecordPosition(DNSBody, AnswerCount + 1);
 
 			SET_16_BIT_U_INT(Resource - 2, NameLength + 1);
 

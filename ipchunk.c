@@ -1,0 +1,31 @@
+#include "ipchunk.h"
+
+static int Compare(IpElement *_1, IpElement *_2)
+{
+	return (int)(_1 -> Ip) - (int)(_2 -> Ip);
+}
+
+int IpChunk_Init(IpChunk *ic)
+{
+	return Bst_Init(ic, sizeof(IpElement), (int (*)(const void *, const void *))Compare);
+}
+
+int IpChunk_Add(IpChunk *ic, _32BIT_UINT Ip)
+{
+	IpElement	New = {Ip};
+	return Bst_Add(ic, &New);
+}
+
+BOOL IpChunk_Find(IpChunk *ic, _32BIT_UINT Ip)
+{
+	IpElement	Key = {Ip};
+
+	if( Bst_Search(ic, &Key, NULL) == NULL )
+	{
+		return FALSE;
+	} else {
+		return TRUE;
+	}
+}
+
+

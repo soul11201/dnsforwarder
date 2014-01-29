@@ -11,7 +11,7 @@ BOOL Cache_IsInited(void);
 
 int DNSCache_AddItemsToCache(char *DNSBody, time_t CurrentTime);
 
-int DNSCache_GetByQuestion(__in char *Question, __inout ExtendableBuffer *Buffer, __out int *RecordsLength, __in time_t CurrentTime);
+int DNSCache_GetByQuestion(__in const char *Question, __inout ExtendableBuffer *Buffer, __out int *RecordsLength, __in time_t CurrentTime);
 
 void DNSCacheClose(void);
 

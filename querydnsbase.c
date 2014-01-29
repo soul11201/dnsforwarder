@@ -40,6 +40,12 @@ void ShowRefusingMassage(ThreadContext *Context)
 			  Context -> RequestingDomain
 			  );
 	}
+
+	DEBUG_FILE("[R][%s][%s][%s].\n",
+		   Context -> ClientIP,
+		   DNSGetTypeName(Context -> RequestingType),
+		   Context -> RequestingDomain
+		   );
 }
 
 void ShowErrorMassage(ThreadContext *Context, char ProtocolCharacter)
@@ -49,7 +55,7 @@ void ShowErrorMassage(ThreadContext *Context, char ProtocolCharacter)
 	int		ErrorNum = GET_LAST_ERROR();
 	char	ErrorMessage[320];
 
-	if( ErrorMessages == TRUE )
+	if( ErrorMessages == TRUE || DEBUGMODE )
 	{
 		GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
 
@@ -57,6 +63,10 @@ void ShowErrorMassage(ThreadContext *Context, char ProtocolCharacter)
 
 		GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
 
+	}
+
+	if( ErrorMessages == TRUE )
+	{
 		printf("%s[%c][%s][%s][%s] An error occured : %d : %s .\n",
 			   DateAndTime,
 			   ProtocolCharacter,
@@ -67,6 +77,15 @@ void ShowErrorMassage(ThreadContext *Context, char ProtocolCharacter)
 			   ErrorMessage
 			   );
 	}
+
+	DEBUG_FILE("[%c][%s][%s][%s] An error occured : %d : %s .\n",
+			   ProtocolCharacter,
+			   Context -> ClientIP,
+			   DNSGetTypeName(Context -> RequestingType),
+			   Context -> RequestingDomain,
+			   ErrorNum,
+			   ErrorMessage
+			   );
 }
 
 void ShowNormalMassage(ThreadContext *Context, _32BIT_INT Offset, char ProtocolCharacter)
@@ -74,22 +93,56 @@ void ShowNormalMassage(ThreadContext *Context, _32BIT_INT Offset, char ProtocolC
 	char DateAndTime[32];
 	char InfoBuffer[1024];
 
-	if( ShowMassages == TRUE )
+	if( ShowMassages == TRUE || DEBUGMODE )
 	{
 		GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
 
 		InfoBuffer[0] = '\0';
 		GetAllAnswers(ExtendableBuffer_GetPositionByOffset(Context -> ResponseBuffer, Offset), InfoBuffer, sizeof(InfoBuffer));
+	}
 
-		printf("%s[%c][%s][%s][%s] :\n%s",
+	if( ShowMassages == TRUE )
+	{
+		printf("%s[%c][%s][%s][%s] : %d bytes\n%s",
 			  DateAndTime,
 			  ProtocolCharacter,
 			  Context -> ClientIP,
 			  DNSGetTypeName(Context -> RequestingType),
 			  Context -> RequestingDomain,
+			  ExtendableBuffer_GetUsedBytes(Context -> ResponseBuffer) - Offset,
 			  InfoBuffer
 			  );
 	}
+
+	DEBUG_FILE("[%c][%s][%s][%s] :%d bytes\n%s",
+			   ProtocolCharacter,
+			   Context -> ClientIP,
+			   DNSGetTypeName(Context -> RequestingType),
+			   Context -> RequestingDomain,
+			   ExtendableBuffer_GetUsedBytes(Context -> ResponseBuffer) - Offset,
+			   InfoBuffer
+			   );
+}
+
+void ShowBlockedMessage(const char *RequestingDomain, const char *Package, const char *Message)
+{
+	char DateAndTime[32];
+	char InfoBuffer[1024];
+
+	if( ShowMassages == TRUE || DEBUGMODE )
+	{
+		GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
+
+		InfoBuffer[0] = '\0';
+		GetAllAnswers(Package, InfoBuffer, sizeof(InfoBuffer));
+	}
+
+	if( ShowMassages == TRUE )
+	{
+		printf("%s[B][%s] %s :\n%s", DateAndTime, RequestingDomain, Message == NULL ? "" : Message, InfoBuffer);
+	}
+
+	DEBUG_FILE("[B][%s] %s :\n%s", RequestingDomain, Message == NULL ? "" : Message, InfoBuffer);
 }
 
 int DNSFetchFromHosts(__in ThreadContext *Context)
@@ -98,13 +151,6 @@ int DNSFetchFromHosts(__in ThreadContext *Context)
 	int			RecordsLength;
 	_32BIT_INT	HeaderOffset;
 	int			AnswerCount;
-
-	if( DNSGetAdditionalCount(Context -> RequestEntity) > 0 )
-	{
-		DNSSetAdditionalCount(Context -> RequestEntity, 0);
-
-		Context -> RequestLength = DNSGetQuestionRecordPosition(Context -> RequestEntity, DNSGetQuestionCount(Context -> RequestEntity) + 1) - Context -> RequestEntity;
-	}
 
 	Header = ExtendableBuffer_Expand(Context -> ResponseBuffer, Context -> RequestLength, &HeaderOffset);
 	if( Header == NULL )
@@ -124,8 +170,6 @@ int DNSFetchFromHosts(__in ThreadContext *Context)
 		((DNSHeader *)Header) -> Flags.ResponseCode = 0;
 		((DNSHeader *)Header) -> AnswerCount = htons(AnswerCount);
 
-		ShowNormalMassage(Context, HeaderOffset, 'H');
-
 		if( AnswerCount != 1 && Context -> Compress != FALSE )
 		{
 			int UnCompressedLength = Context -> RequestLength + RecordsLength;
@@ -133,8 +177,13 @@ int DNSFetchFromHosts(__in ThreadContext *Context)
 			int CompressedLength = DNSCompress(Header, UnCompressedLength);
 
 			ExtendableBuffer_Eliminate_Tail(Context -> ResponseBuffer, UnCompressedLength - CompressedLength);
+
+			ShowNormalMassage(Context, HeaderOffset, 'H');
+
 			return CompressedLength;
 		} else {
+			ShowNormalMassage(Context, HeaderOffset, 'H');
+
 			return Context -> RequestLength + RecordsLength;
 		}
 	} else {
@@ -168,18 +217,21 @@ int DNSFetchFromCache(__in ThreadContext *Context)
 
 		((DNSHeader *)Header) -> AnswerCount = htons(RecordsCount);
 
-		ShowNormalMassage(Context, HeaderOffset, 'C');
-
 		if(Context -> Compress != FALSE)
 		{
 			int UnCompressedLength = Context -> RequestLength + RecordsLength;
 			int CompressedLength = DNSCompress(Header, UnCompressedLength);
 
 			ExtendableBuffer_Eliminate_Tail(Context -> ResponseBuffer, UnCompressedLength - CompressedLength);
+
+			ShowNormalMassage(Context, HeaderOffset, 'C');
+
 			return CompressedLength;
-		}
-		else
+		} else {
+			ShowNormalMassage(Context, HeaderOffset, 'C');
+
 			return Context -> RequestLength + RecordsLength;
+		}
 	} else {
 		return -1;
 	}
@@ -189,6 +241,11 @@ int FetchFromHostsAndCache(ThreadContext *Context)
 {
 	int			StateOfReceiving = -1;
 	_32BIT_INT	OriOffset = ExtendableBuffer_GetEndOffset(Context -> ResponseBuffer);
+
+	if( DNSGetAdditionalCount(Context -> RequestEntity) > 0 )
+	{
+		return -1;
+	}
 
 	if( Hosts_IsInited() )
 	{
@@ -246,13 +303,15 @@ static int LoadDedicatedServer(void)
 		Itr = StringList_GetNext(DedicatedServer, Itr);
 	}
 
+	StringList_Free(DedicatedServer);
+
 	return 0;
 }
 
 int InitAddress(void)
 {
-	const StringList	*tcpaddrs	=	ConfigGetStringList(&ConfigInfo, "TCPServer");
-	const StringList	*udpaddrs	=	ConfigGetStringList(&ConfigInfo, "UDPServer");
+	StringList	*tcpaddrs	=	ConfigGetStringList(&ConfigInfo, "TCPServer");
+	StringList	*udpaddrs	=	ConfigGetStringList(&ConfigInfo, "UDPServer");
 
 	const char	*Itr	=	NULL;
 
@@ -265,6 +324,9 @@ int InitAddress(void)
 	while( Itr != NULL )
 	{
 		AddressChunk_AddATCPAddress_FromString(&Addresses, Itr);
+
+		DEBUG_FILE("Add TCP address : %s\n", Itr);
+
 		Itr = StringList_GetNext(tcpaddrs, Itr);
 	}
 
@@ -272,6 +334,9 @@ int InitAddress(void)
 	while( Itr != NULL )
 	{
 		AddressChunk_AddAUDPAddress_FromString(&Addresses, Itr);
+
+		DEBUG_FILE("Add UDP address : %s\n", Itr);
+
 		Itr = StringList_GetNext(udpaddrs, Itr);
 	}
 
@@ -290,16 +355,22 @@ int InitAddress(void)
 		if( NumberOfAddr <= 0 )
 		{
 			ERRORMSG("No UDP server specified, cannot use parallel query.\n")
-			ParallelQuery == FALSE;
+			ParallelQuery = FALSE;
 		} else {
+			DEBUG_FILE("Enable parallel query.\n");
 
 			AddressChunk_GetOneUDPBySubscript(&Addresses, &MainFamily, 0);
 
 			if( MainFamily == AF_INET )
 			{
 				AddrLen = sizeof(struct sockaddr);
+
+				DEBUG_FILE("Parallel query servers family IPv4.\n");
+
 			} else {
 				AddrLen = sizeof(struct sockaddr_in6);
+
+				DEBUG_FILE("Parallel query servers family IPv6.\n");
 			}
 
 			Array_Init(&Addresses_Array, AddrLen, NumberOfAddr, FALSE, NULL);
@@ -316,6 +387,9 @@ int InitAddress(void)
 			}
 		}
 	}
+
+	StringList_Free(tcpaddrs);
+	StringList_Free(udpaddrs);
 
 	return LoadDedicatedServer();
 
@@ -351,7 +425,7 @@ static void SetAddressAndPrococolLetter(ThreadContext		*Context,
 	{
 		if( ProtocolUsed == DNS_QUARY_PROTOCOL_UDP && ParallelQuery == TRUE )
 		{
-			*Addresses_List = Addresses_Array.Data;
+			*Addresses_List = (struct sockaddr *)Addresses_Array.Data;
 			*NumberOfAddresses = Addresses_Array.Used;
 			*Family = MainFamily;
 		} else {
@@ -447,7 +521,7 @@ static int QueryFromServer(ThreadContext *Context)
 		/* Move pointer to the next */
 		AddressChunk_Advance(&Addresses, ProtocolUsed);
 
-		if( Context -> SecondarySocket != NULL && AllowFallBack == TRUE )
+		if( UseSecondary == FALSE && Context -> SecondarySocket != NULL && AllowFallBack == TRUE )
 		{
 			INFO("Fallback from %c for %s .\n",
 				 ProtocolCharacter,
@@ -457,7 +531,7 @@ static int QueryFromServer(ThreadContext *Context)
 			SelectSocketAndProtocol(Context,
 									&SocketUsed,
 									&ProtocolUsed,
-									!UseSecondary
+									TRUE
 									);
 
 			SetAddressAndPrococolLetter(Context,
@@ -556,10 +630,69 @@ static BOOL DefinitionLoop(ThreadContext *Context, const char *Name)
 	return FALSE;
 }
 
-int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Type)
+void InitContext(ThreadContext *Context, char *RequestEntity)
 {
-	static const char *RecursiveQuery = "CNameRedirect";
+	static BOOL Inited = FALSE;
+	static DNSQuaryProtocol PrimaryProtocolToServer;
+	static BOOL NullSecondary = FALSE;
 
+	Context -> Head = Context;
+	Context -> Previous = NULL;
+
+	Context -> TCPSocket = INVALID_SOCKET;
+	Context -> UDPSocket = INVALID_SOCKET;
+
+	Context -> LastServer = NULL;
+
+	Context -> Compress = TRUE;
+
+	Context -> ResponseBuffer = &(Context -> ResponseBuffer_Entity);
+	ExtendableBuffer_Init(Context -> ResponseBuffer, 512, 10240);
+	Context -> RequestEntity = RequestEntity;
+
+	/* Choose and fill default primary and secondary socket */
+	if( Inited == FALSE )
+	{
+		char ProtocolStr[8] = {0};
+
+		strncpy(ProtocolStr, ConfigGetRawString(&ConfigInfo, "PrimaryServer"), 3);
+		StrToLower(ProtocolStr);
+		if( strcmp(ProtocolStr, "tcp") == 0 )
+		{
+			PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_TCP;
+			NullSecondary = (ConfigGetStringList(&ConfigInfo, "UDPServer") == NULL);
+		} else {
+			PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_UDP;
+			NullSecondary = (ConfigGetStringList(&ConfigInfo, "TCPServer") == NULL);
+		}
+
+		Inited = TRUE;
+	}
+
+	if( PrimaryProtocolToServer == DNS_QUARY_PROTOCOL_TCP )
+	{
+		Context -> PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_TCP;
+		Context -> PrimarySocket = &(Context -> TCPSocket);
+
+		if( NullSecondary == FALSE )
+			Context -> SecondarySocket = &(Context -> UDPSocket);
+		else
+			Context -> SecondarySocket = NULL;
+
+	} else {
+		Context -> PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_UDP;
+		Context -> PrimarySocket = &(Context -> UDPSocket);
+
+		if( NullSecondary == FALSE )
+			Context -> SecondarySocket = &(Context -> TCPSocket);
+		else
+			Context -> SecondarySocket = NULL;
+	}
+
+}
+
+int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Type, const char *Agent)
+{
 	ThreadContext RecursionContext;
 	int	StateOfReceiving;
 
@@ -574,7 +707,6 @@ int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Typ
 	};
 
 	char *NamePos = RequestEntity + 0x0C;
-	char *Itr;
 
 	if( DefinitionLoop(Context, Name) == TRUE )
 	{
@@ -582,27 +714,23 @@ int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Typ
 		return -1;
 	}
 
-	strcpy(NamePos, Name);
-
-	Itr = DNSLabelizedName(NamePos, sizeof(RequestEntity) - 12 - 2);
-
-	if( Itr == NULL )
+	if( DNSGenQuestionRecord(NamePos, sizeof(RequestEntity) - 12, Name, Type, DNS_CLASS_IN) == 0 )
 	{
-		return -1;
+        return -1;
 	}
 
-	SET_16_BIT_U_INT(Itr, Type);
-	SET_16_BIT_U_INT(Itr + 2, DNS_CLASS_IN);
+	*(_16BIT_UINT *)RequestEntity = rand();
 
 	memcpy(&RecursionContext, Context, sizeof(RecursionContext));
 
 	RecursionContext.Previous = Context;
-	RecursionContext.RequestLength = 12 + strlen(Name) + 2 + 4;
 	RecursionContext.RequestEntity = RequestEntity;
+
+	RecursionContext.RequestLength = 12 + strlen(Name) + 2 + 4;
 	RecursionContext.RequestingDomain = Name;
 	RecursionContext.RequestingType = Type;
 	RecursionContext.RequestingDomainHashValue = ELFHash(Name, 0);
-	RecursionContext.ClientIP = RecursiveQuery;
+	RecursionContext.ClientIP = Agent;
 	RecursionContext.ClientPort = 0;
 
 	StateOfReceiving = QueryBase(&RecursionContext);
@@ -615,6 +743,52 @@ int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Typ
 	Context -> LastProtocol = RecursionContext.LastProtocol;
 
 	return StateOfReceiving;
+}
+
+int GetHostsByRaw(const char *RawPackage, StringList *out)
+{
+	int AnswerCount = DNSGetAnswerCount(RawPackage);
+
+	int loop;
+	const char *AnswerRecordPosition;
+	const char *DataPos;
+
+	int IpAddressCount = 0;
+
+	char Data[] = "               ";
+
+	for( loop = 1; loop <= AnswerCount; ++loop )
+	{
+		AnswerRecordPosition = DNSGetAnswerRecordPosition(RawPackage, loop);
+
+		if( DNSGetRecordType(AnswerRecordPosition) == DNS_TYPE_A )
+		{
+			DataPos = DNSGetResourceDataPos(AnswerRecordPosition);
+
+			DNSParseData(RawPackage, DataPos, 1, Data, sizeof(Data), DNS_RECORD_A, NUM_OF_DNS_RECORD_A, 1);
+
+			StringList_Add(out, Data, ',');
+
+			++IpAddressCount;
+		}
+	}
+
+	return IpAddressCount;
+}
+
+int GetHostsByName(const char *Name, const char *Agent, StringList *out)
+{
+	ThreadContext Context;
+
+	InitContext(&Context, NULL);
+
+	if( GetAnswersByName(&Context, Name, DNS_TYPE_A, Agent) <= 0 )
+	{
+		return 0;
+	} else {
+		return GetHostsByRaw(ExtendableBuffer_GetData(Context.ResponseBuffer), out);
+	}
+
 }
 
 int GetMaximumMessageSize(SOCKET sock)

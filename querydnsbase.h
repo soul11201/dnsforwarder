@@ -1,22 +1,7 @@
 #ifndef _QUERY_DNS_BASE_H_
 #define _QUERY_DNS_BASE_H_
 
-#ifdef INTERNAL_DEBUG
-#define	DEBUG_FILE(...)	EFFECTIVE_LOCK_GET(Debug_Mutex); \
-						fprintf(Debug_File, "THREAD : %d : ", GET_THREAD_ID()); \
-						fprintf(Debug_File, __VA_ARGS__); \
-						fflush(Debug_File); \
-						EFFECTIVE_LOCK_RELEASE(Debug_Mutex);
-
-
-#define	DEBUG(...)		fprintf(stderr, "[DEBUG] "__VA_ARGS__); \
-						DEBUG_FILE(__VA_ARGS__);
-
-
-#else
-#define	DEBUG_FILE(...)
-#define	DEBUG(...)
-#endif
+#include "debug.h"
 
 #define	PRINT(...)		if(ShowMassages == TRUE){ printf(__VA_ARGS__); } DEBUG_FILE(__VA_ARGS__);
 #define	INFO(...)		if(ShowMassages == TRUE){ printf("[INFO] "__VA_ARGS__); } DEBUG_FILE(__VA_ARGS__);
@@ -40,10 +25,7 @@ extern int				TimeToServer;
 extern BOOL				AllowFallBack;
 extern BOOL				ShowMassages;
 extern BOOL				ErrorMessages;
-#ifdef INTERNAL_DEBUG
-extern EFFECTIVE_LOCK	Debug_Mutex;
-extern FILE				*Debug_File;
-#endif
+
 
 typedef struct _QueryContext ThreadContext;
 
@@ -61,7 +43,7 @@ struct _QueryContext{
 	struct sockaddr		*LastServer;
 	DNSQuaryProtocol	LastProtocol;
 
-	const char			*RequestEntity;
+	char				*RequestEntity;
 	int					RequestLength;
 	const char			*RequestingDomain;
 	DNSRecordType		RequestingType;
@@ -88,6 +70,8 @@ void ShowErrorMassage(ThreadContext *Context, char ProtocolCharacter);
 
 void ShowNormalMassage(ThreadContext *Context, _32BIT_INT Offset, char ProtocolCharacter);
 
+void ShowBlockedMessage(const char *RequestingDomain, const char *Package, const char *Message);
+
 int DNSFetchFromCache(__in ThreadContext *Context);
 
 int InitAddress(void);
@@ -99,7 +83,13 @@ int FetchFromHostsAndCache(ThreadContext *Context);
 
 int QueryBase(ThreadContext *Context);
 
-int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Type);
+void InitContext(ThreadContext *Context, char *RequestEntity);
+
+int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Type, const char *Agent);
+
+int GetHostsByRaw(const char *RawPackage, StringList *out);
+
+int GetHostsByName(const char *Name, const char *Agent, StringList *out);
 
 int GetMaximumMessageSize(SOCKET sock);
 

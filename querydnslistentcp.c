@@ -25,8 +25,6 @@ static int			RefusingResponseCode = 0;
 typedef struct _RecvInfo{
 	SOCKET				Socket;
 	CompatibleAddr		Peer;
-	DNSQuaryProtocol	PrimaryProtocolToServer;
-	BOOL				SecondaryExists;
 } RecvInfo;
 
 /* Functions */
@@ -131,6 +129,8 @@ static int Query(ThreadContext *Context, _16BIT_UINT TCPLength, SOCKET *ClientSo
 
 	Context -> RequestingDomain = RequestingDomain;
 
+	StrToLower(RequestingDomain);
+
 	Context -> RequestingType =
 		(DNSRecordType)DNSGetRecordType(DNSJumpHeader(Context -> RequestEntity));
 
@@ -146,12 +146,17 @@ static int Query(ThreadContext *Context, _16BIT_UINT TCPLength, SOCKET *ClientSo
 			((DNSHeader *)(Context -> RequestEntity)) -> Flags.Direction = 1;
 			((DNSHeader *)(Context -> RequestEntity)) -> Flags.RecursionAvailable = 1;
 			((DNSHeader *)(Context -> RequestEntity)) -> Flags.ResponseCode = RefusingResponseCode;
-			send(*ClientSocket, &TCPLength, 2, 0);
+			send(*ClientSocket, (const char *)&TCPLength, 2, 0);
 			send(*ClientSocket, Context -> RequestEntity, Context -> RequestLength, 0);
 			return -1;
 			break;
 
 		case QUERY_RESULT_ERROR:
+			((DNSHeader *)(Context -> RequestEntity)) -> Flags.Direction = 1;
+			((DNSHeader *)(Context -> RequestEntity)) -> Flags.RecursionAvailable = 1;
+			((DNSHeader *)(Context -> RequestEntity)) -> Flags.ResponseCode = 2;
+			send(*ClientSocket, (const char *)&TCPLength, 2, 0);
+			send(*ClientSocket, Context -> RequestEntity, Context -> RequestLength, 0);
 			return -1;
 			break;
 
@@ -159,7 +164,7 @@ static int Query(ThreadContext *Context, _16BIT_UINT TCPLength, SOCKET *ClientSo
 			{
 				_16BIT_UINT ResponseLength;
 				SET_16_BIT_U_INT(&ResponseLength, State);
-				send(*ClientSocket, &ResponseLength, 2, 0);
+				send(*ClientSocket, (const char *)&ResponseLength, 2, 0);
 				send(*ClientSocket, ExtendableBuffer_GetData(Context -> ResponseBuffer), State, 0);
 				return 0;
 				break;
@@ -179,35 +184,7 @@ static int ReceiveFromClient(RecvInfo *Info)
 
 	char				RequestEntity[1024];
 
-	Context.Head = &Context;
-	Context.Previous = NULL;
-	Context.TCPSocket = INVALID_SOCKET;
-	Context.UDPSocket = INVALID_SOCKET;
-	Context.LastServer = NULL;
-	Context.Compress = TRUE;
-	Context.ResponseBuffer = &(Context.ResponseBuffer_Entity);
-	ExtendableBuffer_Init(Context.ResponseBuffer, 512, 10240);
-	Context.RequestEntity = RequestEntity + 2;
-
-	if( Info -> PrimaryProtocolToServer == DNS_QUARY_PROTOCOL_TCP )
-	{
-		Context.PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_TCP;
-		Context.PrimarySocket = &(Context.TCPSocket);
-
-		if( Info -> SecondaryExists == TRUE )
-			Context.SecondarySocket = &(Context.UDPSocket);
-		else
-			Context.SecondarySocket = NULL;
-
-	} else {
-		Context.PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_UDP;
-		Context.PrimarySocket = &(Context.UDPSocket);
-
-		if( Info -> SecondaryExists == TRUE )
-			Context.SecondarySocket = &(Context.TCPSocket);
-		else
-			Context.SecondarySocket = NULL;
-	}
+	InitContext(&Context, RequestEntity + 2);
 
 	while(TRUE){
 		state = recv(Socket, RequestEntity, sizeof(RequestEntity), MSG_NOSIGNAL);
@@ -265,33 +242,6 @@ static int QueryDNSListenTCP(void *Unused)
 	CompatibleAddr		*Peer;
 	socklen_t			AddrLen;
 
-	DNSQuaryProtocol	PrimaryProtocolToServer;
-	BOOL				SecondaryExists;
-
-	char				ProtocolStr[8] = {0};
-
-	strncpy(ProtocolStr, ConfigGetRawString(&ConfigInfo, "PrimaryServer"), 3);
-	StrToLower(ProtocolStr);
-
-	if( strcmp(ProtocolStr, "tcp") == 0 )
-	{
-		PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_TCP;
-		if( ConfigGetStringList(&ConfigInfo, "UDPServer") == NULL )
-		{
-			SecondaryExists = FALSE;
-		} else {
-			SecondaryExists = TRUE;
-		}
-	} else {
-		PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_UDP;
-		if( ConfigGetStringList(&ConfigInfo, "TCPServer") == NULL )
-		{
-			SecondaryExists = FALSE;
-		} else {
-			SecondaryExists = TRUE;
-		}
-	}
-
 	while(TRUE){
 
 		Info = SafeMalloc(sizeof(RecvInfo));
@@ -302,8 +252,6 @@ static int QueryDNSListenTCP(void *Unused)
 
 		Peer = &(Info -> Peer);
 		memset(Info, 0, sizeof(CompatibleAddr));
-		Info -> PrimaryProtocolToServer = PrimaryProtocolToServer;
-		Info -> SecondaryExists = SecondaryExists;
 
 		if( Family == AF_INET )
 		{

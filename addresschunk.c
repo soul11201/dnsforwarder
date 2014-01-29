@@ -39,7 +39,7 @@ int AddressChunk_AddADedicatedAddress_FromString(AddressChunk *ac, const char *D
 		return -1;
 	}
 
-	if( StringChunk_Add(&(ac -> Dedicated), Domain, &Tmp, sizeof(struct _Address)) != 0 )
+	if( StringChunk_Add(&(ac -> Dedicated), Domain, (const char *)&Tmp, sizeof(struct _Address)) != 0 )
 	{
 		return -2;
 	}
@@ -52,15 +52,15 @@ struct sockaddr *AddressChunk_GetDedicated(AddressChunk *ac, sa_family_t *family
 {
 	struct _Address *Result;
 
-	if( StringChunk_Match(&(ac -> Dedicated), RequestingDomain, HashValue, &Result) == TRUE )
+	if( StringChunk_Match(&(ac -> Dedicated), RequestingDomain, HashValue, (char **)&Result) == TRUE )
 	{
 		if( Result -> family == AF_INET )
 		{
 			*family = Result -> family;
-			return &(Result -> Addr.Addr4);
+			return (struct sockaddr *)&(Result -> Addr.Addr4);
 		} else {
 			*family = Result -> family;
-			return &(Result -> Addr.Addr6);
+			return (struct sockaddr *)&(Result -> Addr.Addr6);
 		}
 
 	} else {

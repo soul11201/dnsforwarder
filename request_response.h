@@ -23,13 +23,25 @@ int QueryDNSViaTCP(SOCKET			Sock,
 				   ExtendableBuffer	*ResultBuffer
 				   );
 
+void SetUDPAntiPollution(BOOL State);
+
+void SetUDPAppendEDNSOpt(BOOL State);
+
+int InitBlockedIP(StringList *l);
+
 int QueryDNSViaUDP(SOCKET			Sock,
 				   struct sockaddr	*PeerAddr_List,
 				   int				NumberOfAddresses,
-				   const void		*RequestEntity,
+				   void		*RequestEntity,
 				   int				RequestLength,
-				   ExtendableBuffer	*ResultBuffer
+				   ExtendableBuffer	*ResultBuffer,
+				   const char		*RequestingDomain
 				   );
+
+int ProbeFakeAddresses(const char	*ServerAddress,
+					   const char	*RequestingDomain,
+					   StringList	*out
+					   );
 
 int SetSocketWait(SOCKET sock, BOOL Wait);
 
@@ -47,7 +59,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 						struct	sockaddr	*ServerAddress_List,
 						int					NumberOfAddresses,
 						DNSQuaryProtocol	ProtocolToServer,
-						const char			*RequestEntity,
+						char				*RequestEntity,
 						int					RequestLength,
 						ExtendableBuffer	*ResultBuffer,
 						const char			*RequestingDomain

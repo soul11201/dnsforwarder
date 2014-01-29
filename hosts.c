@@ -407,7 +407,7 @@ static int AddHosts(HostsContainer *Container, HostsRecord *MetaInfo)
 		case HOSTS_TYPE_AAAA:
 			if( StringChunk_Match_NoWildCard(&(Container -> Ipv6Hosts), MetaInfo -> Domain, NULL, NULL) == TRUE )
 			{
-				INFO("IPv6 Hosts is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
+				INFO("IPv6 Host is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
 				return 0;
 			}
 
@@ -434,7 +434,7 @@ static int AddHosts(HostsContainer *Container, HostsRecord *MetaInfo)
 		case HOSTS_TYPE_A:
 			if( StringChunk_Match_NoWildCard(&(Container -> Ipv4Hosts), MetaInfo -> Domain, NULL, NULL) == TRUE )
 			{
-				INFO("IPv4 Hosts domain is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
+				INFO("IPv4 Host domain is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
 				return 0;
 			}
 
@@ -461,7 +461,7 @@ static int AddHosts(HostsContainer *Container, HostsRecord *MetaInfo)
 		case HOSTS_TYPE_CNAME:
 			if( StringChunk_Match_NoWildCard(&(Container -> CNameHosts), MetaInfo -> Domain, NULL, NULL) == TRUE )
 			{
-				INFO("CName Hosts domain is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
+				INFO("CName redirection domain is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
 				return 0;
 			}
 
@@ -486,7 +486,7 @@ static int AddHosts(HostsContainer *Container, HostsRecord *MetaInfo)
 		case HOSTS_TYPE_EXCLUEDE:
 			if( StringChunk_Match_NoWildCard(&(Container -> ExcludedDomains), MetaInfo -> Domain, NULL, NULL) == TRUE )
 			{
-				INFO("Excluded Hosts domain is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
+				INFO("Excluded Host domain is duplicated : %s, take only the first occurrence.\n", MetaInfo -> Domain);
 				return 0;
 			}
 
@@ -564,14 +564,14 @@ static int LoadHosts(void)
 		RWLock_WrLock(HostsLock);
 		if( MainContainer != NULL )
 		{
-			FreeHostsContainer(MainContainer);
-			SafeFree(MainContainer);
+			FreeHostsContainer((HostsContainer *)MainContainer);
+			SafeFree((void *)MainContainer);
 		}
 		MainContainer = TempContainer;
 
 		RWLock_UnWLock(HostsLock);
 
-		INFO("Loading Hosts completed, %d IPv4 Hosts, %d IPv6 Hosts, %d CName Hosts, %d items are excluded.\n",
+		INFO("Loading Hosts completed, %d IPv4 Hosts, %d IPv6 Hosts, %d CName Redirections, %d items are excluded.\n",
 			IPv4Count,
 			IPv6Count,
 			CNameCount,
@@ -665,7 +665,7 @@ static void GetHostsFromInternet_Thread(void *Unused)
 {
 	const char *URL = ConfigGetRawString(&ConfigInfo, "Hosts");
 	const char *Script = ConfigGetRawString(&ConfigInfo, "HostsScript");
-	int			FlushTimeOnFailed = ConfigGetInt32(&ConfigInfo, "HostsFlushTimeOnFailed");
+	int			FlushTimeOnFailed = ConfigGetInt32(&ConfigInfo, "HostsRetryInterval");
 
 	if( FlushTimeOnFailed < 0 )
 	{
@@ -727,7 +727,7 @@ int Hosts_Init(void)
 		return 0;
 	}
 
-	FlushTime = ConfigGetInt32(&ConfigInfo, "HostsFlushTime");
+	FlushTime = ConfigGetInt32(&ConfigInfo, "HostsUpdateInterval");
 	RWLock_Init(HostsLock);
 
 	/* If hosts file is desinated */
@@ -746,7 +746,7 @@ int Hosts_Init(void)
 		} else {
 			/* Internet file */
 			File = ConfigGetRawString(&ConfigInfo, "HostsDownloadPath");
-			if( ConfigGetInt32(&ConfigInfo, "HostsFlushTimeOnFailed") < 1 )
+			if( ConfigGetInt32(&ConfigInfo, "HostsRetryInterval") < 1 )
 			{
 				ERRORMSG("`HostsFlushTimeOnFailed' is too small (< 1).\n");
 				return 1;
@@ -771,7 +771,6 @@ int Hosts_Init(void)
 	}
 
 	LastFlush = time(NULL);
-	srand(time(NULL));
 	Inited = TRUE;
 	return 0;
 
@@ -782,11 +781,11 @@ BOOL Hosts_IsInited(void)
 	return Inited;
 }
 
-static const char *FindFromA(char *Name)
+static const char *FindFromA(const char *Name)
 {
 	OffsetOfHosts *IP;
 
-	if( StringChunk_Match(&(MainContainer -> Ipv4Hosts), Name, NULL, (char **)&IP) == TRUE )
+	if( StringChunk_Match((StringChunk *)&(MainContainer -> Ipv4Hosts), Name, NULL, (char **)&IP) == TRUE )
 	{
 		return ExtendableBuffer_GetPositionByOffset(&(MainContainer -> IPs), IP -> Offset);
 	} else {
@@ -794,11 +793,11 @@ static const char *FindFromA(char *Name)
 	}
 }
 
-static const char *FindFromAAAA(char *Name)
+static const char *FindFromAAAA(const char *Name)
 {
 	OffsetOfHosts *IP;
 
-	if( StringChunk_Match(&(MainContainer -> Ipv6Hosts), Name, NULL, (char **)&IP) == TRUE )
+	if( StringChunk_Match((StringChunk *)&(MainContainer -> Ipv6Hosts), Name, NULL, (char **)&IP) == TRUE )
 	{
 		return ExtendableBuffer_GetPositionByOffset(&(MainContainer -> IPs), IP -> Offset);
 	} else {
@@ -806,11 +805,11 @@ static const char *FindFromAAAA(char *Name)
 	}
 }
 
-static const char *FindFromCName(char *Name)
+static const char *FindFromCName(const char *Name)
 {
 	OffsetOfHosts *CName;
 
-	if( StringChunk_Match(&(MainContainer -> CNameHosts), Name, NULL, (char **)&CName) == TRUE )
+	if( StringChunk_Match((StringChunk *)&(MainContainer -> CNameHosts), Name, NULL, (char **)&CName) == TRUE )
 	{
 		return ExtendableBuffer_GetPositionByOffset(&(MainContainer -> IPs), CName -> Offset);
 	} else {
@@ -818,16 +817,16 @@ static const char *FindFromCName(char *Name)
 	}
 }
 
-static BOOL IsExcludedDomain(char *Name)
+static BOOL IsExcludedDomain(const char *Name)
 {
-	return StringChunk_Match(&(MainContainer -> ExcludedDomains), Name, NULL, NULL);
+	return StringChunk_Match((StringChunk *)&(MainContainer -> ExcludedDomains), Name, NULL, NULL);
 }
 
 
 #define	MATCH_STATE_PERFECT	0
 #define	MATCH_STATE_ONLY_CNAME	1
 #define	MATCH_STATE_NONE	(-1)
-static int Hosts_Match(char *Name, DNSRecordType Type, void *OutBuffer)
+static int Hosts_Match(const char *Name, DNSRecordType Type, void *OutBuffer)
 {
 	const char *Result;
 
@@ -974,7 +973,7 @@ static int RecursivelyQuery(DNSRecordType RequestingType, void *HostsItem, int *
 	int		State;
 
 	int		StartOffset = ExtendableBuffer_GetEndOffset(Context -> ResponseBuffer);
-	const char	*StartPos;
+	char	*StartPos;
 	int		EndOffset;
 	const char	*AnswerPos;
 	int		MoreSpaceNeeded = 0;
@@ -996,7 +995,7 @@ static int RecursivelyQuery(DNSRecordType RequestingType, void *HostsItem, int *
 
 	StartOffset = ExtendableBuffer_GetEndOffset(Context -> ResponseBuffer);
 
-	State = GetAnswersByName(Context, h, RequestingType);
+	State = GetAnswersByName(Context, h, RequestingType, "CNameRedirect");
 	if( State < 0 )
 	{
 		Context -> Compress = OriCompress;

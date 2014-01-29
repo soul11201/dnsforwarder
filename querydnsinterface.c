@@ -9,6 +9,7 @@
 #include "excludedlist.h"
 #include "utils.h"
 #include "domainstatistic.h"
+#include "debug.h"
 
 static int CheckArgs(void)
 {
@@ -18,7 +19,7 @@ static int CheckArgs(void)
     {
         if( ConfigGetInt32(&ConfigInfo, "MultipleTTL") == 0 )
 		{
-            INFO("Option `MultipleTTL' was set to be 0, if you don't want to use cache, please set `NoCache' to TRUE. Now restored option `MultipleTTL' to 1.\n");
+            INFO("Option `MultipleTTL' was set to be 0, if you don't want to use cache, please set `UseCache' to `false'. Now restored option `MultipleTTL' to 1.\n");
             tmp.INT32 = 1;
             ConfigSetValue(&ConfigInfo, tmp, "MultipleTTL");
 		}
@@ -28,15 +29,15 @@ static int CheckArgs(void)
             tmp.INT32 = 1;
             ConfigSetValue(&ConfigInfo, tmp, "MultipleTTL");
         }
-        if(ConfigGetInt32(&ConfigInfo, "ForceTTL") > -1 && ConfigGetBoolean(&ConfigInfo, "IgnoreTTL") == TRUE)
+        if(ConfigGetInt32(&ConfigInfo, "OverrideTTL") > -1 && ConfigGetBoolean(&ConfigInfo, "IgnoreTTL") == TRUE)
         {
-            INFO("Ignored option `ForceTTL', because TTL was ignored.\n");
+            INFO("Ignored option `OverrideTTL', because TTL was ignored.\n");
             tmp.INT32 = 1;
-            ConfigSetValue(&ConfigInfo, tmp, "ForceTTL");
+            ConfigSetValue(&ConfigInfo, tmp, "OverrideTTL");
         }
-        if(ConfigGetInt32(&ConfigInfo, "MultipleTTL") != 1 && ConfigGetInt32(&ConfigInfo, "ForceTTL") > -1)
+        if(ConfigGetInt32(&ConfigInfo, "MultipleTTL") != 1 && ConfigGetInt32(&ConfigInfo, "OverrideTTL") > -1)
         {
-            INFO("Ignored option `MultipleTTL', because TTLs were forced to be %d.\n", ConfigGetInt32(&ConfigInfo, "ForceTTL"));
+            INFO("Ignored option `MultipleTTL', because TTLs were forced to be %d.\n", ConfigGetInt32(&ConfigInfo, "OverrideTTL"));
             tmp.INT32 = 1;
             ConfigSetValue(&ConfigInfo, tmp, "MultipleTTL");
         }
@@ -58,28 +59,14 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
 	ShowMassages = _ShowMassages;
 	ErrorMessages = OnlyErrorMessages;
 
-#ifdef INTERNAL_DEBUG
-	{
-		char	FilePath[1024];
-
-		GetFileDirectory(FilePath);
-		strcat(FilePath, PATH_SLASH_STR);
-		strcat(FilePath, "Debug.log");
-
-		EFFECTIVE_LOCK_INIT(Debug_Mutex);
-
-		Debug_File = fopen(FilePath, "a");
-		if( Debug_File == NULL )
-		{
-			return -1;
-		}
-
-		DEBUG_FILE("\n\n\n\n\nNew session\n");
-		INFO("Debug mode.\n");
-	}
-#endif
-
 	ConfigInitInfo(&ConfigInfo);
+
+
+	TmpTypeDescriptor.boolean = TRUE;
+	ConfigAddOption(&ConfigInfo, "Debug", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
+
+    TmpTypeDescriptor.INT32 = 102400;
+    ConfigAddOption(&ConfigInfo, "DebugFileThresholdLength", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = "127.0.0.1";
     ConfigAddOption(&ConfigInfo, "LocalInterface", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Local working interface");
@@ -112,6 +99,15 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     TmpTypeDescriptor.boolean = FALSE;
     ConfigAddOption(&ConfigInfo, "ParallelQuery", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "UDP Parallel Query");
 
+    TmpTypeDescriptor.boolean = FALSE;
+    ConfigAddOption(&ConfigInfo, "UDPAntiPollution", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "UDP Anti-pollution");
+
+    TmpTypeDescriptor.boolean = FALSE;
+    ConfigAddOption(&ConfigInfo, "UDPAppendEDNSOpt", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
+
+    TmpTypeDescriptor.str = NULL;
+    ConfigAddOption(&ConfigInfo, "UDPBlock_IP", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
+
     TmpTypeDescriptor.INT32 = 3000;
     ConfigAddOption(&ConfigInfo, "TimeToServer", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
@@ -123,23 +119,29 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     ConfigAddOption(&ConfigInfo, "DomainStatistic", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.INT32 = 60;
-    ConfigAddOption(&ConfigInfo, "StatisticFlushInterval", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "StatisticUpdateInterval", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+
+	ConfigAddAlias(&ConfigInfo, "StatisticFlushInterval", "StatisticUpdateInterval");
 
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "Hosts", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Hosts File");
 
     TmpTypeDescriptor.INT32 = 600;
-    ConfigAddOption(&ConfigInfo, "HostsFlushTime", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "HostsUpdateInterval", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+
+	ConfigAddAlias(&ConfigInfo, "HostsFlushTime", "HostsUpdateInterval");
 
     TmpTypeDescriptor.INT32 = 30;
-    ConfigAddOption(&ConfigInfo, "HostsFlushTimeOnFailed", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "HostsRetryInterval", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+
+    ConfigAddAlias(&ConfigInfo, "HostsFlushTimeOnFailed", "HostsRetryInterval");
 
 	GetFileDirectory(TmpStr);
 	strcat(TmpStr, PATH_SLASH_STR);
 	strcat(TmpStr, "hosts.txt");
     TmpTypeDescriptor.str = TmpStr;
-    ConfigAddOption(&ConfigInfo, "HostsDownloadPath", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Download Hosts to");
+    ConfigAddOption(&ConfigInfo, "HostsDownloadPath", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "HostsScript", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, NULL);
@@ -156,28 +158,27 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     TmpTypeDescriptor.INT32 = 1048576;
     ConfigAddOption(&ConfigInfo, "CacheSize", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
-	GetFileDirectory(TmpStr);
-	strcat(TmpStr, PATH_SLASH_STR);
-	strcat(TmpStr, "cache");
-    TmpTypeDescriptor.str = TmpStr;
-    ConfigAddOption(&ConfigInfo, "CacheFile", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Cache File");
-
     TmpTypeDescriptor.boolean = FALSE;
     ConfigAddOption(&ConfigInfo, "MemoryCache", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "Memory Cache");
 
     ConfigAddAlias(&ConfigInfo, "MemeryCache", "MemoryCache");
 
+	GetFileDirectory(TmpStr);
+	strcat(TmpStr, PATH_SLASH_STR);
+	strcat(TmpStr, "cache");
+    TmpTypeDescriptor.str = TmpStr;
+    ConfigAddOption(&ConfigInfo, "CacheFile", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, NULL);
+
     TmpTypeDescriptor.boolean = FALSE;
     ConfigAddOption(&ConfigInfo, "IgnoreTTL", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "Ignore TTL");
 
     TmpTypeDescriptor.INT32 = -1;
-    ConfigAddOption(&ConfigInfo, "ForceTTL", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "OverrideTTL", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+
+    ConfigAddAlias(&ConfigInfo, "ForceTTL", "OverrideTTL");
 
     TmpTypeDescriptor.INT32 = 1;
     ConfigAddOption(&ConfigInfo, "MultipleTTL", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
-
-    TmpTypeDescriptor.boolean = TRUE;
-    ConfigAddOption(&ConfigInfo, "StaticTTLCountdown", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.boolean = FALSE;
     ConfigAddOption(&ConfigInfo, "ReloadCache", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
@@ -200,10 +201,14 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     ConfigAddOption(&ConfigInfo, "GfwListBase64Decode", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.INT32 = 7200;
-    ConfigAddOption(&ConfigInfo, "GfwListFlushTime", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "GfwListUpdateInterval", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+
+    ConfigAddAlias(&ConfigInfo, "GfwListFlushTime", "GfwListUpdateInterval");
 
     TmpTypeDescriptor.INT32 = 30;
-    ConfigAddOption(&ConfigInfo, "GfwListFlushTimeOnFailed", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "GfwListRetryInterval", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+
+    ConfigAddAlias(&ConfigInfo, "GfwListFlushTimeOnFailed", "GfwListRetryInterval");
 
 	GetFileDirectory(TmpStr);
 	strcat(TmpStr, PATH_SLASH_STR);
@@ -230,6 +235,10 @@ int QueryDNSInterfaceStart(void)
 {
 	int state = 0;
 
+	const char *LocalAddr;
+
+	int IsZeroZeroZeroZero;
+
 	if( ShowMassages == TRUE )
 	{
 		ConfigDisplay(&ConfigInfo);
@@ -238,9 +247,23 @@ int QueryDNSInterfaceStart(void)
 
 	InitAddress();
 
+	srand(time(NULL));
+
+	if( ConfigGetBoolean(&ConfigInfo, "UDPAntiPollution") == TRUE )
+	{
+		SetUDPAntiPollution(TRUE);
+	}
+
+	if( ConfigGetBoolean(&ConfigInfo, "UDPAppendEDNSOpt") == TRUE )
+	{
+		SetUDPAppendEDNSOpt(TRUE);
+	}
+
+	InitBlockedIP(ConfigGetStringList(&ConfigInfo, "UDPBlock_IP"));
+
 	if( ConfigGetBoolean(&ConfigInfo, "DomainStatistic") == TRUE )
 	{
-		DomainStatistic_Init(ConfigGetInt32(&ConfigInfo, "StatisticFlushInterval"));
+		DomainStatistic_Init(ConfigGetInt32(&ConfigInfo, "StatisticUpdateInterval"));
 	}
 
 	ExcludedList_Init();
@@ -252,7 +275,6 @@ int QueryDNSInterfaceStart(void)
     {
         if(DNSCache_Init() != 0)
         {
-            ERRORMSG("Cache initializing Failed.\n");
             return 2;
         }
     }
@@ -278,14 +300,16 @@ int QueryDNSInterfaceStart(void)
 	if(state == 0)
 	{
 		return 1;
-	} else {
-		if( Hosts_Init() == 0 )
-		{
-			const char *LocalAddr = ConfigGetRawString(&ConfigInfo, "LocalInterface");
-			int IsZeroZeroZeroZero = !strncmp(LocalAddr, "0.0.0.0", 7);
-			INFO("Now you can set DNS%s%s.\n", IsZeroZeroZeroZero ? "" : " to ", IsZeroZeroZeroZero ? "" : LocalAddr);
-		}
 	}
+
+	if( Hosts_Init() != 0 )
+	{
+		return 2;
+	}
+
+	LocalAddr = ConfigGetRawString(&ConfigInfo, "LocalInterface");
+	IsZeroZeroZeroZero = !strncmp(LocalAddr, "0.0.0.0", 7);
+	INFO("Now you can set DNS%s%s.\n", IsZeroZeroZeroZero ? "" : " to ", IsZeroZeroZeroZero ? "" : LocalAddr);
 
 	LoadGfwList();
 

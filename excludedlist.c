@@ -83,7 +83,7 @@ BOOL IsExcludedDomain(const char *Domain, int *HashValue)
 
 	RWLock_RdLock(ExcludedListLock);
 
-	Result = MatchDomain(&(MainExcludedContainer -> ExcludedDomains), Domain, HashValue);
+	Result = MatchDomain((StringChunk *)&(MainExcludedContainer -> ExcludedDomains), Domain, HashValue);
 
 	RWLock_UnRLock(ExcludedListLock);
 	return Result;
@@ -152,9 +152,23 @@ static BOOL ParseGfwListItem(char *Item, ExcludedContainer *Container)
 {
 	char *Itr = NULL;
 
-	if( strchr(Item, '/') != NULL || strchr(Item, '*') != NULL || *Item == '@' || strchr(Item, '?') != NULL || *Item == '!' || strchr(Item, '.') == NULL || *Item == '[' )
+	if( strchr(Item, '/') != NULL || *Item == '@' || strchr(Item, '?') != NULL || *Item == '!' || strchr(Item, '.') == NULL || *Item == '[' )
 	{
 		return FALSE;
+	}
+
+	if( strchr(Item, '*') != NULL )
+	{
+		if( strstr("wikipedia.org", Item) == 0 )
+		{
+			Itr = strchr(Item + 13, '*');
+			if( Itr != NULL )
+			{
+				*Itr = '\0';
+			}
+		} else {
+			return FALSE;
+		}
 	}
 
 	if( *Item == '|' )
@@ -183,15 +197,6 @@ static BOOL ParseGfwListItem(char *Item, ExcludedContainer *Container)
 		*Itr = '\0';
 	}
 
-	if( strstr("wikipedia.org", Item) == 0 )
-	{
-		Itr = strchr(Item + 13, '*');
-		if( Itr != NULL )
-		{
-			*Itr = '\0';
-		}
-	}
-
 	if( strchr(Item, '%') != NULL )
 	{
 		return FALSE;
@@ -207,17 +212,33 @@ static BOOL ParseGfwListItem(char *Item, ExcludedContainer *Container)
 
 }
 
-static int LoadGfwListFile(const char *File, ExcludedContainer *Container)
+static int LoadGfwListFile(const char *File, const StringList *ExcludedList, BOOL NeedBase64Decode)
 {
-	FILE	*fp = fopen(File, "r");
+	FILE	*fp;
 	ReadLineStatus Status;
 	char	Buffer[256];
 	int		Count = 0;
 
-	if( fp == NULL )
+	ExcludedContainer *Container;
+
+	if( (NeedBase64Decode == TRUE) && (Base64Decode(File) != 0) )
 	{
 		return -1;
 	}
+
+	fp = fopen(File, "r");
+	if( fp == NULL )
+	{
+		return -2;
+	}
+
+	Container = SafeMalloc(sizeof(ExcludedContainer));
+	if( Container == NULL )
+	{
+		return -3;
+	}
+
+	LoadDomains(&(Container -> ExcludedDomains), ExcludedList, 2000);
 
 	while(TRUE)
 	{
@@ -234,6 +255,7 @@ static int LoadGfwListFile(const char *File, ExcludedContainer *Container)
 				{
 					++Count;
 				}
+
 				break;
 
 			case READ_TRUNCATED:
@@ -246,20 +268,37 @@ static int LoadGfwListFile(const char *File, ExcludedContainer *Container)
 DONE:
 	fclose(fp);
 
+	if( Count == 0 )
+	{
+		StringChunk_Free((StringChunk *)&(Container -> ExcludedDomains));
+		SafeFree(Container);
+		return -4;
+	}
+
+	/* Evict old container */
+	RWLock_WrLock(ExcludedListLock);
+
+	StringChunk_Free((StringChunk *)&(MainExcludedContainer -> ExcludedDomains));
+	SafeFree((void *)MainExcludedContainer);
+
+	MainExcludedContainer = Container;
+
+	RWLock_UnWLock(ExcludedListLock);
+
 	return Count;
 
 }
 
 int LoadGfwList_Thread(void *Unused)
 {
-	int	FlushTime = ConfigGetInt32(&ConfigInfo, "GfwListFlushTime");
-	int	FlushTimeOnFailed = ConfigGetInt32(&ConfigInfo, "GfwListFlushTimeOnFailed");
+	int	FlushTime			=	ConfigGetInt32(&ConfigInfo, "GfwListUpdateInterval");
+	int	FlushTimeOnFailed	=	ConfigGetInt32(&ConfigInfo, "GfwListRetryInterval");
 
-	const char	*GfwList	=	ConfigGetRawString(&ConfigInfo, "GfwList");
-	const StringList *ExcludedList	=	ConfigGetStringList(&ConfigInfo, "ExcludedDomain");
-	const char	*File	=	ConfigGetRawString(&ConfigInfo, "GfwListDownloadPath");
-	const BOOL	NeedBase64Decode	=	ConfigGetBoolean(&ConfigInfo, "GfwListBase64Decode");
-	int			Count;
+	const char			*GfwList			=	ConfigGetRawString(&ConfigInfo, "GfwList");
+	const StringList	*ExcludedList		=	ConfigGetStringList(&ConfigInfo, "ExcludedDomain");
+	const char			*File				=	ConfigGetRawString(&ConfigInfo, "GfwListDownloadPath");
+	BOOL				NeedBase64Decode	=	ConfigGetBoolean(&ConfigInfo, "GfwListBase64Decode");
+	int					Count;
 
 	if( GfwList == NULL )
 	{
@@ -279,52 +318,33 @@ int LoadGfwList_Thread(void *Unused)
 			ERRORMSG("Downloading GFW List failed. Waiting %d second(s) for retry.\n", FlushTimeOnFailed);
 			SLEEP(FlushTimeOnFailed * 1000);
 		} else {
-
-			ExcludedContainer *NewContainer = NULL;
-
 			INFO("GFW List saved at %s.\n", File);
 
-			if( (NeedBase64Decode == TRUE) && (Base64Decode(File) != 0) )
+			Count = LoadGfwListFile(File, ExcludedList, NeedBase64Decode);
+
+			switch( Count )
 			{
-				ERRORMSG("Decoding GFW List failed. Waiting %d second(s) for retry.\n", FlushTimeOnFailed);
-				SLEEP(FlushTimeOnFailed * 1000);
-				continue;
+				case -1:
+				case -2:
+				case -3:
+					break;
+
+				case -4:
+					ERRORMSG("Loading GFW List failed, cannot open file %s.\n", File);
+					break;
+
+				default:
+					INFO("Loading GFW List completed. %d effective items.\n", Count);
+					SLEEP(FlushTime * 1000);
+					continue;
+					break;
 			}
 
-			NewContainer = SafeMalloc(sizeof(ExcludedContainer));
-			if( NewContainer == NULL )
-			{
-				INFO("Loading GFW List failed, no enough memory?\n");
-				goto END;
-			}
-
-			LoadDomains(&(NewContainer -> ExcludedDomains), ExcludedList, 2000);
-
-			Count = LoadGfwListFile(File, NewContainer);
-			if( Count < 0 )
-			{
-				StringChunk_Free(&(NewContainer -> ExcludedDomains));
-				SafeFree(NewContainer);
-				ERRORMSG("Loading GFW List failed, cannot open file %s.\n", File);
-				goto END;
-			}
-
-			/* Evict old container */
-			RWLock_WrLock(ExcludedListLock);
-
-			StringChunk_Free(&(MainExcludedContainer -> ExcludedDomains));
-			SafeFree(MainExcludedContainer);
-			MainExcludedContainer = NewContainer;
-
-			RWLock_UnWLock(ExcludedListLock);
-			INFO("Loading GFW List completed. %d effective items.\n", Count);
-END:
 			if( FlushTime < 0 )
 			{
 				return 0;
 			}
 
-			SLEEP(FlushTime * 1000);
 		}
 	}
 }
@@ -335,17 +355,15 @@ int LoadGfwList(void)
 	const char	*GfwList	=	ConfigGetRawString(&ConfigInfo, "GfwList");
 	const char	*File	=	ConfigGetRawString(&ConfigInfo, "GfwListDownloadPath");
 	const StringList *ExcludedList	=	ConfigGetStringList(&ConfigInfo, "ExcludedDomain");
-	const char	*ProtocolStr	=	ConfigGetRawString(&ConfigInfo, "PrimaryServer");
+	char		*ProtocolStr	=	(char *)ConfigGetRawString(&ConfigInfo, "PrimaryServer");
 	int			Count;
-
-	ExcludedContainer *NewContainer = NULL;
-
-	StrToLower(ProtocolStr);
 
 	if( GfwList == NULL )
 	{
 		return 0;
 	}
+
+	StrToLower(ProtocolStr);
 
 	if( strncmp(ProtocolStr, "udp", 3) != 0 )
 	{
@@ -353,44 +371,30 @@ int LoadGfwList(void)
 		return -1;
 	}
 
-	if( !FileIsReadable(File) )
+	if( FileIsReadable(File) )
 	{
-		goto END;
+		INFO("Loading the existing GFW List ...\n");
+
+		Count = LoadGfwListFile(File, ExcludedList, FALSE);
+
+		switch( Count )
+		{
+			case -1:
+			case -2:
+			case -3:
+				break;
+
+			case -4:
+				ERRORMSG("Loading the existing GFW List failed, cannot open file %s.\n", File);
+				break;
+
+			default:
+				INFO("Loading the existing GFW List completed. %d effective items.\n", Count);
+				break;
+		}
 	}
 
-	INFO("Loading the existing GFW List ...\n");
-
-	NewContainer = SafeMalloc(sizeof(ExcludedContainer));
-	if( NewContainer == NULL )
-	{
-		INFO("Loading the existing GFW List failed, no enough memory?\n");
-		goto END;
-	}
-
-	LoadDomains(&(NewContainer -> ExcludedDomains), ExcludedList, 2000);
-
-	Count = LoadGfwListFile(File, NewContainer);
-	if( Count < 0 )
-	{
-		StringChunk_Free(&(NewContainer -> ExcludedDomains));
-		SafeFree(NewContainer);
-		goto END;
-	}
-
-	/* Evict old container */
-	RWLock_WrLock(ExcludedListLock);
-
-	StringChunk_Free(&(MainExcludedContainer -> ExcludedDomains));
-	SafeFree(MainExcludedContainer);
-	MainExcludedContainer = NewContainer;
-
-	RWLock_UnWLock(ExcludedListLock);
-
-	INFO("Loading the existing GFW List completed. %d effective items.\n", Count);
-
-END:
 	CREATE_THREAD(LoadGfwList_Thread, NULL, gt);
-
 	DETACH_THREAD(gt);
 
 	return 0;
@@ -401,11 +405,15 @@ int ExcludedList_Init(void)
 
 	LoadDomains(&DisabledDomains, ConfigGetStringList(&ConfigInfo, "DisabledDomain"), 31);
 
+	StringList_Free(ConfigGetStringList(&ConfigInfo, "DisabledDomain"));
+
 	MainExcludedContainer = SafeMalloc(sizeof(ExcludedContainer));
 
 	if( MainExcludedContainer != NULL )
 	{
-		LoadDomains(&(MainExcludedContainer -> ExcludedDomains), ConfigGetStringList(&ConfigInfo, "ExcludedDomain"), 31);
+		LoadDomains((StringChunk *)&(MainExcludedContainer -> ExcludedDomains), ConfigGetStringList(&ConfigInfo, "ExcludedDomain"), 31);
+	} else {
+		return -1;
 	}
 
 	LoadDisableType();

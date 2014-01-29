@@ -5,11 +5,11 @@
 #include "utils.h"
 #include "readline.h"
 
-void ConfigInitInfo(ConfigFileInfo *Info)
+int ConfigInitInfo(ConfigFileInfo *Info)
 {
 	Info -> fp = NULL;
-	Info -> Options = NULL;
-	Info -> NumOfOptions = 0;
+	Info -> LastAccessedOption = 0;
+	return Array_Init(&(Info -> Options), sizeof(ConfigOption), 0, FALSE, NULL);
 }
 
 int ConfigOpenFile(ConfigFileInfo *Info, const char *File)
@@ -28,59 +28,33 @@ int ConfigCloseFile(ConfigFileInfo *Info)
 
 int ConfigAddOption(ConfigFileInfo *Info, char *KeyName, MultilineStrategy Strategy, OptionType Type, VType Initial, char *Caption)
 {
-	int loop;
+	ConfigOption New;
 
-	if( strlen(KeyName) > sizeof(Info -> Options -> KeyName) - 1 )
-	{
-		return -1;
-	}
+	strcpy(New.KeyName, KeyName);
+	New.Type = Type;
+	New.Status = STATUS_DEFAULT_VALUE;
+	New.Strategy = Strategy;
 
-	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
-	{
-		if(Info -> Options[loop].Status == STATUS_UNUSED)
-			break;
-	}
-
-	if(loop == Info -> NumOfOptions)
-	{
-		int loop2;
-
-		if( SafeRealloc((void *)&(Info -> Options), (Info -> NumOfOptions + 10) * sizeof(ConfigOption)) != 0)
-		{
-			return 1;
-		}
-
-		(Info -> NumOfOptions) += 10;
-
-		for(loop2 = loop; loop2 != Info -> NumOfOptions; ++loop2)
-			Info -> Options[loop2].Status = STATUS_UNUSED;
-	}
-
-	strcpy(Info -> Options[loop].KeyName, KeyName);
-	Info -> Options[loop].Type = Type;
-	Info -> Options[loop].Status = STATUS_DEFAULT_VALUE;
 	if( Caption != NULL )
 	{
-		strncpy(Info -> Options[loop].Caption, Caption, CAPTION_MAX_SIZE);
-		Info -> Options[loop].Caption[CAPTION_MAX_SIZE] = '\0';
+		strncpy(New.Caption, Caption, CAPTION_MAX_SIZE);
+		New.Caption[CAPTION_MAX_SIZE] = '\0';
 	} else {
-		*(Info -> Options[loop].Caption) = '\0';
+		New.Caption[0] = '\0';
 	}
-
-	Info -> Options[loop].Strategy = Strategy;
 
 	switch( Type )
 	{
 		case TYPE_INT32:
-			Info -> Options[loop].Holder.INT32 = Initial.INT32;
+			New.Holder.INT32 = Initial.INT32;
 			break;
 
 		case TYPE_BOOLEAN:
-			Info -> Options[loop].Holder.boolean = Initial.boolean;
+			New.Holder.boolean = Initial.boolean;
 			break;
 
 		case TYPE_STRING:
-			if( StringList_Init(&(Info -> Options[loop].Holder.str), Initial.str, ',') != 0 )
+			if( StringList_Init(&(New.Holder.str), Initial.str, ',') < 0 )
 			{
 				return 2;
 			}
@@ -91,63 +65,59 @@ int ConfigAddOption(ConfigFileInfo *Info, char *KeyName, MultilineStrategy Strat
 			break;
 	}
 
-	return 0;
+	return Array_PushBack(&(Info -> Options), &New, NULL);
 }
 
 int ConfigAddAlias(ConfigFileInfo *Info, char *Alias, char *Target)
 {
-	int loop;
 
-	if( strlen(Alias) > sizeof(Info -> Options -> KeyName) - 1 )
-	{
-		return -1;
-	}
+	ConfigOption New;
 
-	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
-	{
-		if(Info -> Options[loop].Status == STATUS_UNUSED)
-			break;
-	}
+	strcpy(New.KeyName, Alias);
+	New.Status = STATUS_ALIAS;
+	strncpy(New.Caption, Target, CAPTION_MAX_SIZE);
+	New.Caption[CAPTION_MAX_SIZE] = '\0';
 
-	if(loop == Info -> NumOfOptions)
-	{
-		int loop2;
-
-		if( SafeRealloc((void *)&(Info -> Options), (Info -> NumOfOptions + 10) * sizeof(ConfigOption)) != 0)
-		{
-			return 1;
-		}
-
-		(Info -> NumOfOptions) += 10;
-
-		for(loop2 = loop; loop2 != Info -> NumOfOptions; ++loop2)
-			Info -> Options[loop2].Status = STATUS_UNUSED;
-	}
-
-	strcpy(Info -> Options[loop].KeyName, Alias);
-	Info -> Options[loop].Status = STATUS_ALIAS;
-	strncpy(Info -> Options[loop].Caption, Target, CAPTION_MAX_SIZE);
-	Info -> Options[loop].Caption[CAPTION_MAX_SIZE] = '\0';
-
-	return 0;
+	return Array_PushBack(&(Info -> Options), &New, NULL);
 }
 
-static ConfigOption *GetOptionOfAInfo(const ConfigFileInfo *Info, const char *KeyName)
+static ConfigOption *GetOptionOfAInfo(ConfigFileInfo *Info, const char *KeyName)
 {
 	int	loop;
+	ConfigOption *Option;
 
-	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
+	for(loop = Info -> LastAccessedOption; loop != Array_GetUsed(&(Info -> Options)); ++loop)
 	{
-		if(strcmp(KeyName, Info -> Options[loop].KeyName) == 0)
+		Option = Array_GetBySubscript(&(Info -> Options), loop);
+
+		if( Option != NULL && strcmp(KeyName, Option -> KeyName) == 0 )
 		{
-			if( Info -> Options[loop].Status == STATUS_ALIAS )
+			Info -> LastAccessedOption = loop;
+			if( Option -> Status == STATUS_ALIAS )
 			{
-				return GetOptionOfAInfo(Info, Info -> Options[loop].Caption);
+				return GetOptionOfAInfo(Info, Option -> Caption);
 			} else {
-				return Info -> Options + loop;
+				return Option;
 			}
 		}
 	}
+
+	for(loop = 0; loop != Info -> LastAccessedOption; ++loop)
+	{
+		Option = Array_GetBySubscript(&(Info -> Options), loop);
+
+		if( Option != NULL && strcmp(KeyName, Option -> KeyName) == 0 )
+		{
+			Info -> LastAccessedOption = loop;
+			if( Option -> Status == STATUS_ALIAS )
+			{
+				return GetOptionOfAInfo(Info, Option -> Caption);
+			} else {
+				return Option;
+			}
+		}
+	}
+
 	return NULL;
 }
 
@@ -481,30 +451,36 @@ void ConfigSetValue(ConfigFileInfo *Info, VType Value, char *KeyName)
 void ConfigDisplay(ConfigFileInfo *Info)
 {
 	int loop;
-	for(loop = 0; loop != Info -> NumOfOptions; ++loop)
+	ConfigOption *Option;
+
+	for(loop = 0; loop != Array_GetUsed(&(Info -> Options)); ++loop)
 	{
-		if( *(Info -> Options[loop].Caption) != '\0' )
+		Option = Array_GetBySubscript(&(Info -> Options), loop);
+
+		if( Option != NULL && Option -> Caption[0] != '\0' && Option -> Status != STATUS_ALIAS )
 		{
-			switch( Info -> Options[loop].Type )
+			switch( Option -> Type )
 			{
 				case TYPE_INT32:
-					printf("%s:%d\n", Info -> Options[loop].Caption, Info -> Options[loop].Holder.INT32);
+					printf("%s:%d\n", Option -> Caption, Option -> Holder.INT32);
 					break;
+
 				case TYPE_BOOLEAN:
-					printf("%s:%s\n", Info -> Options[loop].Caption, BoolToYesNo(Info -> Options[loop].Holder.boolean));
+					printf("%s:%s\n", Option -> Caption, BoolToYesNo(Option -> Holder.boolean));
 					break;
+
 				case TYPE_STRING:
-					if( Info -> Options[loop].Holder.str.Used >= 0 )
 					{
-						const char *Str = StringList_GetNext(&(Info -> Options[loop].Holder.str), NULL);
+						const char *Str = StringList_GetNext(&(Option -> Holder.str), NULL);
 
 						while( Str != NULL )
 						{
-							printf("%s:%s\n", Info -> Options[loop].Caption, Str);
-							Str = StringList_GetNext(&(Info -> Options[loop].Holder.str), Str);
+							printf("%s:%s\n", Option -> Caption, Str);
+							Str = StringList_GetNext(&(Option -> Holder.str), Str);
 						}
 					}
 					break;
+
 				default:
 					break;
 			}

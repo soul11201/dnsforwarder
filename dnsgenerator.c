@@ -4,7 +4,7 @@
 #include "dnsparser.h"
 
 /* Other Codes */
-char *DNSLabelizedName(__inout char *Origin, __in int OriginSpaceLength){
+char *DNSLabelizedName(__inout char *Origin, __in size_t OriginSpaceLength){
 	unsigned char *LabelLength = (unsigned char *)Origin;
 
 	if( *Origin == '\0' )
@@ -46,10 +46,10 @@ int DNSCompress(__inout char *DNSBody, __in int DNSBodyLength)
 	if(AnswerCount == 0) return DNSBodyLength;
 
 	/* The First Stage */
-	LastName = DNSJumpHeader(DNSBody);
-	CurName = DNSGetAnswerRecordPosition(DNSBody, 1);
+	LastName = (char *)DNSJumpHeader(DNSBody);
+	CurName = (char *)DNSGetAnswerRecordPosition(DNSBody, 1);
 
-	NameEnd = DNSJumpOverName(CurName);
+	NameEnd = (char *)DNSJumpOverName(CurName);
 	*(unsigned char *)CurName = 0xC0;
 	*(unsigned char *)(CurName + 1) = (unsigned char)(LastName - DNSBody);
 	DNSBodyLength -= (NameEnd - CurName) - 2;
@@ -61,16 +61,16 @@ int DNSCompress(__inout char *DNSBody, __in int DNSBodyLength)
 	for(loop = 2; loop <= AnswerCount; ++loop)
 	{
 		LastName = CurName;
-		CurName = DNSGetAnswerRecordPosition(DNSBody, loop);
+		CurName = (char *)DNSGetAnswerRecordPosition(DNSBody, loop);
 
 		LastType = (DNSRecordType)DNSGetRecordType(LastName);
 
 		if(LastType == DNS_TYPE_CNAME)
 		{
-			LastData = DNSGetResourceDataPos(LastName);
+			LastData = (char *)DNSGetResourceDataPos(LastName);
 		}
 
-		NameEnd = DNSJumpOverName(CurName);
+		NameEnd = (char *)DNSJumpOverName(CurName);
 		*(unsigned char *)CurName = 0xC0;
 		*(unsigned char *)(CurName + 1) = (unsigned char)(LastData - DNSBody);
 		DNSBodyLength -= (NameEnd - CurName) - 2;
@@ -99,26 +99,29 @@ char *DNSGenHeader(	__out char			*Buffer,
 	return DNSJumpHeader(Buffer);
 }
 
-int DNSGenQuestionRecord(	__out char			*Buffer,
-							__in int			BufferLength,
-							__inout char		*Name,
-							__in int			NameSpaceLength,
-							__in _16BIT_UINT	Type,
-							__in _16BIT_UINT	Class
-						   ){
+int DNSGenQuestionRecord(__out char			*Buffer,
+						 __in int			BufferLength,
+						 __in const char	*Name,
+						 __in _16BIT_UINT	Type,
+						 __in _16BIT_UINT	Class
+						 ){
 	int NameLen;
 
 	NameLen = strlen(Name);
+
 	if(BufferLength < NameLen + 2 + 2 + 2) return 0;
 
-	if(DNSLabelizedName(Name, NameSpaceLength) == NULL) return 0;
+	strcpy(Buffer, Name);
 
-	DNSSetName(Buffer, Name);
+	if( DNSLabelizedName(Buffer, NameLen + 2) == NULL )
+	{
+		return 0;
+	}
 
-	SET_16_BIT_U_INT(Buffer + NameLen + 1, Type);
-	SET_16_BIT_U_INT(Buffer + NameLen + 3, Class);
+	SET_16_BIT_U_INT(Buffer + NameLen + 2, Type);
+	SET_16_BIT_U_INT(Buffer + NameLen + 4, Class);
 
-	return NameLen + 1 + 2 + 2;
+	return NameLen + 2 + 2 + 2;
 }
 
 int DNSGenResourceRecord(	__out char			*Buffer,
@@ -179,7 +182,7 @@ int DNSGenResourceRecord(	__out char			*Buffer,
 
 int DNSGenerateData(__in			char				*Data,
 					__out			void				*Buffer,
-					__in			int					BufferLength,
+					__in			size_t				BufferLength,
 					__in	const	ElementDescriptor	*Descriptor
 					)
 
@@ -197,7 +200,7 @@ int DNSGenerateData(__in			char				*Data,
 			return strlen(Data) + 2;
 			break;
 
-		case DNS_PLANT_TEXT:
+		case DNS_CHARACTER_STRING:
 			if( Buffer != NULL )
 			{
 				if( BufferLength < strlen(Data) + 1 )
@@ -206,7 +209,7 @@ int DNSGenerateData(__in			char				*Data,
 				}
 
 				*(unsigned char *)Buffer = strlen(Data);
-				memcpy(Buffer + 1, Data, strlen(Data));
+				memcpy(((char *)Buffer) + 1, Data, strlen(Data));
 			}
 			return strlen(Data) + 1;
 			break;

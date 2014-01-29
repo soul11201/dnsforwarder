@@ -29,29 +29,29 @@
 #define DNSJumpHeader(dns_body)				((char *)(dns_body) + DNS_HEADER_LENGTH)
 
 /* Handle question record */
-char *DNSGetQuestionRecordPosition(char *DNSBody, int Num);
+const char *DNSGetQuestionRecordPosition(const char *DNSBody, int Num);
 
 #define DNSJumpOverQuestionRecords(dns_body)	DNSGetQuestionRecordPosition((dns_body), DNSGetQuestionCount(dns_body) + 1)
 
 /* Handle resource\answer record */
-char *DNSGetAnswerRecordPosition(char *DNSBody, int Num);
+const char *DNSGetAnswerRecordPosition(const char *DNSBody, int Num);
 
 #define DNSGetTTL(ans_start_ptr)				GET_32_BIT_U_INT(DNSJumpOverName(ans_start_ptr) + 4)
 
 #define DNSGetResourceDataLength(ans_start_ptr)	GET_16_BIT_U_INT(DNSJumpOverName(ans_start_ptr) + 8)
 
-#define DNSGetResourceDataPos(ans_start_ptr)	(DNSJumpOverName(ans_start_ptr) + 10)
+#define DNSGetResourceDataPos(ans_start_ptr)	(DNSJumpOverName((const char *)(ans_start_ptr)) + 10)
 
 #define DNSJumpOverAnswerRecords(dns_body)		DNSGetAnswerRecordPosition((dns_body), DNSGetAnswerCount(dns_body) + 1)
 
 #define DNSGetARecordLength(record_ptr)			(strlen(record_ptr) + 1 + 10 + DNSGetResourceDataLength(record_ptr))
 
 /* Common */
-char *DNSJumpOverName(char *NameStart);
+const char *DNSJumpOverName(const char *NameStart);
 
 int DNSGetHostName(const char *DNSBody, const char *NameStart, char *buffer);
 
-int DNSGetHostNameLength(char *DNSBody, char *NameStart);
+int DNSGetHostNameLength(const char *DNSBody, const char *NameStart);
 
 #define DNSGetRecordType(rec_start_ptr)		GET_16_BIT_U_INT(DNSJumpOverName(rec_start_ptr))
 
@@ -59,7 +59,7 @@ int DNSGetHostNameLength(char *DNSBody, char *NameStart);
 
 int DNSExpandCName_MoreSpaceNeeded(const char *DNSBody);
 
-void DNSExpandCName(char *DNSBody);
+void DNSExpandCName(const char *DNSBody);
 
 typedef enum _RecordElement{
 	DNS_UNKNOWN  = 0,
@@ -67,7 +67,16 @@ typedef enum _RecordElement{
 	DNS_32BIT_UINT,
 	DNS_16BIT_UINT,
 	DNS_8BIT_UINT,
-	DNS_PLANT_TEXT,
+	DNS_CHARACTER_STRING,
+
+
+
+	DNS_DNSKEY_FLAGS,
+	DNS_DNSKEY_PROTOCOL,
+	DNS_DNSKEY_ALGORITHM,
+	DNS_DNSKEY_PUBLIC_KEY,
+
+	DNS_DNSSIG_SIGNATURE,
 
 	DNS_IPV4_ADDR = (INT_MAX / 4),
 	DNS_IPV6_ADDR,
@@ -102,11 +111,19 @@ extern const ElementDescriptor DNS_RECORD_MX[];
 extern const ElementDescriptor DNS_RECORD_TXT[];
 #define	NUM_OF_DNS_RECORD_TXT	1
 
-int DNSGetDescriptor(DNSRecordType Type, const ElementDescriptor **Buffer);
+extern const ElementDescriptor DNS_RECORD_DNSKEY[];
+#define	NUM_OF_DNS_RECORD_DNSKEY	4
+
+extern const ElementDescriptor DNS_RECORD_RRSIG[];
+#define	NUM_OF_DNS_RECORD_RRSIG	9
+
+int DNSGetDescriptor(DNSRecordType Type, BOOL NeededCache, const ElementDescriptor **Buffer);
 
 #ifdef HOST_BIG_ENDIAN
 /* DNSMessageFlags, on offset 2(bytes) of a DNS message body, is 2 bytes length.
- * For details: http://www.freesoft.org/CIE/RFC/1035/40.htm */
+ * For details: http://www.freesoft.org/CIE/RFC/1035/40.htm and
+ * http://www.ietf.org/rfc/rfc2535.txt (Section 6.1)
+ */
 typedef struct _DNSMessageProperties{
 	_16BIT_UINT	Direction	:	1; /* query (0), or response (1) */
 
@@ -125,7 +142,11 @@ typedef struct _DNSMessageProperties{
 
 	_16BIT_UINT	RecursionAvailable:	1; /* 0 no, 1 yes */
 
-	_16BIT_UINT	Unused			:	3;
+	_16BIT_UINT	Unused			:	1;
+
+	_16BIT_UINT AuthenticData	:	1;
+
+	_16BIT_UINT CheckingDisabled:	1;
 
 	/* ResponseCode:
 	 * 0	No error condition.
@@ -155,6 +176,7 @@ typedef struct _DNSMessageProperties{
 
 	_16BIT_UINT	Direction	:	1; /* query (0), or response (1) */
 
+
 	/* ResponseCode:
 	 * 0	No error condition.
 	 * 1	Format error - The name server was unable to interpret the query.
@@ -165,7 +187,11 @@ typedef struct _DNSMessageProperties{
 	 * 6-15	Reserved for future use. */
 	_16BIT_UINT	ResponseCode	:	4;
 
-	_16BIT_UINT	Unused			:	3;
+	_16BIT_UINT CheckingDisabled:	1;
+
+	_16BIT_UINT AuthenticData	:	1;
+
+	_16BIT_UINT	Unused			:	1;
 
 	_16BIT_UINT	RecursionAvailable:	1; /* 0 no, 1 yes */
 
@@ -196,8 +222,9 @@ typedef struct _DNSDataInfo{
 	int				DataLength;
 }DNSDataInfo;
 
-DNSDataInfo DNSParseData(char *DNSBody,
-						char *DataBody,
+DNSDataInfo DNSParseData(const char *DNSBody,
+						const char *DataBody,
+						int DataLength,
 						void *Buffer,
 						int BufferLength,
 						const ElementDescriptor *Descriptor,
@@ -205,9 +232,11 @@ DNSDataInfo DNSParseData(char *DNSBody,
 						int Num);
 
 /* Convert a DNS message to text */
-char *GetAnswer(char *DNSBody, char *DataBody, char *Buffer, DNSRecordType ResourceType);
+char *GetAnswer(const char *DNSBody, const char *DataBody, int DataLength, char *Buffer, DNSRecordType ResourceType);
 
-char *GetAllAnswers(char *DNSBody, char *Buffer, int BufferLength);
+char *GetAllAnswers(const char *DNSBody, char *Buffer, size_t BufferLength);
+
+void DNSCopyLable(const char *DNSBody, char *here, const char *src);
 
 void DNSParser(char *dns_over_tcp, char *buffer);
 

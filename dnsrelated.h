@@ -52,17 +52,22 @@ typedef enum _DNSRecordClass{
 	DNS_CLASS_ANY		=	255,
 }DNSRecordClass;
 
-
-
 typedef struct _DNSTypeName{
 	DNSRecordType	Num;
 	const char		*Name;
 }DNSTypeAndName;
 
+typedef struct _DNSSECAlgorithm {
+	int Num;
+	const char *Name;
+} DNSSECAlgorithm;
+
 extern const DNSTypeAndName DNSTypeList[];
 
-BOOL IsOneOfDNSTypes(int n);
+extern const DNSSECAlgorithm DNSSECAlgorithmList[];
 
 const char *DNSGetTypeName(_16BIT_UINT Num);
+
+const char *DNSSECGetAlgorithmName(int Num);
 
 #endif /* _DNS_RELATED_ */

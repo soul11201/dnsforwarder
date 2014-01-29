@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 #include "common.h"
 #include "stringchunk.h"
@@ -75,7 +76,7 @@ int DomainStatistic_Add(const char *Domain, int *HashValue, StatisticType Type)
 
 	EFFECTIVE_LOCK_GET(StatisticLock);
 
-	if( StringChunk_Match(&MainChunk, Domain, HashValue, (const char **)&ExistInfo) == FALSE )
+	if( StringChunk_Match(&MainChunk, Domain, HashValue, (char **)&ExistInfo) == FALSE )
 	{
 		DomainInfo NewInfo;
 
@@ -217,12 +218,12 @@ int DomainStatistic_Hold(void)
 			    "                                                          Domain   Total     | Hosts Cache   UDP   TCP\n",
 			InitTime_Str,
 			GenerateTime_Str,
-			GenerateTime_Num - InitTime_Num
+			(int)(GenerateTime_Num - InitTime_Num)
 			);
 
 		DomainCount = 0;
 
-		Str = StringChunk_Enum(&MainChunk, NULL, (const char **)&Info);
+		Str = StringChunk_Enum(&MainChunk, NULL, (char **)&Info);
 
 		while( Str != NULL )
 		{
@@ -248,11 +249,11 @@ int DomainStatistic_Hold(void)
 
 			AddToRankList(Ranks, MAXIMUN_NUMBER_OF_RANKED_DOMAIN, Str, Info );
 
-			Str = StringChunk_Enum(&MainChunk, Str, (const char **)&Info);
+			Str = StringChunk_Enum(&MainChunk, Str, (char **)&Info);
 
 		}
 
-		fprintf(MainFile, "Total number of : Queried domain       : %d\n"
+		fprintf(MainFile, "Total number of : Queried domains      : %d\n"
 						  "                  Requests             : %d\n"
 						  "                  Refused&Failed       : %d\n"
 						  "                  Responses from hosts : %d\n"

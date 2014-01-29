@@ -137,6 +137,8 @@ static int Query(ThreadContext *Context, CompatibleAddr *ClientAddr)
 				   RequestingDomain
 				   );
 
+	StrToLower(RequestingDomain);
+
 	Context -> RequestingDomain = RequestingDomain;
 
 	Context -> RequestingType =
@@ -176,6 +178,27 @@ static int Query(ThreadContext *Context, CompatibleAddr *ClientAddr)
 			break;
 
 		case QUERY_RESULT_ERROR:
+			((DNSHeader *)(Context -> RequestEntity)) -> Flags.Direction = 1;
+			((DNSHeader *)(Context -> RequestEntity)) -> Flags.RecursionAvailable = 1;
+			((DNSHeader *)(Context -> RequestEntity)) -> Flags.ResponseCode = 2;
+			if( Family == AF_INET )
+			{
+				_SendTo(ListenSocketUDP,
+						Context -> RequestEntity,
+						Context -> RequestLength,
+						0,
+						(struct sockaddr *)&(ClientAddr -> Addr4),
+						sizeof(struct sockaddr)
+						);
+			} else {
+				_SendTo(ListenSocketUDP,
+						Context -> RequestEntity,
+						Context -> RequestLength,
+						0,
+						(struct sockaddr *)&(ClientAddr -> Addr6),
+						sizeof(struct sockaddr_in6)
+						);
+			}
 			return -1;
 			break;
 
@@ -217,43 +240,9 @@ static int QueryDNSListenUDP(void *ID){
 
 	ThreadContext		Context;
 
-	char				ProtocolStr[8] = {0};
-
 	char				RequestEntity[1024];
 
-	Context.Head = &Context;
-	Context.Previous = NULL;
-	Context.TCPSocket = INVALID_SOCKET;
-	Context.UDPSocket = INVALID_SOCKET;
-	Context.LastServer = NULL;
-	Context.Compress = TRUE;
-	Context.ResponseBuffer = &(Context.ResponseBuffer_Entity);
-	ExtendableBuffer_Init(Context.ResponseBuffer, 512, 10240);
-	Context.RequestEntity = RequestEntity;
-
-	/* Choose and fill default primary and secondary socket */
-	strncpy(ProtocolStr, ConfigGetRawString(&ConfigInfo, "PrimaryServer"), 3);
-	StrToLower(ProtocolStr);
-
-	if( strcmp(ProtocolStr, "tcp") == 0 )
-	{
-		Context.PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_TCP;
-		Context.PrimarySocket = &(Context.TCPSocket);
-
-		if( ConfigGetStringList(&ConfigInfo, "UDPServer") != NULL )
-			Context.SecondarySocket = &(Context.UDPSocket);
-		else
-			Context.SecondarySocket = NULL;
-
-	} else {
-		Context.PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_UDP;
-		Context.PrimarySocket = &(Context.UDPSocket);
-
-		if( ConfigGetStringList(&ConfigInfo, "TCPServer") != NULL )
-			Context.SecondarySocket = &(Context.TCPSocket);
-		else
-			Context.SecondarySocket = NULL;
-	}
+	InitContext(&Context, RequestEntity);
 
 	/* Listen and accept requests */
 	while(TRUE)

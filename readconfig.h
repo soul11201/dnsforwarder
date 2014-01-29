@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "stringlist.h"
 #include "stringchunk.h"
+#include "array.h"
 #include "common.h"
 
 /* A valid line of a configuration file has the following structure:
@@ -67,7 +68,7 @@ typedef struct _Option{
 	OptionType	Type;
 
 	/* Value holder */
-	struct {
+	union {
 		StringList	str;
 		_32BIT_INT	INT32;
 		BOOL		boolean;
@@ -78,20 +79,18 @@ typedef struct _Option{
 } ConfigOption;
 
 /* The exposed type(The infomations about a configuration file) to read options from a configuration file. */
-typedef struct _ConfigFileInfo{
-
+typedef struct _ConfigFileInfo
+{
 	/* Static, once inited, never changed. */
-	FILE			*fp;
+	FILE	*fp;
 
 	/* An array of all the options. */
-	ConfigOption	*Options;
+	Array	Options;
 
-	/* The number of options. */
-	int			NumOfOptions;
-
+	int		LastAccessedOption;
 } ConfigFileInfo;
 
-void ConfigInitInfo(ConfigFileInfo *Info);
+int ConfigInitInfo(ConfigFileInfo *Info);
 
 int ConfigOpenFile(ConfigFileInfo *Info, const char *File);
 

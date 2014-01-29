@@ -99,4 +99,6 @@ int ELFHash(const char *str, int Unused);
 
 void HexDump(const char *Data, int Length);
 
+char *BinaryOutput(const char *Origin, int OriginLength, char *Buffer);
+
 #endif /* _UTILS_ */

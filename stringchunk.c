@@ -9,6 +9,11 @@ typedef struct _EntryForString{
 
 int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain */)
 {
+	if( dl == NULL )
+	{
+		return 0;
+	}
+
 	if( StringList_Init(&(dl -> List), NULL, 0) != 0 )
 	{
 		return -1;

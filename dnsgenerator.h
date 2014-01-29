@@ -21,13 +21,13 @@
 
 #define DNSSetAdditionalCount(dns_start, AdC)	SET_16_BIT_U_INT((char *)(dns_start) + 10, AdC)
 
-char *DNSLabelizedName(__inout char *Origin, __in int OriginSpaceLength);
+char *DNSLabelizedName(__inout char *Origin, __in size_t OriginSpaceLength);
 
 int DNSCompress(__inout char *DNSBody, __in int DNSBodyLength);
 
 int DNSGenerateData(__in char *Data,
 					__out void *Buffer,
-					__in int BufferLength,
+					__in size_t BufferLength,
 					__in const ElementDescriptor *Descriptor
 					);
 
@@ -40,13 +40,12 @@ char *DNSGenHeader(	__out char			*Buffer,
 					__in unsigned short	AdditionalCount
 					);
 
-int DNSGenQuestionRecord(__out char		*Buffer,
-						   __in int			BufferLength,
-						   __inout char		*Name,
-						   __in int			NameSpaceLength,
-						   __in _16BIT_UINT	Type,
-						   __in _16BIT_UINT	Class
-						   );
+int DNSGenQuestionRecord(__out char			*Buffer,
+						 __in int			BufferLength,
+						 __in const char		*Name,
+						 __in _16BIT_UINT	Type,
+						 __in _16BIT_UINT	Class
+						 );
 
 int DNSGenResourceRecord(	__out char			*Buffer,
 							__in int			BufferLength,
