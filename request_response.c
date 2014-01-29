@@ -34,10 +34,14 @@ void ClearSocketBuffer(SOCKET Sock)
 {
 	char BlackHole[128];
 
+	int OriginErrorCode = GET_LAST_ERROR();
+
 	while( SocketIsStillReadable(Sock) )
 	{
 		recvfrom(Sock, BlackHole, sizeof(BlackHole), 0, NULL, NULL);
 	}
+
+	SET_LAST_ERROR(OriginErrorCode);
 }
 
 int SendAndReveiveRawMessageViaTCP(SOCKET			Sock,
@@ -125,7 +129,7 @@ int QueryDNSViaTCP(SOCKET			Sock,
 	}
 }
 
-static char FakeOpt[] = {
+static char OptPseudoRecord[] = {
 	0x00,
 	0x00, 0x29,
 	0x05, 0x00,
@@ -205,11 +209,11 @@ int QueryDNSViaUDP(SOCKET			Sock,
 
 	if( UDPAppendEDNSOpt == TRUE && DNSGetAdditionalCount(RequestEntity) == 0 )
 	{
-		memcpy((char *)RequestEntity + RequestLength, FakeOpt, sizeof(FakeOpt));
+		memcpy((char *)RequestEntity + RequestLength, OptPseudoRecord, sizeof(OptPseudoRecord));
 
 		DNSSetAdditionalCount(RequestEntity, 1);
 
-		RequestLength += sizeof(FakeOpt);
+		RequestLength += sizeof(OptPseudoRecord);
 	}
 
 	if( DNSGetAdditionalCount(RequestEntity) > 0 )
@@ -335,8 +339,6 @@ int QueryDNSViaUDP(SOCKET			Sock,
 
 		break;
 	}
-
-	ClearSocketBuffer(Sock);
 
 	ExtendableBuffer_Eliminate_Tail(ResultBuffer, LengthOfNewlyAllocated - StateOfReceiving);
 

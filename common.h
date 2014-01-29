@@ -235,6 +235,9 @@
 
 #define INVALID_THREAD	((ThreadHandle)NULL)
 
+#define	MAKE_RETURN_CODE()	(GET_LAST_ERROR == 0 ? 0 : (-1) * GET_LAST_ERROR - 1)
+#define	MAKE_ERROR_CODE()	(GET_LAST_ERROR == 0 ? 0 : (-1) * (GET_LAST_ERROR + 1))
+
 /* Unified interfaces end */
 
 /* something is STILL on some state */

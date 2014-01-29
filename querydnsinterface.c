@@ -84,7 +84,7 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     TmpTypeDescriptor.INT32 = 3;
     ConfigAddOption(&ConfigInfo, "UDPThreads", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
-    TmpTypeDescriptor.str = "8.8.4.4";
+    TmpTypeDescriptor.str = "8.8.8.8";
     ConfigAddOption(&ConfigInfo, "TCPServer", STRATEGY_APPEND_DISCARD_DEFAULT, TYPE_STRING, TmpTypeDescriptor, "TCP Server");
 
     TmpTypeDescriptor.str = NULL;
@@ -158,7 +158,7 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
     TmpTypeDescriptor.INT32 = 1048576;
     ConfigAddOption(&ConfigInfo, "CacheSize", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
-    TmpTypeDescriptor.boolean = FALSE;
+    TmpTypeDescriptor.boolean = TRUE;
     ConfigAddOption(&ConfigInfo, "MemoryCache", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "Memory Cache");
 
     ConfigAddAlias(&ConfigInfo, "MemeryCache", "MemoryCache");
