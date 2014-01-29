@@ -150,7 +150,15 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../array.h" />
+		<Unit filename="../bst.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../bst.h" />
 		<Unit filename="../common.h" />
+		<Unit filename="../debug.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../debug.h" />
 		<Unit filename="../dnscache.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -191,6 +199,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../hosts.h" />
+		<Unit filename="../ipchunk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../ipchunk.h" />
 		<Unit filename="../main.c">
 			<Option compilerVar="CC" />
 		</Unit>
