@@ -3,7 +3,7 @@ dnsforwarder
 
 All the sources are free for non-commercial use.
 
-Necessary libraries :
+Dependencies :
 
   For Linux:
 
