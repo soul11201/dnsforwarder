@@ -19,25 +19,25 @@ static int CheckArgs(void)
     {
         if( ConfigGetInt32(&ConfigInfo, "MultipleTTL") == 0 )
 		{
-            INFO("Option `MultipleTTL' was set to be 0, if you don't want to use cache, please set `UseCache' to `false'. Now restored option `MultipleTTL' to 1.\n");
+            INFO("Option `MultipleTTL' is 0, if you don't want to use cache, please set `UseCache' to `false'. Now restored option `MultipleTTL' to 1.\n");
             tmp.INT32 = 1;
             ConfigSetValue(&ConfigInfo, tmp, "MultipleTTL");
 		}
         if(ConfigGetInt32(&ConfigInfo, "MultipleTTL") != 1 && ConfigGetBoolean(&ConfigInfo, "IgnoreTTL") == TRUE)
         {
-            INFO("Ignored option `MultipleTTL', because TTL was ignored.\n");
+            INFO("Ignored option `MultipleTTL', because TTLs will be ignored.\n");
             tmp.INT32 = 1;
             ConfigSetValue(&ConfigInfo, tmp, "MultipleTTL");
         }
         if(ConfigGetInt32(&ConfigInfo, "OverrideTTL") > -1 && ConfigGetBoolean(&ConfigInfo, "IgnoreTTL") == TRUE)
         {
-            INFO("Ignored option `OverrideTTL', because TTL was ignored.\n");
+            INFO("Ignored option `OverrideTTL', because TTLs will be ignored.\n");
             tmp.INT32 = 1;
             ConfigSetValue(&ConfigInfo, tmp, "OverrideTTL");
         }
         if(ConfigGetInt32(&ConfigInfo, "MultipleTTL") != 1 && ConfigGetInt32(&ConfigInfo, "OverrideTTL") > -1)
         {
-            INFO("Ignored option `MultipleTTL', because TTLs were forced to be %d.\n", ConfigGetInt32(&ConfigInfo, "OverrideTTL"));
+            INFO("Ignored option `MultipleTTL', because TTLs will be overrided to be %d.\n", ConfigGetInt32(&ConfigInfo, "OverrideTTL"));
             tmp.INT32 = 1;
             ConfigSetValue(&ConfigInfo, tmp, "MultipleTTL");
         }
