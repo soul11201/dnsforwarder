@@ -87,7 +87,7 @@ START:
 			{
 				fgets(BlackHole, sizeof(BlackHole), fp);
 				ReachedEnd = ReachedLineEnd(fp, BlackHole);
-			}while( ReachedEnd != FALSE);
+			}while( ReachedEnd == FALSE );
 		}
 
 		EliminateFootSpace(Buffer);

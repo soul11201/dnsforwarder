@@ -121,55 +121,26 @@ static ConfigOption *GetOptionOfAInfo(ConfigFileInfo *Info, const char *KeyName)
 	return NULL;
 }
 
-static char *GetKeyNameFromLine(const char *Line, char *Buffer)
+static char *GetKeyNameAndValue(char *Line)
 {
-	const char	*itr = Line;
-	const char	*Delimiter;
-
-	for(; isspace(*itr); ++itr);
-
-	Delimiter = strchr(itr, ' ');
+	char *Delimiter = strpbrk(Line, " =");
+	char *Itr;
 
 	if( Delimiter == NULL )
 	{
-		Delimiter = strchr(itr, '=');
-	}
-
-	if(Delimiter == NULL)
 		return NULL;
-
-	strncpy(Buffer, itr, Delimiter - Line);
-	Buffer[Delimiter - Line] = '\0';
-
-	return Buffer;
-}
-
-static const char *GetValuePosition(const char *Line)
-{
-	const char	*itr = Line;
-
-	for(; isspace(*itr); ++itr);
-
-	itr = strchr(itr, ' ');
-
-	if(itr == NULL)
-	{
-		itr = strchr(Line, '=');
 	}
 
-	if( itr == NULL )
+	*Delimiter = '\0';
+
+	for( Itr = Delimiter + 1; *Itr != '\0' && isspace(*Itr); ++Itr );
+
+	if( *Itr == '\0' )
 	{
 		return NULL;
+	} else {
+		return Itr;
 	}
-
-	++itr;
-
-	for(; isspace(*itr) && *itr != '\0'; ++itr);
-
-	if( *itr == '\0' )
-		return NULL;
-	else
-		return itr;
 }
 
 static BOOL GetBoolealValueFromString(char *str)
@@ -201,11 +172,11 @@ int ConfigRead(ConfigFileInfo *Info)
 {
 	int				NumOfRead	=	0;
 
-	char			Buffer[3072];
+	char			Buffer[2048];
 	char			*ValuePos;
 	ReadLineStatus	ReadStatus;
 
-	char			KeyName[KEY_NAME_MAX_SIZE + 1];
+	char			*KeyName;
 	ConfigOption	*Option;
 
 	while(TRUE){
@@ -213,15 +184,14 @@ int ConfigRead(ConfigFileInfo *Info)
 		if( ReadStatus == READ_FAILED_OR_END )
 			return NumOfRead;
 
-		if( GetKeyNameFromLine(Buffer, KeyName) == NULL )
+		ValuePos = GetKeyNameAndValue(Buffer);
+		if( ValuePos == NULL )
 			continue;
+
+		KeyName = Buffer;
 
 		Option = GetOptionOfAInfo(Info, KeyName);
 		if( Option == NULL )
-			continue;
-
-		ValuePos = (char *)GetValuePosition(Buffer);
-		if( ValuePos == NULL )
 			continue;
 
 		switch( Option -> Type )
@@ -310,7 +280,7 @@ int ConfigRead(ConfigFileInfo *Info)
 						case STRATEGY_REPLACE:
 							StringList_Clear(&(Option -> Holder.str));
 							Option -> Status = STATUS_SPECIAL_VALUE;
-							if( StringList_Add(&(Option -> Holder.str), ValuePos, ',') != 0 )
+							if( StringList_Add(&(Option -> Holder.str), ValuePos, ',') < 0 )
 							{
 								continue;
 							}
@@ -318,7 +288,7 @@ int ConfigRead(ConfigFileInfo *Info)
 							break;
 
 						case STRATEGY_APPEND:
-							if( StringList_Add(&(Option -> Holder.str), ValuePos, ',') != 0 )
+							if( StringList_Add(&(Option -> Holder.str), ValuePos, ',') < 0 )
 							{
 								continue;
 							}
