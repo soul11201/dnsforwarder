@@ -1,27 +1,46 @@
 #include "string.h"
 #include "bst.h"
 
-int Bst_Init(Bst *t, int ElementLength, int (*Compare)(const void *, const void *))
+int Bst_Init(Bst *t, Array *Nodes, int ElementLength, int (*Compare)(const void *, const void *))
 {
 	t -> Compare = Compare;
 	t -> Root = -1;
 
-	return Array_Init(&(t -> Nodes), ElementLength + sizeof(Bst_NodeHead), 0, FALSE, NULL);
+	if( Nodes == NULL )
+	{
+		t -> Nodes = SafeMalloc(sizeof(Array));
+		if( t -> Nodes == NULL )
+		{
+			return -1;
+		}
+
+		return Bst_NodesInit(t -> Nodes, ElementLength);
+
+	} else {
+		t -> Nodes = Nodes;
+
+		return 0;
+	}
+}
+
+int Bst_NodesInit(Array *Nodes, int ElementLength)
+{
+	return Array_Init(Nodes, ElementLength + sizeof(Bst_NodeHead), 0, FALSE, NULL);
 }
 
 static int Add(Bst *t, int ParentNode, BOOL IsLeft, const void *Data)
 {
 	static const Bst_NodeHead	NewHead = {-1, -1};
 
-	_32BIT_INT	NewElement = Array_PushBack(&(t -> Nodes), NULL, NULL);
+	_32BIT_INT	NewElement = Array_PushBack(t -> Nodes, NULL, NULL);
 
 	if( NewElement >= 0 )
 	{
-		char *NewZone = Array_GetBySubscript(&(t -> Nodes), NewElement);
+		char *NewZone = Array_GetBySubscript(t -> Nodes, NewElement);
 
         if( ParentNode >= 0 )
         {
-            Bst_NodeHead *Parent = Array_GetBySubscript(&(t -> Nodes), ParentNode);
+            Bst_NodeHead *Parent = Array_GetBySubscript(t -> Nodes, ParentNode);
 
             if( IsLeft == TRUE )
             {
@@ -34,7 +53,7 @@ static int Add(Bst *t, int ParentNode, BOOL IsLeft, const void *Data)
         }
 
 		memcpy(NewZone, &NewHead, sizeof(Bst_NodeHead));
-		memcpy(NewZone + sizeof(Bst_NodeHead), Data, t -> Nodes.DataLength - sizeof(Bst_NodeHead));
+		memcpy(NewZone + sizeof(Bst_NodeHead), Data, t -> Nodes -> DataLength - sizeof(Bst_NodeHead));
 		return 0;
 	} else {
 		return -1;
@@ -53,7 +72,7 @@ int Bst_Add(Bst *t, const void *Data)
 
 		while( TRUE )
 		{
-			Current = Array_GetBySubscript(&(t -> Nodes), CurrentNode);
+			Current = Array_GetBySubscript(t -> Nodes, CurrentNode);
 			if( (t -> Compare)(((char *)Current) + sizeof(Bst_NodeHead), Data) <= 0 )
 			{
 				if( Current -> Left == -1 )
@@ -91,7 +110,7 @@ const void *Bst_Search(Bst *t, const void *Data, const void *Start)
 
 	while( CurrentNode >= 0 )
 	{
-		Current = Array_GetBySubscript(&(t -> Nodes), CurrentNode);
+		Current = Array_GetBySubscript(t -> Nodes, CurrentNode);
 		CompareResult = (t -> Compare)(((char *)Current) + sizeof(Bst_NodeHead), Data);
 
 		if( CompareResult < 0 )

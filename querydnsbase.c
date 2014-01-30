@@ -32,10 +32,9 @@ void ShowRefusingMassage(ThreadContext *Context)
 	{
 		GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
 
-		printf("%s[R][%s:%d][%s][%s] Refused.\n",
+		printf("%s[R][%s][%s][%s] Refused.\n",
 			  DateAndTime,
 			  Context -> ClientIP,
-			  Context -> ClientPort,
 			  DNSGetTypeName(Context -> RequestingType),
 			  Context -> RequestingDomain
 			  );
@@ -731,7 +730,6 @@ int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Typ
 	RecursionContext.RequestingType = Type;
 	RecursionContext.RequestingDomainHashValue = ELFHash(Name, 0);
 	RecursionContext.ClientIP = Agent;
-	RecursionContext.ClientPort = 0;
 
 	StateOfReceiving = QueryBase(&RecursionContext);
 	if( StateOfReceiving <= 0 )

@@ -7,7 +7,7 @@ static int Compare(IpElement *_1, IpElement *_2)
 
 int IpChunk_Init(IpChunk *ic)
 {
-	return Bst_Init(ic, sizeof(IpElement), (int (*)(const void *, const void *))Compare);
+	return Bst_Init(ic, NULL, sizeof(IpElement), (int (*)(const void *, const void *))Compare);
 }
 
 int IpChunk_Add(IpChunk *ic, _32BIT_UINT Ip)

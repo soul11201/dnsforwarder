@@ -194,7 +194,7 @@ _32BIT_INT HashTable_FetchNode(HashTable *h, NodeHead *Node)
 	return 0;
 }
 
-int HashTable_AddByNode(HashTable	*h,
+int HashTable_InsertANode(HashTable	*h,
 						const char	*Key,
 						int			KeyLength,
 						int			Node_index,
@@ -245,7 +245,7 @@ int HashTable_Add(HashTable *h, const char *Key, int KeyLength, void *Data, int 
 
 	memcpy(NewNode + 1, Data, h -> NodeChunk.DataLength - sizeof(NodeHead));
 
-	return HashTable_AddByNode(h, Key, KeyLength, NewNode_i, NewNode, HashValue);
+	return HashTable_InsertANode(h, Key, KeyLength, NewNode_i, NewNode, HashValue);
 }
 
 int HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *Node)
@@ -276,55 +276,45 @@ int HashTable_RemoveNode(HashTable *h, _32BIT_INT SubScriptOfNode, NodeHead *Nod
 		Node = (NodeHead *)Array_GetBySubscript(&(h -> NodeChunk), SubScriptOfNode);
 	}
 
-	/* If this node has not been removed */
-	if( Node -> Next != HASHTABLE_NODE_FREE )
+	/* If this node is not a stray node */
+	if( Node -> Next != HASHTABLE_NODE_STRAY )
+	{
+		/* If this node is not tail */
+		if( Node -> Next >= 0 )
+		{
+			((NodeHead *)Array_GetBySubscript(NodeChunk, Node -> Next)) -> Prev = Node -> Prev;
+		}
+
+		if( Node -> Prev < 0 )
+		{
+			/* Prev is a slot */
+			((NodeHead *)Array_GetBySubscript(&(h -> Slots), GET_SLOT_SUBSCRIPT(Node -> Prev))) -> Next = Node -> Next;
+		} else {
+			/* Prev is a node. */
+			((NodeHead *)Array_GetBySubscript(NodeChunk, Node -> Prev)) -> Next = Node -> Next;
+		}
+	}
+
+	/* If this node is not the last one of NodeChunk, add it into free list,
+	 * or simply delete it from NodeChunk
+	 */
+	if( SubScriptOfNode != NodeChunk -> Used - 1 )
 	{
 
-		/* If this node is not a stray node */
-		if( Node -> Next != HASHTABLE_NODE_STRAY )
+		/* Modify the first node in FreeList */
+		if( h -> FreeList >= 0 )
 		{
-			/* If this node is not tail */
-			if( Node -> Next >= 0 )
-			{
-				((NodeHead *)Array_GetBySubscript(NodeChunk, Node -> Next)) -> Prev = Node -> Prev;
-			}
-
-			if( Node -> Prev < 0 )
-			{
-				/* Prev is a slot */
-				((NodeHead *)Array_GetBySubscript(&(h -> Slots), GET_SLOT_SUBSCRIPT(Node -> Prev))) -> Next = Node -> Next;
-			} else {
-				/* Prev is a node. */
-				((NodeHead *)Array_GetBySubscript(NodeChunk, Node -> Prev)) -> Next = Node -> Next;
-			}
+			NodeHead	*PreviousRemovedNode;
+			PreviousRemovedNode = (NodeHead *)Array_GetBySubscript(NodeChunk, h -> FreeList);
+			PreviousRemovedNode -> Prev = SubScriptOfNode;
 		}
 
-		/* If this node is not the last one of NodeChunk, add it into free list,
-		 * or simply delete it from NodeChunk
-		 */
-		if( SubScriptOfNode != NodeChunk -> Used - 1 )
-		{
-
-			/* Modify the first node in FreeList */
-			if( h -> FreeList >= 0 )
-			{
-				NodeHead	*PreviousRemovedNode;
-				PreviousRemovedNode = (NodeHead *)Array_GetBySubscript(NodeChunk, h -> FreeList);
-				PreviousRemovedNode -> Prev = SubScriptOfNode;
-			}
-
-			/* Insert this node at the head of the FreeList */
-			Node -> Next = h -> FreeList;
-			Node -> Prev = -1;
-			h -> FreeList = SubScriptOfNode;
-		} else {
-			--(NodeChunk -> Used);
-		}
+		/* Insert this node at the head of the FreeList */
+		Node -> Next = h -> FreeList;
+		Node -> Prev = -1;
+		h -> FreeList = SubScriptOfNode;
 	} else {
-		if( SubScriptOfNode == NodeChunk -> Used - 1 )
-		{
-			--(NodeChunk -> Used);
-		}
+		--(NodeChunk -> Used);
 	}
 
 	return 0;

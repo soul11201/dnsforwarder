@@ -113,10 +113,8 @@ static int Query(ThreadContext *Context, _16BIT_UINT TCPLength, SOCKET *ClientSo
 	if( Family == AF_INET )
 	{
 		strcpy(ClientIP, inet_ntoa(ClientAddr -> Addr4.sin_addr));
-		Context -> ClientPort = htons(ClientAddr -> Addr4.sin_port);
 	} else {
 		IPv6AddressToAsc(&(ClientAddr -> Addr6.sin6_addr), ClientIP);
-		Context -> ClientPort = htons(ClientAddr -> Addr6.sin6_port);
 	}
 
 	Context -> ClientIP = ClientIP;

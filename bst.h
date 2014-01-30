@@ -9,14 +9,16 @@ typedef struct _Bst_NodeHead{
 } Bst_NodeHead;
 
 typedef struct _Bst {
-	Array		Nodes;
+	Array		*Nodes;
 
 	_32BIT_INT	Root;
 
 	int		(*Compare)(const void *, const void *);
 } Bst;
 
-int Bst_Init(Bst *t, int ElementLength, int (*Compare)(const void *, const void *));
+int Bst_Init(Bst *t, Array *Nodes, int ElementLength, int (*Compare)(const void *, const void *));
+
+int Bst_NodesInit(Array *Nodes, int ElementLength);
 
 int Bst_Add(Bst *t, const void *Data);
 

@@ -50,7 +50,6 @@ struct _QueryContext{
 	int					RequestingDomainHashValue;
 
 	const char			*ClientIP;
-	int					ClientPort; /* host's byte order */
 
 	BOOL	Compress;
 

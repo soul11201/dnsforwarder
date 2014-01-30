@@ -53,7 +53,7 @@ _32BIT_INT HashTable_FindUnusedNode(HashTable *h, NodeHead **Out, _32BIT_INT Sta
 
 _32BIT_INT HashTable_FetchNode(HashTable *h, NodeHead *Node);
 
-int HashTable_AddByNode(HashTable	*h,
+int HashTable_InsertANode(HashTable	*h,
 						const char	*Key,
 						int			KeyLength,
 						int			Node_index,

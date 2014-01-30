@@ -253,13 +253,20 @@ int DNSCache_Init(void)
 	const char	*CacheFile = ConfigGetRawString(&ConfigInfo, "CacheFile");
 	int			InitCacheInfoState;
 
-	OverrideTTL = ConfigGetInt32(&ConfigInfo, "OverrideTTL");
-
-	TTLMultiple = ConfigGetInt32(&ConfigInfo, "MultipleTTL");
-
 	IgnoreTTL = ConfigGetBoolean(&ConfigInfo, "IgnoreTTL");
 
-	if(TTLMultiple == 0) return 1;
+	OverrideTTL = ConfigGetInt32(&ConfigInfo, "OverrideTTL");
+	if( OverrideTTL > -1 )
+	{
+		TTLMultiple = 1;
+	} else {
+		TTLMultiple = ConfigGetInt32(&ConfigInfo, "MultipleTTL");
+		if( TTLMultiple < 1 )
+		{
+			ERRORMSG("Invalid `MultipleTTL'.\n");
+			TTLMultiple = 1;
+		}
+	}
 
 	if( _CacheSize % sizeof(void *) != 0 )
 	{
@@ -540,7 +547,7 @@ static int DNSCache_AddAItemToCache(const char *DNSBody, const char *RecordBody,
 			DEBUG_FILE("Added cache : %s, TTL : %d\n", Buffer + 1, Entry -> TTL);
 
 			/* Index this entry on the hash table */
-			HashTable_AddByNode(CacheInfo, Buffer + 1, 0, Subscript, Chunk, NULL);
+			HashTable_InsertANode(CacheInfo, Buffer + 1, 0, Subscript, Chunk, NULL);
 		} else {
 			return -1;
 		}

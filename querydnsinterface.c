@@ -11,46 +11,6 @@
 #include "domainstatistic.h"
 #include "debug.h"
 
-static int CheckArgs(void)
-{
-	VType tmp;
-
-    if( ConfigGetBoolean(&ConfigInfo, "UseCache") == TRUE )
-    {
-        if( ConfigGetInt32(&ConfigInfo, "MultipleTTL") == 0 )
-		{
-            INFO("Option `MultipleTTL' is 0, if you don't want to use cache, please set `UseCache' to `false'. Now restored option `MultipleTTL' to 1.\n");
-            tmp.INT32 = 1;
-            ConfigSetValue(&ConfigInfo, tmp, "MultipleTTL");
-		}
-        if(ConfigGetInt32(&ConfigInfo, "MultipleTTL") != 1 && ConfigGetBoolean(&ConfigInfo, "IgnoreTTL") == TRUE)
-        {
-            INFO("Ignored option `MultipleTTL', because TTLs will be ignored.\n");
-            tmp.INT32 = 1;
-            ConfigSetValue(&ConfigInfo, tmp, "MultipleTTL");
-        }
-        if(ConfigGetInt32(&ConfigInfo, "OverrideTTL") > -1 && ConfigGetBoolean(&ConfigInfo, "IgnoreTTL") == TRUE)
-        {
-            INFO("Ignored option `OverrideTTL', because TTLs will be ignored.\n");
-            tmp.INT32 = 1;
-            ConfigSetValue(&ConfigInfo, tmp, "OverrideTTL");
-        }
-        if(ConfigGetInt32(&ConfigInfo, "MultipleTTL") != 1 && ConfigGetInt32(&ConfigInfo, "OverrideTTL") > -1)
-        {
-            INFO("Ignored option `MultipleTTL', because TTLs will be overrided to be %d.\n", ConfigGetInt32(&ConfigInfo, "OverrideTTL"));
-            tmp.INT32 = 1;
-            ConfigSetValue(&ConfigInfo, tmp, "MultipleTTL");
-        }
-
-    }
-    else
-    {
-
-    }
-
-    return 0;
-}
-
 int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMessages)
 {
 	VType	TmpTypeDescriptor;
@@ -224,7 +184,7 @@ int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMe
 	{
 		ConfigRead(&ConfigInfo);
 		ConfigCloseFile(&ConfigInfo);
-		return CheckArgs();
+		return 0;
 	} else {
 		ERRORMSG("WARNING: Cannot load configuration file : %s, use default options.\n", ConfigFile);
 		return 0;
