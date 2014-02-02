@@ -99,6 +99,15 @@
     <ClInclude Include="..\ipchunk.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\gfwlist.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\simpleht.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\statichosts.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\addresschunk.c">
@@ -180,6 +189,15 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\ipchunk.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\gfwlist.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\simpleht.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\statichosts.c">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

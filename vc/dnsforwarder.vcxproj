@@ -36,22 +36,22 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v110</PlatformToolset>
-    <CLRSupport>true</CLRSupport>
+    <CLRSupport>false</CLRSupport>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v110</PlatformToolset>
-    <CLRSupport>true</CLRSupport>
-    <CharacterSet>Unicode</CharacterSet>
+    <CLRSupport>false</CLRSupport>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v110</PlatformToolset>
-    <CLRSupport>true</CLRSupport>
-    <CharacterSet>Unicode</CharacterSet>
+    <CLRSupport>false</CLRSupport>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -104,29 +104,29 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;Wininet.lib;Shlwapi.lib;Crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies />
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <AdditionalDependencies>ws2_32.lib;Wininet.lib;Shlwapi.lib;Crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;WIN64;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <AdditionalDependencies>ws2_32.lib;Wininet.lib;Shlwapi.lib;Crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -144,6 +144,7 @@
     <ClInclude Include="..\downloader.h" />
     <ClInclude Include="..\excludedlist.h" />
     <ClInclude Include="..\extendablebuffer.h" />
+    <ClInclude Include="..\gfwlist.h" />
     <ClInclude Include="..\hashtable.h" />
     <ClInclude Include="..\hosts.h" />
     <ClInclude Include="..\ipchunk.h" />
@@ -155,6 +156,8 @@
     <ClInclude Include="..\readline.h" />
     <ClInclude Include="..\request_response.h" />
     <ClInclude Include="..\rwlock.h" />
+    <ClInclude Include="..\simpleht.h" />
+    <ClInclude Include="..\statichosts.h" />
     <ClInclude Include="..\stringchunk.h" />
     <ClInclude Include="..\stringlist.h" />
     <ClInclude Include="..\utils.h" />
@@ -173,6 +176,7 @@
     <ClCompile Include="..\downloader.c" />
     <ClCompile Include="..\excludedlist.c" />
     <ClCompile Include="..\extendablebuffer.c" />
+    <ClCompile Include="..\gfwlist.c" />
     <ClCompile Include="..\hashtable.c" />
     <ClCompile Include="..\hosts.c" />
     <ClCompile Include="..\ipchunk.c" />
@@ -184,6 +188,8 @@
     <ClCompile Include="..\readconfig.c" />
     <ClCompile Include="..\readline.c" />
     <ClCompile Include="..\request_response.c" />
+    <ClCompile Include="..\simpleht.c" />
+    <ClCompile Include="..\statichosts.c" />
     <ClCompile Include="..\stringchunk.c" />
     <ClCompile Include="..\stringlist.c" />
     <ClCompile Include="..\utils.c" />
