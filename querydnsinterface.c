@@ -7,26 +7,17 @@
 #include "readconfig.h"
 #include "hosts.h"
 #include "excludedlist.h"
+#include "gfwlist.h"
 #include "utils.h"
 #include "domainstatistic.h"
 #include "debug.h"
 
-int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMessages)
+int QueryDNSInterfaceInit(char *ConfigFile)
 {
 	VType	TmpTypeDescriptor;
 	char	TmpStr[1024];
 
-	ShowMassages = _ShowMassages;
-	ErrorMessages = OnlyErrorMessages;
-
 	ConfigInitInfo(&ConfigInfo);
-
-
-	TmpTypeDescriptor.boolean = TRUE;
-	ConfigAddOption(&ConfigInfo, "Debug", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
-
-    TmpTypeDescriptor.INT32 = 102400;
-    ConfigAddOption(&ConfigInfo, "DebugFileThresholdLength", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = "127.0.0.1";
     ConfigAddOption(&ConfigInfo, "LocalInterface", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Local working interface");
@@ -209,15 +200,9 @@ int QueryDNSInterfaceStart(void)
 
 	srand(time(NULL));
 
-	if( ConfigGetBoolean(&ConfigInfo, "UDPAntiPollution") == TRUE )
-	{
-		SetUDPAntiPollution(TRUE);
-	}
+	SetUDPAntiPollution(ConfigGetBoolean(&ConfigInfo, "UDPAntiPollution"));
 
-	if( ConfigGetBoolean(&ConfigInfo, "UDPAppendEDNSOpt") == TRUE )
-	{
-		SetUDPAppendEDNSOpt(TRUE);
-	}
+	SetUDPAppendEDNSOpt(ConfigGetBoolean(&ConfigInfo, "UDPAppendEDNSOpt"));
 
 	InitBlockedIP(ConfigGetStringList(&ConfigInfo, "UDPBlock_IP"));
 
@@ -227,17 +212,12 @@ int QueryDNSInterfaceStart(void)
 	}
 
 	ExcludedList_Init();
+	GfwList_Init(FALSE);
 
-	TimeToServer = ConfigGetInt32(&ConfigInfo, "TimeToServer");
-	AllowFallBack = ConfigGetBoolean(&ConfigInfo, "AllowFallBack");
+	SetServerTimeOut(ConfigGetInt32(&ConfigInfo, "TimeToServer"));
+	SetFallBack(ConfigGetBoolean(&ConfigInfo, "AllowFallBack"));
 
-    if( ConfigGetBoolean(&ConfigInfo, "UseCache") == TRUE)
-    {
-        if(DNSCache_Init() != 0)
-        {
-            return 2;
-        }
-    }
+	DNSCache_Init();
 
 	if( ConfigGetInt32(&ConfigInfo, "UDPThreads") > 0)
 	{
@@ -262,16 +242,13 @@ int QueryDNSInterfaceStart(void)
 		return 1;
 	}
 
-	if( Hosts_Init() != 0 )
-	{
-		return 2;
-	}
+	DynamicHosts_Init();
+
+	GfwList_PeriodWork();
 
 	LocalAddr = ConfigGetRawString(&ConfigInfo, "LocalInterface");
 	IsZeroZeroZeroZero = !strncmp(LocalAddr, "0.0.0.0", 7);
 	INFO("Now you can set DNS%s%s.\n", IsZeroZeroZeroZero ? "" : " to ", IsZeroZeroZeroZero ? "" : LocalAddr);
-
-	LoadGfwList();
 
 	return 0;
 }

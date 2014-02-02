@@ -14,12 +14,6 @@ typedef int offset_t;
 
 #define CURRENT_THREAD_ID	(GET_THREAD_ID())
 
-/* void SafeMallocInit(void);
- * Description:
- *  Initialize for safe memory allocation and free.
- */
-void SafeMallocInit(void);
-
 /* void *SafeMalloc(size_t Bytes);
  * Description:
  *  Allocate a block of memory of `Bytes' bytes.
@@ -28,7 +22,7 @@ void SafeMallocInit(void);
  * Return value:
  *  The first address of the allocated block of memory.
  */
-void *SafeMalloc(size_t Bytes);
+#define SafeMalloc	malloc
 
 /* void SafeFree(void *Memory);
  * Description:
@@ -36,7 +30,7 @@ void *SafeMalloc(size_t Bytes);
  * Parameters:
  *  Memory:The first address of the memory to be freed.
  */
-void SafeFree(void *Memory);
+#define SafeFree	free
 
 /* int SafeRealloc(void **Memory_ptr, size_t NewBytes);
  * Description:
@@ -100,5 +94,7 @@ int ELFHash(const char *str, int Unused);
 void HexDump(const char *Data, int Length);
 
 char *BinaryOutput(const char *Origin, int OriginLength, char *Buffer);
+
+char *StringDup(const char *Str);
 
 #endif /* _UTILS_ */

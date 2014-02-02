@@ -1,6 +1,6 @@
 #include "addresschunk.h"
 
-int AddressChunk_Init(AddressChunk *ac, int NumberOfDedicated)
+int AddressChunk_Init(AddressChunk *ac)
 {
 	if( AddressList_Init(&(ac -> TCPAddresses)) != 0 )
 	{
@@ -12,7 +12,7 @@ int AddressChunk_Init(AddressChunk *ac, int NumberOfDedicated)
 		return 2;
 	}
 
-	if( StringChunk_Init(&(ac -> Dedicated), NumberOfDedicated) != 0 )
+	if( StringChunk_Init(&(ac -> Dedicated)) != 0 )
 	{
 		return 3;
 	}

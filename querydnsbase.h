@@ -21,11 +21,8 @@ typedef enum _DnsQuaryProtocol{
 
 /* Global Varibles */
 extern ConfigFileInfo	ConfigInfo;
-extern int				TimeToServer;
-extern BOOL				AllowFallBack;
 extern BOOL				ShowMassages;
 extern BOOL				ErrorMessages;
-
 
 typedef struct _QueryContext ThreadContext;
 
@@ -62,6 +59,8 @@ struct _QueryContext{
 	ExtendableBuffer	ResponseBuffer_Entity;
 
 };
+
+void SetFallBack(BOOL FallBack);
 
 void ShowRefusingMassage(ThreadContext *Context);
 

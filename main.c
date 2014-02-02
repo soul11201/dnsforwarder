@@ -22,30 +22,20 @@
 
 #define VERSION "2.6 Beta 1"
 
-#define PRINTM(...)		if(ProgramArgs.ShowMassages == TRUE) printf(__VA_ARGS__);
+#define PRINTM(...)		if(ShowMassages == TRUE) printf(__VA_ARGS__);
 
 /* Global Variables */
 ConfigFileInfo	ConfigInfo;
-int				TimeToServer;
-BOOL			AllowFallBack;
-BOOL			ShowMassages;
-BOOL			ErrorMessages;
+BOOL			ShowMassages = TRUE;
+BOOL			ErrorMessages = TRUE;
 
-struct _ProgramArgs
-{
-	char		*ConfigFile_ptr;
-	char		ConfigFile[320];
+static char		*ConfigFile;
+static BOOL		DeamonMode;
 
-	BOOL		DeamonMode;
-
-	BOOL		ShowMassages;
-	BOOL		ErrorMessages;
-
-} ProgramArgs = {
-	NULL, {0},
-	FALSE,
-	TRUE, TRUE,
-};
+#ifdef INTERNAL_DEBUG
+static BOOL		DebugMode == TRUE;
+static int		DebugFileThresholdLength  = 102400;
+#endif
 
 int DaemonInit()
 {
@@ -152,7 +142,7 @@ void Probe(int Threshold)
 	StringChunk	s;
 
 	StringList_Init(&l, NULL, ',');
-	StringChunk_Init(&s, 100);
+	StringChunk_Init(&s);
 
 	while( Threshold > 0 )
 	{
@@ -212,6 +202,10 @@ int ArgParse(int argc, char *argv_ori[])
 				  "  -e         Show only error messages.\n"
 				  "  -d         Daemon mode. Running at background.\n"
 				  "  -P         Try to probe all the fake IP addresses held in false DNS responses,\n"
+#ifdef INTERNAL_DEBUG
+				  "  -nD        \n"
+				  "  -DT <NUM>  \n"
+#endif
 				  "  -h         Show this help.\n"
 				  "\n"
 				  "Output format:\n"
@@ -222,29 +216,29 @@ int ArgParse(int argc, char *argv_ori[])
 		}
         if(strcmp("-q", *argv) == 0)
         {
-            ProgramArgs.ShowMassages = FALSE;
-            ProgramArgs.ErrorMessages = FALSE;
+            ShowMassages = FALSE;
+            ErrorMessages = FALSE;
             ++argv;
             continue;
         }
 
         if(strcmp("-e", *argv) == 0)
         {
-            ProgramArgs.ShowMassages = FALSE;
+            ShowMassages = FALSE;
             ++argv;
             continue;
         }
 
         if(strcmp("-d", *argv) == 0)
         {
-			ProgramArgs.DeamonMode = TRUE;
+			DeamonMode = TRUE;
             ++argv;
             continue;
         }
 
         if(strcmp("-f", *argv) == 0)
         {
-            ProgramArgs.ConfigFile_ptr = *(++argv);
+            ConfigFile = *(++argv);
             ++argv;
             continue;
         }
@@ -263,6 +257,25 @@ int ArgParse(int argc, char *argv_ori[])
 			++argv;
             continue;
         }
+
+#ifdef INTERNAL_DEBUG
+		if( strcmp("-nD", *argv) == 0 )
+		{
+			DebugMode = FALSE;
+
+			++argv;
+            continue;
+		}
+
+		if( strcmp("-DT", *argv) == 0 )
+		{
+			++argv;
+			sscanf(*argv, "%d", &DebugFileThresholdLength);
+
+			++argv;
+            continue;
+		}
+#endif
 
 		PRINTM("Unrecognisable arg `%s'\n", *argv);
         ++argv;
@@ -289,51 +302,56 @@ int main(int argc, char *argv[])
     WSADATA wdata;
 #endif
 
-    int ret = 0;
-
 #ifndef NODOWNLOAD
 #ifdef WIN32
     if(WSAStartup(MAKEWORD(2, 2), &wdata) != 0)
         return -1;
-
-	SetConsoleTitle("dnsforwarder");
 #else
-
 	curl_global_init(CURL_GLOBAL_ALL);
 #endif /* WIN32 */
 #endif /* NODOWNLOAD */
 
-	SafeMallocInit();
+#ifdef WIN32
+	SetConsoleTitle("dnsforwarder");
+#endif /* WIN32 */
 
 	ArgParse(argc, argv);
 
-	if( ProgramArgs.ConfigFile_ptr == NULL )
+#ifdef INTERNAL_DEBUG
+	if( DebugMode == TRUE )
 	{
-		GetDefaultConfigureFile(ProgramArgs.ConfigFile, sizeof(ProgramArgs.ConfigFile));
-		ProgramArgs.ConfigFile_ptr = ProgramArgs.ConfigFile;
+		Debug_Init(DebugFileThresholdLength);
+	}
+#endif
+
+	if( ConfigFile == NULL )
+	{
+		ConfigFile = malloc(320);
+		if( ConfigFile == NULL )
+		{
+			return -1;
+		}
+
+		GetDefaultConfigureFile(ConfigFile, 320);
+
 	}
 
     PRINTM("DNSforwarder by holmium. Free for non-commercial use. Version "VERSION" .\nTime of compilation : %s %s.\n\n", __DATE__, __TIME__);
 
-    PRINTM("Configure File : %s\n\n", ProgramArgs.ConfigFile_ptr);
+    PRINTM("Configure File : %s\n\n", ConfigFile);
 
-	if( ProgramArgs.DeamonMode == TRUE )
+	if( DeamonMode == TRUE )
 	{
 		if( DaemonInit() == 0 )
 		{
-			ProgramArgs.ShowMassages = FALSE;
+			ShowMassages = FALSE;
 		} else {
 			printf("Daemon init failed, continuing on non-daemon mode.\n");
 		}
 	}
 
-	if( QueryDNSInterfaceInit(ProgramArgs.ConfigFile_ptr, ProgramArgs.ShowMassages, ProgramArgs.ErrorMessages) != 0 )
+	if( QueryDNSInterfaceInit(ConfigFile) != 0 )
 		goto JustEnd;
-
-	if( ConfigGetBoolean(&ConfigInfo, "Debug") == TRUE )
-	{
-		Debug_Init(ConfigGetInt32(&ConfigInfo, "DebugFileThresholdLength"));
-	}
 
 	putchar('\n');
 
@@ -346,5 +364,5 @@ JustEnd:
 #ifdef WIN32
     WSACleanup();
 #endif
-    return ret;
+    return 0;
 }

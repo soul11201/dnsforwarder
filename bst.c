@@ -1,5 +1,6 @@
-#include "string.h"
+#include <string.h>
 #include "bst.h"
+#include "utils.h"
 
 int Bst_Init(Bst *t, Array *Nodes, int ElementLength, int (*Compare)(const void *, const void *))
 {
@@ -8,7 +9,7 @@ int Bst_Init(Bst *t, Array *Nodes, int ElementLength, int (*Compare)(const void 
 
 	if( Nodes == NULL )
 	{
-		t -> Nodes = SafeMalloc(sizeof(Array));
+		t -> Nodes = (Array *)SafeMalloc(sizeof(Array));
 		if( t -> Nodes == NULL )
 		{
 			return -1;

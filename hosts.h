@@ -6,10 +6,10 @@
 
 #define DOMAIN_NAME_LENGTH_MAX 128
 
-int Hosts_Init(void);
+int DynamicHosts_Init(void);
 
-BOOL Hosts_IsInited(void);
+int DynamicHosts_GetByQuestion(ThreadContext *Context, int *AnswerCount);
 
-int Hosts_GetByQuestion(ThreadContext *Context, int *AnswerCount);
+BOOL DynamicHosts_Inited(void);
 
 #endif // HOSTS_H_INCLUDED

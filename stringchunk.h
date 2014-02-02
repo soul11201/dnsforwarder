@@ -1,7 +1,7 @@
 #ifndef STRINGCHUNK_H_INCLUDED
 #define STRINGCHUNK_H_INCLUDED
 
-#include "hashtable.h"
+#include "simpleht.h"
 #include "stringlist.h"
 #include "array.h"
 #include "extendablebuffer.h"
@@ -11,7 +11,7 @@ typedef struct _StringChunk{
 	StringList	List;
 
 	/* Positions of every domain in `List', offsets */
-	HashTable	List_Pos;
+	SimpleHT	List_Pos;
 
 
 	/* Domains containing wildcards */
@@ -26,7 +26,7 @@ typedef struct _StringChunk{
 
 } StringChunk;
 
-int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain */);
+int StringChunk_Init(StringChunk *dl);
 
 int StringChunk_Add(StringChunk *dl,
 					const char *Str,

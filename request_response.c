@@ -504,6 +504,13 @@ BOOL TCPSocketIsHealthy(SOCKET *sock)
 	return FALSE;
 }
 
+static int	ServerTimeOut = 2000;
+
+void SetServerTimeOut(int TimeOut)
+{
+	ServerTimeOut = TimeOut;
+}
+
 /* BOOL ConnectToServer(SOCKET *sock, struct sockaddr_in *addr);
  * Description:
  *  Let the `sock' Connect to the server addressed by `addr'.
@@ -511,7 +518,7 @@ BOOL TCPSocketIsHealthy(SOCKET *sock)
  *  sock:A pointer to a `SOCKET' that hold the connection.
  *  addr:A pointer to a `struct sockaddr_in' specifying the address to connect.
 */
-BOOL ConnectToTCPServer(SOCKET *sock, struct sockaddr *addr, sa_family_t Family, int TimeToServer)
+BOOL ConnectToTCPServer(SOCKET *sock, struct sockaddr *addr, sa_family_t Family)
 {
 	int SizeOfAddr;
 
@@ -534,8 +541,8 @@ BOOL ConnectToTCPServer(SOCKET *sock, struct sockaddr *addr, sa_family_t Family,
 	SetSocketWait(*sock, TRUE);
 
 	/* Set time limit. */
-	SetSocketSendTimeLimit(*sock, TimeToServer);
-	SetSocketRecvTimeLimit(*sock, TimeToServer);
+	SetSocketSendTimeLimit(*sock, ServerTimeOut);
+	SetSocketRecvTimeLimit(*sock, ServerTimeOut);
 
 	if(connect(*sock, addr, SizeOfAddr) != 0){
 		int OriginErrorCode = GET_LAST_ERROR();
@@ -582,11 +589,11 @@ int QueryFromServerBase(SOCKET				*Socket,
 			}
 		}
 
-		SetSocketRecvTimeLimit(*Socket, TimeToServer);
+		SetSocketRecvTimeLimit(*Socket, ServerTimeOut);
 	} else {
 		if(TCPSocketIsHealthy(Socket) == FALSE)
 		{
-			if(ConnectToTCPServer(Socket, ServerAddress_List, ServerAddress_List -> sa_family, TimeToServer) == FALSE)
+			if(ConnectToTCPServer(Socket, ServerAddress_List, ServerAddress_List -> sa_family) == FALSE)
 			{
 				DomainStatistic_Add(RequestingDomain, NULL, STATISTIC_TYPE_REFUSED);
 				return -2; /* Failed */

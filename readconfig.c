@@ -30,18 +30,17 @@ int ConfigAddOption(ConfigFileInfo *Info, char *KeyName, MultilineStrategy Strat
 {
 	ConfigOption New;
 
-	strcpy(New.KeyName, KeyName);
+	New.KeyName = StringDup(KeyName);
+	if( New.KeyName == NULL )
+	{
+		return -1;
+	}
+
 	New.Type = Type;
 	New.Status = STATUS_DEFAULT_VALUE;
 	New.Strategy = Strategy;
 
-	if( Caption != NULL )
-	{
-		strncpy(New.Caption, Caption, CAPTION_MAX_SIZE);
-		New.Caption[CAPTION_MAX_SIZE] = '\0';
-	} else {
-		New.Caption[0] = '\0';
-	}
+	New.Caption = StringDup(Caption);
 
 	switch( Type )
 	{
@@ -70,13 +69,16 @@ int ConfigAddOption(ConfigFileInfo *Info, char *KeyName, MultilineStrategy Strat
 
 int ConfigAddAlias(ConfigFileInfo *Info, char *Alias, char *Target)
 {
-
 	ConfigOption New;
 
-	strcpy(New.KeyName, Alias);
+	New.KeyName = StringDup(Alias);
+	if( New.KeyName == NULL )
+	{
+		return -1;
+	}
+
 	New.Status = STATUS_ALIAS;
-	strncpy(New.Caption, Target, CAPTION_MAX_SIZE);
-	New.Caption[CAPTION_MAX_SIZE] = '\0';
+	New.Caption = StringDup(Target);
 
 	return Array_PushBack(&(Info -> Options), &New, NULL);
 }
@@ -121,9 +123,9 @@ static ConfigOption *GetOptionOfAInfo(ConfigFileInfo *Info, const char *KeyName)
 	return NULL;
 }
 
-static char *GetKeyNameAndValue(char *Line)
+char *GetKeyNameAndValue(char *Line)
 {
-	char *Delimiter = strpbrk(Line, " =");
+	char *Delimiter = strpbrk(Line, " \t=");
 	char *Itr;
 
 	if( Delimiter == NULL )
@@ -427,7 +429,7 @@ void ConfigDisplay(ConfigFileInfo *Info)
 	{
 		Option = Array_GetBySubscript(&(Info -> Options), loop);
 
-		if( Option != NULL && Option -> Caption[0] != '\0' && Option -> Status != STATUS_ALIAS )
+		if( Option != NULL && Option -> Caption != NULL && Option -> Status != STATUS_ALIAS )
 		{
 			switch( Option -> Type )
 			{

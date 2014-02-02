@@ -49,7 +49,7 @@ int DNSGenQuestionRecord(__out char			*Buffer,
 
 int DNSGenResourceRecord(	__out char			*Buffer,
 							__in int			BufferLength,
-							__in char			*Name,
+							__in const char		*Name,
 							__in _16BIT_UINT	Type,
 							__in _16BIT_UINT	Class,
 							__in _32BIT_UINT	TTL,

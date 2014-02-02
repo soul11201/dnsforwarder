@@ -134,7 +134,7 @@ static BOOL IsReloadable(void)
 		return FALSE;
 	}
 
-	DEBUG_FILE("Specified cache size : %d, yhe existing cache size : %d\n", CacheSize, Header -> CacheSize);
+	DEBUG_FILE("Specified cache size : %d, the existing cache size : %d\n", CacheSize, Header -> CacheSize);
 
 	if( Header -> CacheSize != CacheSize )
 	{
@@ -252,6 +252,11 @@ int DNSCache_Init(void)
 	int			_CacheSize = ConfigGetInt32(&ConfigInfo, "CacheSize");
 	const char	*CacheFile = ConfigGetRawString(&ConfigInfo, "CacheFile");
 	int			InitCacheInfoState;
+
+	if( ConfigGetBoolean(&ConfigInfo, "UseCache") == FALSE )
+	{
+		return 0;
+	}
 
 	IgnoreTTL = ConfigGetBoolean(&ConfigInfo, "IgnoreTTL");
 

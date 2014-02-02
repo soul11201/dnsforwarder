@@ -78,7 +78,7 @@ void *Array_GetBySubscript(__in Array *a, __in int Subscript);
  *  The address of the gotten element. NULL on failure.
  */
 
-int Array_PushBack(__in Array *a, __in_opt void *Data, __in_opt void *Boundary);
+int Array_PushBack(__in Array *a, __in_opt const void *Data, __in_opt void *Boundary);
 /* Description:
  *  Add an element to the end of an array. For growing down array, end means the
  *  element at the lowest address in an array.

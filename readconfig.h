@@ -59,7 +59,7 @@ typedef struct _Option{
 	OptionStatus	Status;
 
 	/* Name */
-	char		KeyName[KEY_NAME_MAX_SIZE + 1];
+	char		*KeyName;
 
 
 	MultilineStrategy	Strategy;
@@ -75,7 +75,7 @@ typedef struct _Option{
 	} Holder;
 
 	/* Caption */
-	char		Caption[CAPTION_MAX_SIZE + 1];
+	char		*Caption;
 } ConfigOption;
 
 /* The exposed type(The infomations about a configuration file) to read options from a configuration file. */
@@ -89,6 +89,8 @@ typedef struct _ConfigFileInfo
 
 	int		LastAccessedOption;
 } ConfigFileInfo;
+
+char *GetKeyNameAndValue(char *Line);
 
 int ConfigInitInfo(ConfigFileInfo *Info);
 

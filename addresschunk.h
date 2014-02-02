@@ -12,7 +12,7 @@ typedef struct _AddressChunk{
 	StringChunk	Dedicated;
 } AddressChunk;
 
-int AddressChunk_Init(AddressChunk *ac, int NumberOfDedicated);
+int AddressChunk_Init(AddressChunk *ac);
 
 int AddressChunk_AddATCPAddress_FromString(AddressChunk *ac, const char *Addr_Port);
 

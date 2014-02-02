@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-int QueryDNSInterfaceInit(char *ConfigFile, BOOL _ShowMassages, BOOL OnlyErrorMessages);
+int QueryDNSInterfaceInit(char *ConfigFile);
 
 int QueryDNSInterfaceStart(void);
 

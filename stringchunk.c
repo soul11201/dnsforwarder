@@ -7,7 +7,7 @@ typedef struct _EntryForString{
 	_32BIT_INT	OffsetOfData;
 } EntryForString;
 
-int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain */)
+int StringChunk_Init(StringChunk *dl)
 {
 	if( dl == NULL )
 	{
@@ -19,7 +19,7 @@ int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain
 		return -1;
 	}
 
-	if( HashTable_Init(&(dl -> List_Pos), sizeof(EntryForString), InitialCount, NULL) != 0 )
+	if( SimpleHT_Init(&(dl -> List_Pos), sizeof(EntryForString), 5, ELFHash) != 0 )
 	{
 		StringList_Free(&(dl -> List));
 		return -2;
@@ -28,14 +28,14 @@ int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain
 	if( StringList_Init(&(dl -> List_W), NULL, 0) != 0 )
 	{
 		StringList_Free(&(dl -> List));
-		HashTable_Free(&(dl -> List_Pos));
+		SimpleHT_Free(&(dl -> List_Pos));
 		return -3;
 	}
 
 	if( Array_Init(&(dl -> List_W_Pos), sizeof(EntryForString), 0, FALSE, NULL) != 0 )
 	{
 		StringList_Free(&(dl -> List));
-		HashTable_Free(&(dl -> List_Pos));
+		SimpleHT_Free(&(dl -> List_Pos));
 		StringList_Free(&(dl -> List_W));
 		return -4;
 	}
@@ -43,7 +43,7 @@ int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain
 	if( ExtendableBuffer_Init(&(dl -> AdditionalDataChunk), 0, -1) != 0 )
 	{
 		StringList_Free(&(dl -> List));
-		HashTable_Free(&(dl -> List_Pos));
+		SimpleHT_Free(&(dl -> List_Pos));
 		StringList_Free(&(dl -> List_W));
 		Array_Free(&(dl -> List_W_Pos));
 		return -5;
@@ -52,10 +52,10 @@ int StringChunk_Init(StringChunk *dl, int InitialCount /* For no-wildcard domain
 	return 0;
 }
 
-int StringChunk_Add(StringChunk *dl,
-					const char *Str,
-					const char *AdditionalData,
-					int LengthOfAdditionalData /* The length will not be stored. */
+int StringChunk_Add(StringChunk	*dl,
+					const char	*Str,
+					const char	*AdditionalData,
+					int			LengthOfAdditionalData /* The length will not be stored. */
 					)
 {
 	EntryForString NewEntry;
@@ -98,7 +98,7 @@ int StringChunk_Add(StringChunk *dl,
 
 		if( NewEntry.OffsetOfString >= 0 )
 		{
-			HashTable_Add(&(dl -> List_Pos), Str, 0, &NewEntry, NULL);
+			SimpleHT_Add(&(dl -> List_Pos), Str, 0, (const char *)&NewEntry, NULL);
 		} else {
 			return -2;
 		}
@@ -118,7 +118,7 @@ BOOL StringChunk_Match_NoWildCard(StringChunk	*dl,
 
 	const char *FoundString;
 
-	FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, 0, NULL, HashValue);
+	FoundEntry = (EntryForString *)SimpleHT_Find(&(dl -> List_Pos), Str, 0, HashValue, NULL);
 	while( FoundEntry != NULL )
 	{
 		FoundString = StringList_GetByOffset(&(dl -> List),
@@ -137,7 +137,7 @@ BOOL StringChunk_Match_NoWildCard(StringChunk	*dl,
 			return TRUE;
 		}
 
-		FoundEntry = HashTable_Get(&(dl -> List_Pos), Str, 0, FoundEntry, HashValue);
+		FoundEntry = (EntryForString *)SimpleHT_Find(&(dl -> List_Pos), Str, 0, HashValue, (const char *)FoundEntry);
 	}
 
 	return FALSE;
@@ -217,7 +217,7 @@ const char *StringChunk_Enum(StringChunk *dl, const char *Start, char **Data)
 void StringChunk_Free(StringChunk *dl)
 {
 	StringList_Free(&(dl -> List));
-	HashTable_Free(&(dl -> List_Pos));
+	SimpleHT_Free(&(dl -> List_Pos));
 	StringList_Free(&(dl -> List_W));
 	Array_Free(&(dl -> List_W_Pos));
 	ExtendableBuffer_Free(&(dl -> AdditionalDataChunk));

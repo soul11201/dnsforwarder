@@ -13,6 +13,7 @@
 #include "hosts.h"
 #include "utils.h"
 #include "excludedlist.h"
+#include "gfwlist.h"
 #include "addresschunk.h"
 #include "stringlist.h"
 #include "domainstatistic.h"
@@ -23,6 +24,13 @@ static AddressChunk	Addresses;
 static BOOL			ParallelQuery;
 static sa_family_t	MainFamily;
 static Array		Addresses_Array;
+
+static BOOL			AllowFallBack = FALSE;
+
+void SetFallBack(BOOL FallBack)
+{
+	AllowFallBack = FallBack;
+}
 
 void ShowRefusingMassage(ThreadContext *Context)
 {
@@ -157,7 +165,7 @@ int DNSFetchFromHosts(__in ThreadContext *Context)
 		return -1;
 	}
 
-	RecordsLength = Hosts_GetByQuestion(Context, &AnswerCount);
+	RecordsLength = DynamicHosts_GetByQuestion(Context, &AnswerCount);
 	if( RecordsLength > 0 )
 	{
 		Header = ExtendableBuffer_GetData(Context -> ResponseBuffer) + HeaderOffset;
@@ -246,7 +254,7 @@ int FetchFromHostsAndCache(ThreadContext *Context)
 		return -1;
 	}
 
-	if( Hosts_IsInited() )
+	if( DynamicHosts_Inited() || StaticHosts_Inited() )
 	{
 		StateOfReceiving = DNSFetchFromHosts(Context);
 
@@ -314,7 +322,7 @@ int InitAddress(void)
 
 	const char	*Itr	=	NULL;
 
-	if( AddressChunk_Init(&Addresses, 0) != 0 )
+	if( AddressChunk_Init(&Addresses) != 0 )
 	{
 		return -1;
 	}
@@ -486,7 +494,10 @@ static int QueryFromServer(ThreadContext *Context)
 	int			AnswerCount;
 
 	/* Determine whether the secondaries are used */
-	if( Context -> SecondarySocket != NULL && IsExcludedDomain(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue)) )
+	if( Context -> SecondarySocket != NULL &&
+		(IsExcludedDomain(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue)) ||
+		GfwList_Match(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue)))
+		 )
 	{
 		UseSecondary = TRUE;
 	} else {

@@ -21,75 +21,11 @@
 #endif /* WIN32 */
 #endif /* NODOWNLOAD */
 
-/* Safe Alloc & Free */
-#ifdef WIN32 /* we use critical section */
-static CRITICAL_SECTION AllocCS;
-#else /* we use spin lock */
-static SpinHandle AllocSpin;
-#endif /* WIN32 */
-
-void SafeMallocInit(void){
-#ifdef WIN32
-	CRITICAL_SECTION_INIT(AllocCS, 128);
-#else
-	CREATE_SPIN(AllocSpin);
-#endif /* WIN32 */
-}
-
-void *SafeMalloc(size_t Bytes)
-{
-	void *Result;
-#ifdef WIN32
-	ENTER_CRITICAL_SECTION(AllocCS);
-#else
-	LOCK_SPIN(AllocSpin);
-#endif /* WIN32 */
-
-	Result = malloc(Bytes);
-
-#ifdef WIN32
-	LEAVE_CRITICAL_SECTION(AllocCS);
-#else
-	UNLOCK_SPIN(AllocSpin);
-#endif /* WIN32 */
-	return Result;
-}
-
-void SafeFree(void *Memory)
-{
-	if(Memory == NULL)
-		return;
-#ifdef WIN32
-	ENTER_CRITICAL_SECTION(AllocCS);
-#else
-	LOCK_SPIN(AllocSpin);
-#endif /* WIN32 */
-
-	free(Memory);
-
-#ifdef WIN32
-	LEAVE_CRITICAL_SECTION(AllocCS);
-#else
-	UNLOCK_SPIN(AllocSpin);
-#endif /* WIN32 */
-}
-
 int SafeRealloc(void **Memory_ptr, size_t NewBytes)
 {
 	void *New;
-#ifdef WIN32
-	ENTER_CRITICAL_SECTION(AllocCS);
-#else
-	LOCK_SPIN(AllocSpin);
-#endif /* WIN32 */
 
 	New = realloc(*Memory_ptr, NewBytes);
-
-#ifdef WIN32
-	LEAVE_CRITICAL_SECTION(AllocCS);
-#else
-	UNLOCK_SPIN(AllocSpin);
-#endif /* WIN32 */
 
 	if(New != NULL)
 	{
@@ -665,4 +601,22 @@ char *BinaryOutput(const char *Origin, int OriginLength, char *Buffer)
 
 	*Buffer = '\0';
 	return Buffer + 1;
+}
+
+char *StringDup(const char *Str)
+{
+	char *New;
+
+	if( Str == NULL )
+	{
+		return NULL;
+	}
+
+	New = malloc(strlen(Str) + 1);
+	if( New != NULL )
+	{
+		strcpy(New, Str);
+	}
+
+	return New;
 }

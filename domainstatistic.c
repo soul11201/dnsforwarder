@@ -55,7 +55,7 @@ int DomainStatistic_Init(int OutputInterval)
 	}
 
 	EFFECTIVE_LOCK_INIT(StatisticLock);
-	StringChunk_Init(&MainChunk, 512);
+	StringChunk_Init(&MainChunk);
 
 	Interval = OutputInterval * 1000;
 

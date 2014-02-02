@@ -50,7 +50,7 @@ void *Array_GetBySubscript(__in Array *a, __in int Subscript)
 }
 
 /* Subscribe returned */
-int Array_PushBack(__in Array *a, __in_opt void *Data, __in_opt void *Boundary /* Only used by grow down array */)
+int Array_PushBack(__in Array *a, __in_opt const void *Data, __in_opt void *Boundary /* Only used by grow down array */)
 {
 	if( a -> Allocated >= 0 )
 	{
@@ -105,6 +105,11 @@ void *Array_SetToSubscript(Array *a, int Subscript, void *Data)
 
 		return (a -> Data) + (a -> DataLength) * Subscript;
 	} else {
+		if( a -> Used < Subscript + 1 )
+		{
+			a -> Used = Subscript + 1;
+		}
+
 		memcpy((a -> Data) + (-1) * (a -> DataLength) * Subscript, Data, a -> DataLength);
 
 		return (a -> Data) + (-1) * (a -> DataLength) * Subscript;
@@ -116,8 +121,8 @@ void Array_Free(Array *a)
 	if( a -> Allocated >= 0 )
 	{
 		SafeFree(a -> Data);
-		a -> Data = NULL;
 	}
+	a -> Data = NULL;
 	a -> Used = 0;
 	a -> Allocated = 0;
 }

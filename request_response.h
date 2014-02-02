@@ -51,7 +51,9 @@ int SetSocketRecvTimeLimit(SOCKET sock, int time);
 
 BOOL TCPSocketIsHealthy(SOCKET *sock);
 
-BOOL ConnectToTCPServer(SOCKET *sock, struct sockaddr *addr, sa_family_t Family, int TimeToServer);
+void SetServerTimeOut(int TimeOut);
+
+BOOL ConnectToTCPServer(SOCKET *sock, struct sockaddr *addr, sa_family_t Family);
 
 void CloseTCPConnection(SOCKET *sock);
 
