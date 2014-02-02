@@ -266,7 +266,7 @@ HostsRecordType Hosts_LoadFromMetaLine(HostsContainer *Container, char *MetaLine
 	if( Domain == NULL )
 	{
 		INFO("Unrecognisable hosts : %s\n", MetaLine);
-		return -1;
+		return HOSTS_TYPE_UNKNOWN;
 	}
 
 	return Hosts_AddToContainer(Container, IPOrCName, Domain);
