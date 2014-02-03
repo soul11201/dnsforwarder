@@ -120,6 +120,23 @@ _32BIT_INT CacheHT_FindUnusedNode(CacheHT		*h,
 	return CacheHT_CreateNewNode(h, ChunkSize, Out, Boundary);
 }
 
+static void ThereIsAnEnd(CacheHT *h, int Slot_i, Cht_Slot *Slot)
+{
+	int i = Slot -> Next;
+	Cht_Node *Node;
+
+	while( i >= 0 )
+	{
+		Node = Array_GetBySubscript(&(h -> NodeChunk), i);
+
+		if( Node -> Slot != Slot_i )
+		{
+			printf("--------------------ERROR\n");
+		}
+
+		i = Node -> Next;
+	}
+}
 
 int CacheHT_InsertToSlot(CacheHT	*h,
 						 const char	*Key,
@@ -153,10 +170,34 @@ int CacheHT_InsertToSlot(CacheHT	*h,
 	return 0;
 }
 
+static Cht_Node *CacheHT_FindPredecesor(CacheHT *h, Cht_Slot *Slot, _32BIT_INT SubScriptOfNode)
+{
+	int Next = Slot -> Next;
+	Cht_Node *Node;
+
+	if( Next == SubScriptOfNode )
+	{
+		return NULL;
+	}
+
+	while( Next >= 0 )
+	{
+		Node = Array_GetBySubscript(&(h -> NodeChunk), Next);
+		Next = Node -> Next;
+
+		if( Next == SubScriptOfNode )
+		{
+			return Node;
+		}
+	}
+
+}
+
 int CacheHT_RemoveFromSlot(CacheHT *h, _32BIT_INT SubScriptOfNode, Cht_Node *Node)
 {
 	Array		*NodeChunk = &(h -> NodeChunk);
 	Cht_Slot	*Slot;
+	Cht_Node	*Predecesor;
 
 	if( Node -> Slot < 0 )
 	{
@@ -169,7 +210,13 @@ int CacheHT_RemoveFromSlot(CacheHT *h, _32BIT_INT SubScriptOfNode, Cht_Node *Nod
 		return -1;
 	}
 
-	Slot -> Next = Node -> Next;
+	Predecesor = CacheHT_FindPredecesor(h, Slot, SubScriptOfNode);
+	if( Predecesor == NULL )
+	{
+		Slot -> Next = Node -> Next;
+	} else {
+		Predecesor -> Next = Node -> Next;
+	}
 
 	/* If this node is not the last one of NodeChunk, add it into free list,
 	 * or simply delete it from NodeChunk

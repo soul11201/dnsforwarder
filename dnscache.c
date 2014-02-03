@@ -33,7 +33,7 @@ static _32BIT_INT		*CacheCount;
 
 static volatile _32BIT_INT	*CacheEnd; /* Offset */
 
-static CacheHT	*CacheInfo;
+static CacheHT			*CacheInfo;
 
 struct _Header{
 	_32BIT_UINT	Ver;
@@ -226,8 +226,6 @@ int DNSCache_Init(void)
 	} else {
 		CacheSize = _CacheSize;
 	}
-
-	printf("CacheFile : %s\n", CacheFile);
 
 	if( CacheSize < 102400 )
 	{
