@@ -51,9 +51,6 @@
     <ClInclude Include="..\extendablebuffer.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\hashtable.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="..\hosts.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -108,6 +105,9 @@
     <ClInclude Include="..\statichosts.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\cacheht.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\addresschunk.c">
@@ -141,9 +141,6 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\extendablebuffer.c">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\hashtable.c">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\hosts.c">
@@ -198,6 +195,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\statichosts.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cacheht.c">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
