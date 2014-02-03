@@ -244,7 +244,7 @@ int QueryDNSInterfaceStart(void)
 
 	DynamicHosts_Init();
 
-	GfwList_PeriodWork();
+	GfwList_PeriodicWork();
 
 	LocalAddr = ConfigGetRawString(&ConfigInfo, "LocalInterface");
 	IsZeroZeroZeroZero = !strncmp(LocalAddr, "0.0.0.0", 7);

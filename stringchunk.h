@@ -7,26 +7,20 @@
 #include "extendablebuffer.h"
 
 typedef struct _StringChunk{
-	/* Domains without wildcards */
-	StringList	List;
+	StringList	*List;
 
 	/* Positions of every domain in `List', offsets */
 	SimpleHT	List_Pos;
 
-
-	/* Domains containing wildcards */
-	StringList	List_W;
-
 	/* Positions of every domain in `List_W', offsets */
 	Array		List_W_Pos;
-
 
 	/* Chunk of all additional datas */
 	ExtendableBuffer	AdditionalDataChunk;
 
 } StringChunk;
 
-int StringChunk_Init(StringChunk *dl);
+int StringChunk_Init(StringChunk *dl, StringList *List);
 
 int StringChunk_Add(StringChunk *dl,
 					const char *Str,
@@ -48,8 +42,8 @@ BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl,
 
 BOOL StringChunk_Match(StringChunk *dl, const char *Str, int *HashValue, char **Data);
 
-const char *StringChunk_Enum(StringChunk *dl, const char *Start, char **Data);
+const char *StringChunk_Enum_NoWildCard(StringChunk *dl, _32BIT_INT *Start, char **Data);
 
-void StringChunk_Free(StringChunk *dl);
+void StringChunk_Free(StringChunk *dl, BOOL FreeStringList);
 
 #endif // STRINGCHUNK_H_INCLUDED

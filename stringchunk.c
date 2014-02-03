@@ -7,46 +7,45 @@ typedef struct _EntryForString{
 	_32BIT_INT	OffsetOfData;
 } EntryForString;
 
-int StringChunk_Init(StringChunk *dl)
+int StringChunk_Init(StringChunk *dl, StringList *List)
 {
 	if( dl == NULL )
 	{
 		return 0;
 	}
 
-	if( StringList_Init(&(dl -> List), NULL, 0) != 0 )
+	if( SimpleHT_Init(&(dl -> List_Pos), sizeof(EntryForString), 5, ELFHash) != 0 )
 	{
 		return -1;
 	}
 
-	if( SimpleHT_Init(&(dl -> List_Pos), sizeof(EntryForString), 5, ELFHash) != 0 )
-	{
-		StringList_Free(&(dl -> List));
-		return -2;
-	}
-
-	if( StringList_Init(&(dl -> List_W), NULL, 0) != 0 )
-	{
-		StringList_Free(&(dl -> List));
-		SimpleHT_Free(&(dl -> List_Pos));
-		return -3;
-	}
-
 	if( Array_Init(&(dl -> List_W_Pos), sizeof(EntryForString), 0, FALSE, NULL) != 0 )
 	{
-		StringList_Free(&(dl -> List));
 		SimpleHT_Free(&(dl -> List_Pos));
-		StringList_Free(&(dl -> List_W));
-		return -4;
+		return -2;
 	}
 
 	if( ExtendableBuffer_Init(&(dl -> AdditionalDataChunk), 0, -1) != 0 )
 	{
-		StringList_Free(&(dl -> List));
 		SimpleHT_Free(&(dl -> List_Pos));
-		StringList_Free(&(dl -> List_W));
 		Array_Free(&(dl -> List_W_Pos));
-		return -5;
+		return -3;
+	}
+
+	if( List == NULL )
+	{
+		dl -> List = SafeMalloc(sizeof(StringList));
+		if( dl -> List == NULL )
+		{
+			return -4;
+		}
+
+		if( StringList_Init(dl -> List, NULL, ',') != 0 )
+		{
+			return -5;
+		}
+	} else {
+		dl -> List = List;
 	}
 
 	return 0;
@@ -83,25 +82,17 @@ int StringChunk_Add(StringChunk	*dl,
 		NewEntry.OffsetOfData = -1;
 	}
 
+	NewEntry.OffsetOfString = StringList_Add(dl -> List, Str, ',');
+	if( NewEntry.OffsetOfString < 0 )
+	{
+		return -1;
+	}
+
 	if( ContainWildCard(Str) )
 	{
-		NewEntry.OffsetOfString = StringList_Add(&(dl -> List_W), Str, ',');
-
-		if( NewEntry.OffsetOfString >= 0 )
-		{
-			Array_PushBack(&(dl -> List_W_Pos), &NewEntry, NULL);
-		} else {
-			return -1;
-		}
+		Array_PushBack(&(dl -> List_W_Pos), &NewEntry, NULL);
 	} else {
-		NewEntry.OffsetOfString = StringList_Add(&(dl -> List), Str, ',');
-
-		if( NewEntry.OffsetOfString >= 0 )
-		{
-			SimpleHT_Add(&(dl -> List_Pos), Str, 0, (const char *)&NewEntry, NULL);
-		} else {
-			return -2;
-		}
+		SimpleHT_Add(&(dl -> List_Pos), Str, 0, (const char *)&NewEntry, NULL);
 	}
 
 	return 0;
@@ -121,7 +112,7 @@ BOOL StringChunk_Match_NoWildCard(StringChunk	*dl,
 	FoundEntry = (EntryForString *)SimpleHT_Find(&(dl -> List_Pos), Str, 0, HashValue, NULL);
 	while( FoundEntry != NULL )
 	{
-		FoundString = StringList_GetByOffset(&(dl -> List),
+		FoundString = StringList_GetByOffset(dl -> List,
 											 FoundEntry -> OffsetOfString
 											 );
 		if( strcmp(FoundString, Str) == 0 )
@@ -160,10 +151,10 @@ BOOL StringChunk_Match_OnlyWildCard(StringChunk	*dl,
 		FoundEntry = (EntryForString *)Array_GetBySubscript(&(dl -> List_W_Pos), loop);
 		if( FoundEntry != NULL )
 		{
-			FoundString = StringList_GetByOffset(&(dl -> List_W), FoundEntry -> OffsetOfString);
+			FoundString = StringList_GetByOffset(dl -> List, FoundEntry -> OffsetOfString);
 			if( WILDCARD_MATCH(FoundString, Str) == WILDCARD_MATCHED )
 			{
-				if( FoundEntry -> OffsetOfData >=0 && Data != NULL )
+				if( FoundEntry -> OffsetOfData >= 0 && Data != NULL )
 				{
 					*Data = ExtendableBuffer_GetPositionByOffset(
 													&(dl -> AdditionalDataChunk),
@@ -193,32 +184,45 @@ BOOL StringChunk_Match(StringChunk *dl, const char *Str, int *HashValue, char **
 	}
 }
 
-const char *StringChunk_Enum(StringChunk *dl, const char *Start, char **Data)
+const char *StringChunk_Enum_NoWildCard(StringChunk *dl, _32BIT_INT *Start, char **Data)
 {
-	const char *str;
+	EntryForString *Result;
 
-	str = StringList_GetNext(&(dl -> List), Start);
-
-	if( str == NULL )
+	Result = (EntryForString *)SimpleHT_Enum(&(dl -> List_Pos), Start);
+	if( Result == NULL )
 	{
-		str = StringList_GetNext(&(dl -> List_W), Start);
-	}
+		if( Data != NULL )
+		{
+			*Data = NULL;
+		}
 
-	if( str == NULL )
-	{
 		return NULL;
 	}
 
-	StringChunk_Match(dl, str, NULL, Data);
+	if( Result -> OffsetOfData >= 0 && Data != NULL )
+	{
+		*Data = ExtendableBuffer_GetPositionByOffset(&(dl -> AdditionalDataChunk),
+													 Result -> OffsetOfData
+													 );
+	}
 
-	return str;
+	if( Result -> OffsetOfString >= 0 )
+	{
+		return StringList_GetByOffset(dl -> List, Result -> OffsetOfString);
+	} else {
+		return NULL;
+	}
 }
 
-void StringChunk_Free(StringChunk *dl)
+void StringChunk_Free(StringChunk *dl, BOOL FreeStringList)
 {
-	StringList_Free(&(dl -> List));
 	SimpleHT_Free(&(dl -> List_Pos));
-	StringList_Free(&(dl -> List_W));
 	Array_Free(&(dl -> List_W_Pos));
 	ExtendableBuffer_Free(&(dl -> AdditionalDataChunk));
+
+	if( FreeStringList == TRUE )
+	{
+		StringList_Free(dl -> List);
+		SafeFree(dl -> List);
+	}
 }

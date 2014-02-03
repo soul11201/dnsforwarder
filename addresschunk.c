@@ -12,7 +12,7 @@ int AddressChunk_Init(AddressChunk *ac)
 		return 2;
 	}
 
-	if( StringChunk_Init(&(ac -> Dedicated)) != 0 )
+	if( StringChunk_Init(&(ac -> Dedicated), NULL) != 0 )
 	{
 		return 3;
 	}

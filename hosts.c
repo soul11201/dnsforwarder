@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <time.h>
 #include "hosts.h"
-#include "statichosts.h"
 #include "dnsrelated.h"
 #include "dnsgenerator.h"
 #include "common.h"
@@ -27,10 +26,11 @@ static volatile HostsContainer	*MainContainer = NULL;
 
 static void DynamicHosts_FreeHostsContainer(HostsContainer *Container)
 {
-	StringChunk_Free(&(Container -> Ipv4Hosts));
-	StringChunk_Free(&(Container -> Ipv6Hosts));
-	StringChunk_Free(&(Container -> CNameHosts));
-	StringChunk_Free(&(Container -> ExcludedDomains));
+	StringChunk_Free(&(Container -> Ipv4Hosts), FALSE);
+	StringChunk_Free(&(Container -> Ipv6Hosts), FALSE);
+	StringChunk_Free(&(Container -> CNameHosts), FALSE);
+	StringChunk_Free(&(Container -> ExcludedDomains), FALSE);
+	StringList_Free(&(Container -> Domains));
 	ExtendableBuffer_Free(&(Container -> IPs));
 }
 

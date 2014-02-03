@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-int GfwList_PeriodWork(void);
+int GfwList_PeriodicWork(void);
 
 int GfwList_Init(BOOL StartPeriodWork);
 

@@ -1,6 +1,7 @@
 #ifndef HOSTS_H_INCLUDED
 #define HOSTS_H_INCLUDED
 
+#include "statichosts.h"
 #include "querydnsbase.h"
 #include "extendablebuffer.h"
 

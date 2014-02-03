@@ -1,3 +1,4 @@
+#include <string.h>
 #include "simpleht.h"
 
 typedef struct _Sht_Slot{

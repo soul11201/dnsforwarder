@@ -1,3 +1,4 @@
+#include <string.h>
 #include "gfwlist.h"
 #include "querydnsbase.h"
 #include "excludedlist.h"
@@ -107,7 +108,7 @@ static int LoadGfwListFile(const char *File, BOOL NeedBase64Decode)
 		return -3;
 	}
 
-	if( StringChunk_Init(&(Container -> GFWList)) != 0 )
+	if( StringChunk_Init(&(Container -> GFWList), NULL) != 0 )
 	{
 		return -4;
 	}
@@ -142,7 +143,7 @@ DONE:
 
 	if( Count == 0 )
 	{
-		StringChunk_Free((StringChunk *)&(Container -> GFWList));
+		StringChunk_Free((StringChunk *)&(Container -> GFWList), TRUE);
 		SafeFree(Container);
 		return -4;
 	}
@@ -152,7 +153,7 @@ DONE:
 
 	if( MainContainer != NULL )
 	{
-		StringChunk_Free((StringChunk *)&(MainContainer -> GFWList));
+		StringChunk_Free((StringChunk *)&(MainContainer -> GFWList), TRUE);
 		SafeFree((void *)MainContainer);
 	}
 
@@ -217,7 +218,7 @@ static int LoadGfwList_Thread(void *Unused)
 	return 0;
 }
 
-int GfwList_PeriodWork(void)
+int GfwList_PeriodicWork(void)
 {
 	ThreadHandle gt;
 
@@ -279,7 +280,7 @@ int GfwList_Init(BOOL StartPeriodWork)
 
 	if( StartPeriodWork == TRUE )
 	{
-		GfwList_PeriodWork();
+		GfwList_PeriodicWork();
 	}
 
 	return 0;

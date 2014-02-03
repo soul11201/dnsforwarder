@@ -142,7 +142,7 @@ void Probe(int Threshold)
 	StringChunk	s;
 
 	StringList_Init(&l, NULL, ',');
-	StringChunk_Init(&s);
+	StringChunk_Init(&s, NULL);
 
 	while( Threshold > 0 )
 	{
@@ -183,7 +183,7 @@ void Probe(int Threshold)
 	}
 
 	StringList_Free(&l);
-	StringChunk_Free(&s);
+	StringChunk_Free(&s, TRUE);
 }
 
 int ArgParse(int argc, char *argv_ori[])

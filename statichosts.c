@@ -231,26 +231,30 @@ static HostsRecordType Hosts_AddToContainer(HostsContainer *Container, const cha
 
 int Hosts_InitContainer(HostsContainer	*Container)
 {
-
-	if( StringChunk_Init(&(Container -> Ipv4Hosts)) != 0 )
+	if( StringList_Init(&(Container -> Domains), NULL, ',') != 0 )
 	{
 		return -1;
 	}
-	if( StringChunk_Init(&(Container -> Ipv6Hosts)) != 0 )
+
+	if( StringChunk_Init(&(Container -> Ipv4Hosts), &(Container -> Domains)) != 0 )
 	{
 		return -2;
 	}
-	if( StringChunk_Init(&(Container -> CNameHosts)) != 0 )
+	if( StringChunk_Init(&(Container -> Ipv6Hosts), &(Container -> Domains)) != 0 )
 	{
 		return -3;
 	}
-	if( StringChunk_Init(&(Container -> ExcludedDomains)) != 0 )
+	if( StringChunk_Init(&(Container -> CNameHosts), &(Container -> Domains)) != 0 )
+	{
+		return -4;
+	}
+	if( StringChunk_Init(&(Container -> ExcludedDomains), &(Container -> Domains)) != 0 )
 	{
 		return -4;
 	}
 	if( ExtendableBuffer_Init(&(Container ->IPs), 0, -1) != 0 )
 	{
-		return -5;
+		return -6;
 	}
 
 	return 0;

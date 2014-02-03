@@ -8,6 +8,8 @@
 #define DOMAIN_NAME_LENGTH_MAX 128
 
 typedef struct _HostsContainer{
+	StringList	Domains;
+
 	StringChunk	Ipv4Hosts;
 	StringChunk	Ipv6Hosts;
 	StringChunk	CNameHosts;

@@ -55,7 +55,7 @@ int DomainStatistic_Init(int OutputInterval)
 	}
 
 	EFFECTIVE_LOCK_INIT(StatisticLock);
-	StringChunk_Init(&MainChunk);
+	StringChunk_Init(&MainChunk, NULL);
 
 	Interval = OutputInterval * 1000;
 
@@ -175,6 +175,7 @@ static void AddToRankList(RankList *List, int NumberOfInList, const char *Curren
 int DomainStatistic_Hold(void)
 {
 	const char *Str;
+	_32BIT_INT Enum_Start;
 
 	DomainInfo *Info;
 
@@ -223,14 +224,18 @@ int DomainStatistic_Hold(void)
 
 		DomainCount = 0;
 
-		Str = StringChunk_Enum(&MainChunk, NULL, (char **)&Info);
+		Enum_Start = 0;
+
+		EFFECTIVE_LOCK_GET(StatisticLock);
+
+		Str = StringChunk_Enum_NoWildCard(&MainChunk, &Enum_Start, (char **)&Info);
 
 		while( Str != NULL )
 		{
 			++DomainCount;
 
 			fprintf(MainFile,
-					"%64s : %5d %5d %5d %5d %5d %5d\n",
+					"%55s : %5d %5d %5d %5d %5d %5d\n",
 					Str,
 					Info -> Count,
 					Info -> Refused,
@@ -249,9 +254,11 @@ int DomainStatistic_Hold(void)
 
 			AddToRankList(Ranks, MAXIMUN_NUMBER_OF_RANKED_DOMAIN, Str, Info );
 
-			Str = StringChunk_Enum(&MainChunk, Str, (char **)&Info);
+			Str = StringChunk_Enum_NoWildCard(&MainChunk, &Enum_Start, (char **)&Info);
 
 		}
+
+		EFFECTIVE_LOCK_RELEASE(StatisticLock);
 
 		fprintf(MainFile, "Total number of : Queried domains      : %d\n"
 						  "                  Requests             : %d\n"

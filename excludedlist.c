@@ -100,7 +100,7 @@ static int LoadDomains(StringChunk *List, const StringList *Domains)
 {
 	const char *Str;
 
-	if( StringChunk_Init(List) < 0 )
+	if( StringChunk_Init(List, NULL) < 0 )
 	{
 		return -1;
 	}
