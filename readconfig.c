@@ -52,6 +52,8 @@ int ConfigAddOption(ConfigFileInfo *Info, char *KeyName, MultilineStrategy Strat
 			New.Holder.boolean = Initial.boolean;
 			break;
 
+		case TYPE_PATH:
+			New.Strategy = STRATEGY_REPLACE;
 		case TYPE_STRING:
 			if( StringList_Init(&(New.Holder.str), Initial.str, ',') < 0 )
 			{
@@ -123,10 +125,9 @@ static ConfigOption *GetOptionOfAInfo(ConfigFileInfo *Info, const char *KeyName)
 	return NULL;
 }
 
-char *GetKeyNameAndValue(char *Line)
+char *GetKeyNameAndValue(char *Line, const char *Delimiters)
 {
-	char *Delimiter = strpbrk(Line, " \t=");
-	char *Itr;
+	char *Delimiter = strpbrk(Line, Delimiters);
 
 	if( Delimiter == NULL )
 	{
@@ -135,14 +136,7 @@ char *GetKeyNameAndValue(char *Line)
 
 	*Delimiter = '\0';
 
-	for( Itr = Delimiter + 1; *Itr != '\0' && isspace(*Itr); ++Itr );
-
-	if( *Itr == '\0' )
-	{
-		return NULL;
-	} else {
-		return Itr;
-	}
+	return GoToNextNonSpace(Delimiter + 1);
 }
 
 static BOOL GetBoolealValueFromString(char *str)
@@ -170,6 +164,199 @@ static BOOL GetBoolealValueFromString(char *str)
 	return FALSE;
 }
 
+static char *TrimStrings(char *Strings)
+{
+	char *PrevNonSpace;
+	char *NextNonSpace;
+	char *Delimiter;
+
+	NextNonSpace = StrNpbrk(Strings, "\t ");
+	if( NextNonSpace == NULL )
+	{
+		return Strings;
+	} else {
+		if( *NextNonSpace == ',' )
+		{
+			*Strings = ',';
+			NextNonSpace = StrNpbrk(NextNonSpace + 1, "\t ,");
+			if( NextNonSpace == NULL )
+			{
+				*(Strings + 1) = '\0';
+				return Strings;
+			}
+
+			memmove(Strings + 1, NextNonSpace, strlen(NextNonSpace) + 1);
+		} else {
+			memmove(Strings, NextNonSpace, strlen(NextNonSpace) + 1);
+		}
+	}
+
+	Delimiter = strchr(Strings + 1, ',');
+    while( Delimiter != NULL )
+    {
+		PrevNonSpace = GoToPrevNonSpace(Delimiter - 1);
+		*(PrevNonSpace + 1) = ',';
+		NextNonSpace = StrNpbrk(Delimiter + 1, "\t ,");
+		if( NextNonSpace == NULL )
+		{
+			*(PrevNonSpace + 2) = '\0';
+			return Strings;
+		} else {
+			memmove(PrevNonSpace + 2, NextNonSpace, strlen(NextNonSpace) + 1);
+		}
+
+		Delimiter = strchr(PrevNonSpace + 2, ',');
+    }
+
+	return Strings;
+}
+
+static void ParseBoolean(ConfigOption *Option, char *Value)
+{
+	switch (Option -> Strategy)
+	{
+		case STRATEGY_APPEND_DISCARD_DEFAULT:
+			if( Option -> Status == STATUS_DEFAULT_VALUE )
+			{
+				Option -> Strategy = STRATEGY_APPEND;
+			}
+			/* No break */
+
+		case STRATEGY_DEFAULT:
+		case STRATEGY_REPLACE:
+
+			Option -> Holder.boolean = GetBoolealValueFromString(Value);
+
+			Option -> Status = STATUS_SPECIAL_VALUE;
+			break;
+
+		case STRATEGY_APPEND:
+			{
+				BOOL SpecifiedValue;
+
+				SpecifiedValue = GetBoolealValueFromString(Value);
+				Option -> Holder.boolean |= SpecifiedValue;
+
+				Option -> Status = STATUS_SPECIAL_VALUE;
+			}
+			break;
+
+		default:
+			break;
+
+	}
+}
+
+static void ParseInt32(ConfigOption *Option, const char *Value)
+{
+	switch (Option -> Strategy)
+	{
+		case STRATEGY_APPEND_DISCARD_DEFAULT:
+			if( Option -> Status == STATUS_DEFAULT_VALUE )
+			{
+				Option -> Strategy = STRATEGY_APPEND;
+			}
+			/* No break */
+
+		case STRATEGY_DEFAULT:
+		case STRATEGY_REPLACE:
+			sscanf(Value, "%d", &(Option -> Holder.INT32));
+			Option -> Status = STATUS_SPECIAL_VALUE;
+			break;
+
+		case STRATEGY_APPEND:
+			{
+				_32BIT_INT SpecifiedValue;
+
+				sscanf(Value, "%d", &SpecifiedValue);
+				Option -> Holder.INT32 += SpecifiedValue;
+
+				Option -> Status = STATUS_SPECIAL_VALUE;
+			}
+			break;
+
+		default:
+			break;
+	}
+}
+
+static void ParseString(ConfigOption *Option, char *Value, ReadLineStatus ReadStatus, BOOL Trim, FILE *fp, char *Buffer, int BufferLength)
+{
+	if( Trim == TRUE )
+	{
+		TrimStrings(Value);
+	}
+
+	switch (Option -> Strategy)
+	{
+		case STRATEGY_APPEND_DISCARD_DEFAULT:
+			if( Option -> Status == STATUS_DEFAULT_VALUE )
+			{
+				Option -> Strategy = STRATEGY_APPEND;
+			}
+			/* No break */
+
+		case STRATEGY_DEFAULT:
+		case STRATEGY_REPLACE:
+			StringList_Clear(&(Option -> Holder.str));
+			Option -> Status = STATUS_SPECIAL_VALUE;
+			if( StringList_Add(&(Option -> Holder.str), Value, ',') < 0 )
+			{
+				return;
+			}
+
+			break;
+
+		case STRATEGY_APPEND:
+			if( StringList_Add(&(Option -> Holder.str), Value, ',') < 0 )
+			{
+				return;
+			}
+			Option -> Status = STATUS_SPECIAL_VALUE;
+			break;
+
+		default:
+			return;
+			break;
+	}
+
+	while( ReadStatus != READ_DONE ){
+
+		ReadStatus = ReadLine(fp, Buffer, BufferLength);
+		if( ReadStatus == READ_FAILED_OR_END )
+			break;
+
+		if( Trim == TRUE )
+		{
+			TrimStrings(Value);
+		}
+
+		StringList_AppendLast(&(Option -> Holder.str), Buffer, ',');
+	}
+}
+
+static char *TrimPath(char *Path)
+{
+	char *LastCharacter = StrRNpbrk(Path, "\"");
+	char *FirstLetter;
+
+	if( LastCharacter != NULL )
+	{
+		*(LastCharacter + 1) = '\0';
+
+		FirstLetter = StrNpbrk(Path, "\"\t ");
+		if( FirstLetter != NULL )
+		{
+			memmove(Path, FirstLetter, strlen(FirstLetter) + 1);
+			return Path;
+		} else {
+			return NULL;
+		}
+	} else {
+		return NULL;
+	}
+}
+
 int ConfigRead(ConfigFileInfo *Info)
 {
 	int				NumOfRead	=	0;
@@ -186,7 +373,7 @@ int ConfigRead(ConfigFileInfo *Info)
 		if( ReadStatus == READ_FAILED_OR_END )
 			return NumOfRead;
 
-		ValuePos = GetKeyNameAndValue(Buffer);
+		ValuePos = GetKeyNameAndValue(Buffer, " \t=");
 		if( ValuePos == NULL )
 			continue;
 
@@ -199,119 +386,25 @@ int ConfigRead(ConfigFileInfo *Info)
 		switch( Option -> Type )
 		{
 			case TYPE_INT32:
-				switch (Option -> Strategy)
-				{
-					case STRATEGY_APPEND_DISCARD_DEFAULT:
-						if( Option -> Status == STATUS_DEFAULT_VALUE )
-						{
-							Option -> Strategy = STRATEGY_APPEND;
-						}
-						/* No break */
-
-					case STRATEGY_DEFAULT:
-					case STRATEGY_REPLACE:
-						sscanf(ValuePos, "%d", &(Option -> Holder.INT32));
-						Option -> Status = STATUS_SPECIAL_VALUE;
-						break;
-
-					case STRATEGY_APPEND:
-						{
-							_32BIT_INT SpecifiedValue;
-
-							sscanf(ValuePos, "%d", &SpecifiedValue);
-							Option -> Holder.INT32 += SpecifiedValue;
-
-							Option -> Status = STATUS_SPECIAL_VALUE;
-						}
-						break;
-
-					default:
-						continue;
-						break;
-				}
+				ParseInt32(Option, ValuePos);
 				break;
 
 			case TYPE_BOOLEAN:
-				switch (Option -> Strategy)
-				{
-					case STRATEGY_APPEND_DISCARD_DEFAULT:
-						if( Option -> Status == STATUS_DEFAULT_VALUE )
-						{
-							Option -> Strategy = STRATEGY_APPEND;
-						}
-						/* No break */
-
-					case STRATEGY_DEFAULT:
-					case STRATEGY_REPLACE:
-
-						Option -> Holder.boolean = GetBoolealValueFromString(ValuePos);
-
-						Option -> Status = STATUS_SPECIAL_VALUE;
-						break;
-
-					case STRATEGY_APPEND:
-						{
-							BOOL SpecifiedValue;
-
-							SpecifiedValue = GetBoolealValueFromString(ValuePos);
-							Option -> Holder.boolean |= SpecifiedValue;
-
-							Option -> Status = STATUS_SPECIAL_VALUE;
-						}
-						break;
-
-						default:
-							continue;
-							break;
-
-				}
+				ParseBoolean(Option, ValuePos);
 				break;
 
-			case TYPE_STRING:
-				{
-					switch (Option -> Strategy)
-					{
-						case STRATEGY_APPEND_DISCARD_DEFAULT:
-							if( Option -> Status == STATUS_DEFAULT_VALUE )
-							{
-								Option -> Strategy = STRATEGY_APPEND;
-							}
-							/* No break */
+			case TYPE_PATH:
+                if( ReadStatus != READ_DONE )
+                {
+					break;
+                }
 
-						case STRATEGY_DEFAULT:
-						case STRATEGY_REPLACE:
-							StringList_Clear(&(Option -> Holder.str));
-							Option -> Status = STATUS_SPECIAL_VALUE;
-							if( StringList_Add(&(Option -> Holder.str), ValuePos, ',') < 0 )
-							{
-								continue;
-							}
-
-							break;
-
-						case STRATEGY_APPEND:
-							if( StringList_Add(&(Option -> Holder.str), ValuePos, ',') < 0 )
-							{
-								continue;
-							}
-							Option -> Status = STATUS_SPECIAL_VALUE;
-							break;
-
-						default:
-							continue;
-							break;
-					}
-
-					while( ReadStatus != READ_DONE ){
-
-						ReadStatus = ReadLine(Info -> fp, Buffer, sizeof(Buffer));
-						if( ReadStatus == READ_FAILED_OR_END )
-							break;
-
-						StringList_AppendLast(&(Option -> Holder.str), Buffer, ',');
-					}
-
+                if( TrimPath(ValuePos) == NULL )
+                {
+					break;
 				}
+			case TYPE_STRING:
+				ParseString(Option, ValuePos, ReadStatus, TRUE, Info -> fp, Buffer, sizeof(Buffer));
 				break;
 
 			default:

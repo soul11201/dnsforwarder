@@ -97,4 +97,12 @@ char *BinaryOutput(const char *Origin, int OriginLength, char *Buffer);
 
 char *StringDup(const char *Str);
 
+char *StrNpbrk(char *Str, const char *Ch);
+
+char *StrRNpbrk(char *Str, const char *Ch);
+
+char *GoToNextNonSpace(char *Here);
+
+char *GoToPrevNonSpace(char *Here);
+
 #endif /* _UTILS_ */

@@ -330,9 +330,12 @@ int InitAddress(void)
 	Itr = StringList_GetNext(tcpaddrs, NULL);
 	while( Itr != NULL )
 	{
-		AddressChunk_AddATCPAddress_FromString(&Addresses, Itr);
-
-		DEBUG_FILE("Add TCP address : %s\n", Itr);
+		if( AddressChunk_AddATCPAddress_FromString(&Addresses, Itr) != 0 )
+		{
+			INFO("Bad address : %s\n", Itr);
+		} else {
+			DEBUG_FILE("Add TCP address : %s\n", Itr);
+		}
 
 		Itr = StringList_GetNext(tcpaddrs, Itr);
 	}
@@ -340,9 +343,12 @@ int InitAddress(void)
 	Itr = StringList_GetNext(udpaddrs, NULL);
 	while( Itr != NULL )
 	{
-		AddressChunk_AddAUDPAddress_FromString(&Addresses, Itr);
-
-		DEBUG_FILE("Add UDP address : %s\n", Itr);
+		if( AddressChunk_AddAUDPAddress_FromString(&Addresses, Itr) != 0 )
+		{
+			INFO("Bad address : %s\n", Itr);
+		} else {
+			DEBUG_FILE("Add UDP address : %s\n", Itr);
+		}
 
 		Itr = StringList_GetNext(udpaddrs, Itr);
 	}

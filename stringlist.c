@@ -139,12 +139,12 @@ _32BIT_INT StringList_AppendLast(StringList *s, const char *str, char Delimiter)
 	if( s == NULL )
 		return 0;
 
-	Tail = s -> Data + s -> Used - 1;
-
 	if( ExtendableBuffer_GuarantyLeft(s, Length) == FALSE )
 	{
 		return -1;
 	}
+
+	Tail = s -> Data + s -> Used - 1;
 
 	s -> Used += Length;
 

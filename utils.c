@@ -399,35 +399,36 @@ int IPv6AddressToNum(const char *asc, void *Buffer)
 
 int IPv4AddressToNum(const char *asc, void *Buffer)
 {
+	int ret = 0;
+
 	unsigned char *BufferInByte = (unsigned char *)Buffer;
 
 	int Components[4];
 
-	sscanf(asc, "%d.%d.%d.%d", Components, Components + 1, Components + 2, Components + 3);
+	ret = sscanf(asc, "%d.%d.%d.%d", Components, Components + 1, Components + 2, Components + 3);
 	BufferInByte[0] = Components[0];
 	BufferInByte[1] = Components[1];
 	BufferInByte[2] = Components[2];
 	BufferInByte[3] = Components[3];
 
-	return 0;
+	return ret;
 }
 
 sa_family_t GetAddressFamily(const char *Addr)
 {
+	char Buffer[8];
+
 	if( strchr(Addr, '[') != NULL )
 	{
 		return AF_INET6;
 	}
 
-	for(; *Addr != '\0'; ++Addr)
+	if( IPv4AddressToNum(Addr, Buffer) == 4 )
 	{
-		if( !(isdigit(*Addr) || *Addr == '.' || *Addr == ':') )
-		{
-			return AF_UNSPEC;
-		}
+		return AF_INET;
 	}
 
-	return AF_INET;
+	return AF_UNSPEC;
 }
 
 int IPv6AddressToAsc(const void *Address, void *Buffer)
@@ -619,4 +620,62 @@ char *StringDup(const char *Str)
 	}
 
 	return New;
+}
+
+char *StrNpbrk(char *Str, const char *Ch)
+{
+	if( Str == NULL || Ch == NULL )
+	{
+		return Str;
+	}
+
+	while( *Str != '\0' && strchr(Ch, *Str) != NULL )
+	{
+		++Str;
+	}
+
+	if( *Str == '\0' )
+	{
+		return NULL;
+	} else {
+		return Str;
+	}
+
+}
+
+char *StrRNpbrk(char *Str, const char *Ch)
+{
+	char *LastCharacter;
+
+	if( Str == NULL || Ch == NULL )
+	{
+		return Str;
+	}
+
+	LastCharacter = Str + strlen(Str) - 1;
+
+	while( LastCharacter >= Str && strchr(Ch, *LastCharacter) != NULL )
+	{
+		--LastCharacter;
+	}
+
+	if( LastCharacter <  Str )
+	{
+		return NULL;
+	} else {
+		return LastCharacter;
+	}
+
+}
+
+char *GoToNextNonSpace(char *Here)
+{
+	return StrNpbrk(Here, "\t ");
+}
+
+char *GoToPrevNonSpace(char *Here)
+{
+	for( ; isspace(*Here); --Here );
+
+	return Here;
 }

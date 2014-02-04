@@ -92,7 +92,7 @@ int QueryDNSInterfaceInit(char *ConfigFile)
 	strcat(TmpStr, PATH_SLASH_STR);
 	strcat(TmpStr, "hosts.txt");
     TmpTypeDescriptor.str = TmpStr;
-    ConfigAddOption(&ConfigInfo, "HostsDownloadPath", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "HostsDownloadPath", STRATEGY_REPLACE, TYPE_PATH, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "HostsScript", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, NULL);
@@ -118,7 +118,7 @@ int QueryDNSInterfaceInit(char *ConfigFile)
 	strcat(TmpStr, PATH_SLASH_STR);
 	strcat(TmpStr, "cache");
     TmpTypeDescriptor.str = TmpStr;
-    ConfigAddOption(&ConfigInfo, "CacheFile", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "CacheFile", STRATEGY_REPLACE, TYPE_PATH, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.boolean = FALSE;
     ConfigAddOption(&ConfigInfo, "IgnoreTTL", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, "Ignore TTL");
@@ -165,7 +165,7 @@ int QueryDNSInterfaceInit(char *ConfigFile)
 	strcat(TmpStr, PATH_SLASH_STR);
 	strcat(TmpStr, "gfwlist.txt");
     TmpTypeDescriptor.str = TmpStr;
-    ConfigAddOption(&ConfigInfo, "GfwListDownloadPath", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "GfwListDownloadPath", STRATEGY_REPLACE, TYPE_PATH, TmpTypeDescriptor, NULL);
 
 
     TmpTypeDescriptor.INT32 = 0;

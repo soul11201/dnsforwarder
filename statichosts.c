@@ -265,8 +265,14 @@ HostsRecordType Hosts_LoadFromMetaLine(HostsContainer *Container, char *MetaLine
 	const char *IPOrCName;
 	const char *Domain;
 
-	IPOrCName = MetaLine;
-	Domain = GetKeyNameAndValue(MetaLine);
+	IPOrCName = GoToNextNonSpace(MetaLine);
+	if( IPOrCName == NULL )
+	{
+		INFO("Unrecognisable hosts : %s\n", MetaLine);
+		return HOSTS_TYPE_UNKNOWN;
+	}
+
+	Domain = GetKeyNameAndValue(IPOrCName, "\t ");
 	if( Domain == NULL )
 	{
 		INFO("Unrecognisable hosts : %s\n", MetaLine);

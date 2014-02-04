@@ -233,7 +233,6 @@ int GfwList_PeriodicWork(void)
 
 int GfwList_Init(BOOL StartPeriodWork)
 {
-	char		*ProtocolStr	=	(char *)ConfigGetRawString(&ConfigInfo, "PrimaryServer");
 	int			Count;
 
 	GfwList	=	ConfigGetRawString(&ConfigInfo, "GfwList");
@@ -244,14 +243,6 @@ int GfwList_Init(BOOL StartPeriodWork)
 	}
 
 	File	=	ConfigGetRawString(&ConfigInfo, "GfwListDownloadPath");
-
-	StrToLower(ProtocolStr);
-
-	if( strncmp(ProtocolStr, "udp", 3) != 0 )
-	{
-		ERRORMSG("Cannot load GFW List because `PrimaryServer' is not udp.\n");
-		return -1;
-	}
 
 	RWLock_Init(GFWListLock);
 

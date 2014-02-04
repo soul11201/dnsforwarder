@@ -29,6 +29,7 @@ typedef enum _OptionType{
 	TYPE_UNDEFINED = 0,
 	TYPE_INT32,
 	TYPE_BOOLEAN,
+	TYPE_PATH,
 	TYPE_STRING
 } OptionType;
 
@@ -90,7 +91,7 @@ typedef struct _ConfigFileInfo
 	int		LastAccessedOption;
 } ConfigFileInfo;
 
-char *GetKeyNameAndValue(char *Line);
+char *GetKeyNameAndValue(char *Line, const char *Delimiters);
 
 int ConfigInitInfo(ConfigFileInfo *Info);
 
