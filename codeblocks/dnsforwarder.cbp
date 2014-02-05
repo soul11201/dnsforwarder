@@ -48,7 +48,7 @@
 			<Add option="-Wall" />
 		</Compiler>
 		<Linker>
-			<Add option="-lcurl -lssl -lcrypto -lldap -lrt -lssl -lcrypto -lz" />
+			<Add option="-lcurl -lssl -lcrypto" />
 			<Add library="pthread" />
 		</Linker>
 		<Unit filename="../addresschunk.c">
@@ -67,7 +67,12 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../bst.h" />
+		<Unit filename="../cacheht.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../cacheht.h" />
 		<Unit filename="../common.h" />
+		<Unit filename="../config.h" />
 		<Unit filename="../debug.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -108,10 +113,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../gfwlist.h" />
-		<Unit filename="../hashtable.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="../hashtable.h" />
 		<Unit filename="../hosts.c">
 			<Option compilerVar="CC" />
 		</Unit>

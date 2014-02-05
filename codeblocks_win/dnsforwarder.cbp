@@ -96,7 +96,7 @@
 					<Add option="-Os" />
 					<Add option="-O3" />
 					<Add option="-DNODOWNLOAD" />
-					<Add option="-DARMVERSION" />
+					<Add option="-DSTATIC_LINK" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -159,6 +159,7 @@
 		</Unit>
 		<Unit filename="../cacheht.h" />
 		<Unit filename="../common.h" />
+		<Unit filename="../config.h" />
 		<Unit filename="../debug.c">
 			<Option compilerVar="CC" />
 		</Unit>
