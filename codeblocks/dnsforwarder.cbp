@@ -46,6 +46,9 @@
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
+			<Add option="-DHAVE_PTHREAD_SPIN_INIT" />
+			<Add option="-DHAVE_PTHREAD_RWLOCK_INIT" />
+			<Add option="-DDOWNLOAD_LIBCURL" />
 		</Compiler>
 		<Linker>
 			<Add option="-lcurl -lssl -lcrypto" />
