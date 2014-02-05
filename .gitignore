@@ -1,5 +1,6 @@
 *.bak
 codeblocks/obj/
+codeblocks/bin/
 codeblocks/*.depend
 codeblocks/*.layout
 codeblocks_win/obj/
