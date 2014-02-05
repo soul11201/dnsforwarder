@@ -715,9 +715,11 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_silent_rules
-enable_dependency_tracking
 with_ccflags
+enable_dependency_tracking
+enable_downloader
 enable_debug
+enable_android
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1348,7 +1350,9 @@ Optional Features:
                           do not reject slow dependency extractors
   --disable-dependency-tracking
                           speeds up one-time build
+  --enable-downloader     enable downloader (default=yes)
   --enable-debug          enable DEBUG mode (default=no)
+  --enable-android        enable downloader (default=no)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -2890,6 +2894,21 @@ fi
 ac_config_headers="$ac_config_headers config.h"
 
 
+
+# Check whether --with-ccflags was given.
+if test "${with_ccflags+set}" = set; then :
+  withval=$with_ccflags;    case "${withval}" in
+	    yes) CFLAGS="" ;;
+	    no)   ;;
+	    *)   as_fn_error $? "bad value ${withval} for --with-ccflags" "$LINENO" 5 ;;
+	    esac
+
+else
+  CFLAGS=""
+
+fi
+
+
 # Checks for programs.
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -4031,8 +4050,6 @@ else
 fi
 
 
-
-
 # Checks for pthread.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -lpthread" >&5
 $as_echo_n "checking for pthread_create in -lpthread... " >&6; }
@@ -4071,102 +4088,6 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pthread_pthread_create" >&5
 $as_echo "$ac_cv_lib_pthread_pthread_create" >&6; }
 if test "x$ac_cv_lib_pthread_pthread_create" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBPTHREAD 1
-_ACEOF
-
-  LIBS="-lpthread $LIBS"
-
-else
-  as_fn_error $? "No pthread found." "$LINENO" 5
-
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_exit in -lpthread" >&5
-$as_echo_n "checking for pthread_exit in -lpthread... " >&6; }
-if ${ac_cv_lib_pthread_pthread_exit+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpthread  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char pthread_exit ();
-int
-main ()
-{
-return pthread_exit ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_pthread_pthread_exit=yes
-else
-  ac_cv_lib_pthread_pthread_exit=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pthread_pthread_exit" >&5
-$as_echo "$ac_cv_lib_pthread_pthread_exit" >&6; }
-if test "x$ac_cv_lib_pthread_pthread_exit" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBPTHREAD 1
-_ACEOF
-
-  LIBS="-lpthread $LIBS"
-
-else
-  as_fn_error $? "No pthread found." "$LINENO" 5
-
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_detach in -lpthread" >&5
-$as_echo_n "checking for pthread_detach in -lpthread... " >&6; }
-if ${ac_cv_lib_pthread_pthread_detach+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpthread  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char pthread_detach ();
-int
-main ()
-{
-return pthread_detach ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_pthread_pthread_detach=yes
-else
-  ac_cv_lib_pthread_pthread_detach=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pthread_pthread_detach" >&5
-$as_echo "$ac_cv_lib_pthread_pthread_detach" >&6; }
-if test "x$ac_cv_lib_pthread_pthread_detach" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBPTHREAD 1
 _ACEOF
@@ -4226,102 +4147,23 @@ else
 
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_spin_init in -lpthread" >&5
-$as_echo_n "checking for pthread_spin_init in -lpthread... " >&6; }
-if ${ac_cv_lib_pthread_pthread_spin_init+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpthread  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char pthread_spin_init ();
-int
-main ()
-{
-return pthread_spin_init ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_pthread_pthread_spin_init=yes
-else
-  ac_cv_lib_pthread_pthread_spin_init=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pthread_pthread_spin_init" >&5
-$as_echo "$ac_cv_lib_pthread_pthread_spin_init" >&6; }
-if test "x$ac_cv_lib_pthread_pthread_spin_init" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBPTHREAD 1
-_ACEOF
-
-  LIBS="-lpthread $LIBS"
+# Check whether --enable-downloader was given.
+if test "${enable_downloader+set}" = set; then :
+  enableval=$enable_downloader;    case "${enableval}" in
+	    yes)  DOWNLOADER=yes;;
+	    no)   DOWNLOADER=no;;
+	    *)   as_fn_error $? "bad value ${enableval} for --enable-downloader" "$LINENO" 5 ;;
+	    esac
 
 else
-  as_fn_error $? "No pthread found." "$LINENO" 5
+  DOWNLOADER=yes
 
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_rwlock_init in -lpthread" >&5
-$as_echo_n "checking for pthread_rwlock_init in -lpthread... " >&6; }
-if ${ac_cv_lib_pthread_pthread_rwlock_init+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpthread  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char pthread_rwlock_init ();
-int
-main ()
-{
-return pthread_rwlock_init ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_pthread_pthread_rwlock_init=yes
-else
-  ac_cv_lib_pthread_pthread_rwlock_init=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pthread_pthread_rwlock_init" >&5
-$as_echo "$ac_cv_lib_pthread_pthread_rwlock_init" >&6; }
-if test "x$ac_cv_lib_pthread_pthread_rwlock_init" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBPTHREAD 1
-_ACEOF
-
-  LIBS="-lpthread $LIBS"
-
-else
-  as_fn_error $? "No pthread found." "$LINENO" 5
-
-fi
-
+if test "$DOWNLOADER" == "yes"
+then
 
 # Checks for curl.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for curl_global_init in -lcurl" >&5
@@ -4361,198 +4203,6 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_curl_curl_global_init" >&5
 $as_echo "$ac_cv_lib_curl_curl_global_init" >&6; }
 if test "x$ac_cv_lib_curl_curl_global_init" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBCURL 1
-_ACEOF
-
-  LIBS="-lcurl $LIBS"
-
-else
-  as_fn_error $? "No libcurl found." "$LINENO" 5
-
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for curl_easy_init in -lcurl" >&5
-$as_echo_n "checking for curl_easy_init in -lcurl... " >&6; }
-if ${ac_cv_lib_curl_curl_easy_init+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcurl  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char curl_easy_init ();
-int
-main ()
-{
-return curl_easy_init ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_curl_curl_easy_init=yes
-else
-  ac_cv_lib_curl_curl_easy_init=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_curl_curl_easy_init" >&5
-$as_echo "$ac_cv_lib_curl_curl_easy_init" >&6; }
-if test "x$ac_cv_lib_curl_curl_easy_init" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBCURL 1
-_ACEOF
-
-  LIBS="-lcurl $LIBS"
-
-else
-  as_fn_error $? "No libcurl found." "$LINENO" 5
-
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for curl_easy_setopt in -lcurl" >&5
-$as_echo_n "checking for curl_easy_setopt in -lcurl... " >&6; }
-if ${ac_cv_lib_curl_curl_easy_setopt+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcurl  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char curl_easy_setopt ();
-int
-main ()
-{
-return curl_easy_setopt ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_curl_curl_easy_setopt=yes
-else
-  ac_cv_lib_curl_curl_easy_setopt=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_curl_curl_easy_setopt" >&5
-$as_echo "$ac_cv_lib_curl_curl_easy_setopt" >&6; }
-if test "x$ac_cv_lib_curl_curl_easy_setopt" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBCURL 1
-_ACEOF
-
-  LIBS="-lcurl $LIBS"
-
-else
-  as_fn_error $? "No libcurl found." "$LINENO" 5
-
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for curl_easy_perform in -lcurl" >&5
-$as_echo_n "checking for curl_easy_perform in -lcurl... " >&6; }
-if ${ac_cv_lib_curl_curl_easy_perform+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcurl  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char curl_easy_perform ();
-int
-main ()
-{
-return curl_easy_perform ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_curl_curl_easy_perform=yes
-else
-  ac_cv_lib_curl_curl_easy_perform=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_curl_curl_easy_perform" >&5
-$as_echo "$ac_cv_lib_curl_curl_easy_perform" >&6; }
-if test "x$ac_cv_lib_curl_curl_easy_perform" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBCURL 1
-_ACEOF
-
-  LIBS="-lcurl $LIBS"
-
-else
-  as_fn_error $? "No libcurl found." "$LINENO" 5
-
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for curl_easy_cleanup in -lcurl" >&5
-$as_echo_n "checking for curl_easy_cleanup in -lcurl... " >&6; }
-if ${ac_cv_lib_curl_curl_easy_cleanup+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcurl  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char curl_easy_cleanup ();
-int
-main ()
-{
-return curl_easy_cleanup ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_curl_curl_easy_cleanup=yes
-else
-  ac_cv_lib_curl_curl_easy_cleanup=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_curl_curl_easy_cleanup" >&5
-$as_echo "$ac_cv_lib_curl_curl_easy_cleanup" >&6; }
-if test "x$ac_cv_lib_curl_curl_easy_cleanup" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBCURL 1
 _ACEOF
@@ -4614,199 +4264,10 @@ else
 
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for BIO_new_mem_buf in -lcrypto" >&5
-$as_echo_n "checking for BIO_new_mem_buf in -lcrypto... " >&6; }
-if ${ac_cv_lib_crypto_BIO_new_mem_buf+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcrypto  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char BIO_new_mem_buf ();
-int
-main ()
-{
-return BIO_new_mem_buf ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_crypto_BIO_new_mem_buf=yes
-else
-  ac_cv_lib_crypto_BIO_new_mem_buf=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crypto_BIO_new_mem_buf" >&5
-$as_echo "$ac_cv_lib_crypto_BIO_new_mem_buf" >&6; }
-if test "x$ac_cv_lib_crypto_BIO_new_mem_buf" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBCRYPTO 1
-_ACEOF
-
-  LIBS="-lcrypto $LIBS"
 
 else
-  as_fn_error $? "No openssl found." "$LINENO" 5
-
+CFLAGS="${CFLAGS} -DNODOWNLOAD "
 fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for BIO_free_all in -lcrypto" >&5
-$as_echo_n "checking for BIO_free_all in -lcrypto... " >&6; }
-if ${ac_cv_lib_crypto_BIO_free_all+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcrypto  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char BIO_free_all ();
-int
-main ()
-{
-return BIO_free_all ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_crypto_BIO_free_all=yes
-else
-  ac_cv_lib_crypto_BIO_free_all=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crypto_BIO_free_all" >&5
-$as_echo "$ac_cv_lib_crypto_BIO_free_all" >&6; }
-if test "x$ac_cv_lib_crypto_BIO_free_all" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBCRYPTO 1
-_ACEOF
-
-  LIBS="-lcrypto $LIBS"
-
-else
-  as_fn_error $? "No openssl found." "$LINENO" 5
-
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for BIO_push in -lcrypto" >&5
-$as_echo_n "checking for BIO_push in -lcrypto... " >&6; }
-if ${ac_cv_lib_crypto_BIO_push+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcrypto  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char BIO_push ();
-int
-main ()
-{
-return BIO_push ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_crypto_BIO_push=yes
-else
-  ac_cv_lib_crypto_BIO_push=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crypto_BIO_push" >&5
-$as_echo "$ac_cv_lib_crypto_BIO_push" >&6; }
-if test "x$ac_cv_lib_crypto_BIO_push" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBCRYPTO 1
-_ACEOF
-
-  LIBS="-lcrypto $LIBS"
-
-else
-  as_fn_error $? "No openssl found." "$LINENO" 5
-
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for BIO_read in -lcrypto" >&5
-$as_echo_n "checking for BIO_read in -lcrypto... " >&6; }
-if ${ac_cv_lib_crypto_BIO_read+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcrypto  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char BIO_read ();
-int
-main ()
-{
-return BIO_read ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_crypto_BIO_read=yes
-else
-  ac_cv_lib_crypto_BIO_read=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crypto_BIO_read" >&5
-$as_echo "$ac_cv_lib_crypto_BIO_read" >&6; }
-if test "x$ac_cv_lib_crypto_BIO_read" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBCRYPTO 1
-_ACEOF
-
-  LIBS="-lcrypto $LIBS"
-
-else
-  as_fn_error $? "No openssl found." "$LINENO" 5
-
-fi
-
-
 
 # Checks for header files.
 ac_ext=c
@@ -5206,7 +4667,7 @@ fi
 done
 
 
-for ac_header in arpa/inet.h fcntl.h limits.h memory.h netinet/in.h stdlib.h string.h sys/ioctl.h sys/socket.h unistd.h math.h stdint.h
+for ac_header in arpa/inet.h fcntl.h limits.h memory.h netinet/in.h stdlib.h string.h sys/ioctl.h sys/socket.h unistd.h math.h stdint.h curl/curl.h openssl/bio.h openssl/evp.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -5614,7 +5075,7 @@ $as_echo "#define realloc rpl_realloc" >>confdefs.h
 fi
 
 
-for ac_func in inet_ntoa memmove memset pow select socket sqrt strchr strerror strpbrk strrchr strstr mkdir
+for ac_func in inet_ntoa memmove memset pow select socket sqrt strchr strerror strpbrk strrchr strstr mkdir pthread_spin_init pthread_rwlock_init
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -5627,31 +5088,27 @@ fi
 done
 
 
-
-# Check whether --with-ccflags was given.
-if test "${with_ccflags+set}" = set; then :
-  withval=$with_ccflags;    case "${withval}" in
-	    yes) [CFLAGS=""] ;;
-	    no)   ;;
-	    *)   as_fn_error $? "bad value ${withval} for --with-ccflags" "$LINENO" 5 ;;
+# Check whether --enable-debug was given.
+if test "${enable_debug+set}" = set; then :
+  enableval=$enable_debug;    case "${enableval}" in
+	    yes) CFLAGS="${CFLAGS} -DDEBUG -g -Wall " ;;
+	    no)  CFLAGS="${CFLAGS} -O2 " ;;
+	    *)   as_fn_error $? "bad value ${enableval} for --enable-debug" "$LINENO" 5 ;;
 	    esac
 
 else
-  CFLAGS=""
+  CFLAGS="${CFLAGS} -O2 "
 
 fi
 
 
-# Check whether --enable-debug was given.
-if test "${enable_debug+set}" = set; then :
-  enableval=$enable_debug;    case "${enableval}" in
-	    yes) CFLAGS="${CFLAGS} -DDEBUG -g -Wall" ;;
-	    no)  CFLAGS="${CFLAGS} -O2" ;;
-	    *)   as_fn_error $? "bad value ${enableval} for --enable-server" "$LINENO" 5 ;;
+# Check whether --enable-android was given.
+if test "${enable_android+set}" = set; then :
+  enableval=$enable_android;    case "${enableval}" in
+	    yes)  CFLAGS="${CFLAGS} -DANDROID ";;
+	    no)   ;;
+	    *)   as_fn_error $? "bad value ${enableval} for --enable-android" "$LINENO" 5 ;;
 	    esac
-
-else
-  CFLAGS="${CFLAGS} -O2"
 
 fi
 

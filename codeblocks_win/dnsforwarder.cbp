@@ -82,12 +82,12 @@
 					<Add option="-s" />
 				</Linker>
 			</Target>
-			<Target title="Release_ARM">
+			<Target title="Release_Android">
 				<Option platforms="Windows;" />
-				<Option output="./bin/Release_ARM/dnsforwarder" prefix_auto="0" extension_auto="0" />
-				<Option object_output="./obj/Release_ARM/" />
+				<Option output="./bin/Release_Android/dnsforwarder" prefix_auto="0" extension_auto="0" />
+				<Option object_output="./obj/Release_Android/" />
 				<Option type="1" />
-				<Option compiler="gnu_gcc_compiler_arm" />
+				<Option compiler="gnu_gcc_compiler_arm-linux-androideabi" />
 				<Option projectCompilerOptionsRelation="1" />
 				<Option projectLinkerOptionsRelation="1" />
 				<Option projectIncludeDirsRelation="1" />
@@ -96,19 +96,17 @@
 					<Add option="-Os" />
 					<Add option="-O3" />
 					<Add option="-DNODOWNLOAD" />
-					<Add option="-DSTATIC_LINK" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
-					<Add option="-lpthread" />
 				</Linker>
 			</Target>
-			<Target title="Release_ARM Internal_Debug">
+			<Target title="Release_Android Internal_Debug">
 				<Option platforms="Windows;" />
-				<Option output="./bin/Release_ARM_id/dnsforwarder" prefix_auto="0" extension_auto="0" />
-				<Option object_output="./obj/Release_ARM_id/" />
+				<Option output="./bin/Release_Android_id/dnsforwarder" prefix_auto="0" extension_auto="0" />
+				<Option object_output="./obj/Release_Android_id/" />
 				<Option type="1" />
-				<Option compiler="gnu_gcc_compiler_arm" />
+				<Option compiler="gnu_gcc_compiler_arm-linux-androideabi" />
 				<Option projectCompilerOptionsRelation="1" />
 				<Option projectLinkerOptionsRelation="1" />
 				<Option projectIncludeDirsRelation="1" />
@@ -117,12 +115,10 @@
 					<Add option="-Os" />
 					<Add option="-O3" />
 					<Add option="-DNODOWNLOAD" />
-					<Add option="-DARMVERSION" />
 					<Add option="-DINTERNAL_DEBUG" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
-					<Add option="-lpthread" />
 				</Linker>
 			</Target>
 		</Build>
