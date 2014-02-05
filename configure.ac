@@ -43,18 +43,19 @@ AC_CHECK_LIB(pthread, pthread_mutex_init, ,
 
 AC_ARG_ENABLE([downloader],
 	[AS_HELP_STRING([--enable-downloader],
-	    [enable downloader (default=yes)]
+	    [downloader, libcurl, wget, or no (default=libcurl)]
 	)],
 	[   case "${enableval}" in
-	    yes)  DOWNLOADER=yes;;
-	    no)   DOWNLOADER=no;;
-	    *)   AC_MSG_ERROR(bad value ${enableval} for --enable-downloader) ;;
+	    libcurl)    DOWNLOADER=libcurl;;
+	    wget)       DOWNLOADER=wget;;
+	    no)         DOWNLOADER=no;;
+	    *)          AC_MSG_ERROR(bad value ${enableval} for --enable-downloader) ;;
 	    esac
 	],
-	[DOWNLOADER=yes]
+	[DOWNLOADER=libcurl]
 	)
 
-if test "$DOWNLOADER" == "yes" 
+if test "$DOWNLOADER" == "libcurl" 
 then 
 
 # Checks for curl.
@@ -62,17 +63,45 @@ AC_CHECK_LIB(curl, curl_global_init, ,
 	AC_MSG_ERROR(No libcurl found.)
 	)
 
+CFLAGS="${CFLAGS} -DDOWNLOAD_LIBCURL "
+fi
+
+if test "$DOWNLOADER" == "wget" 
+then
+CFLAGS="${CFLAGS} -DDOWNLOAD_WGET "
+fi
+
+if test "$DOWNLOADER" == "no" 
+then
+CFLAGS="${CFLAGS} -DNODOWNLOAD "
+else
 # Checks for openssl.
 AC_CHECK_LIB(crypto, BIO_new, ,
 	AC_MSG_ERROR(No openssl found.)
 	)
-
-else
-CFLAGS="${CFLAGS} -DNODOWNLOAD "
 fi
+
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h memory.h netinet/in.h stdlib.h string.h sys/ioctl.h sys/socket.h unistd.h math.h stdint.h curl/curl.h openssl/bio.h openssl/evp.h])
+
+if test "$DOWNLOADER" == "libcurl"
+then
+AC_CHECK_HEADERS([curl/curl.h],
+                 [],
+                 AC_MSG_ERROR(No libcurl headers found.),
+                 []
+                 )
+fi
+
+if test "$DOWNLOADER" != "no"
+then
+AC_CHECK_HEADERS([openssl/evp.h openssl/bio.h]),
+                 [],
+                 AC_MSG_ERROR(No openssl headers found.),
+                 []
+                 )
+fi
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T
