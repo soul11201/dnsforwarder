@@ -9,6 +9,10 @@
 #		ifdef DOWNLOAD_LIBCURL
 #			include <curl/curl.h>
 #		endif /* DOWNLOAD_LIBCURL */
+#		ifdef DOWNLOAD_WGET
+#			include <stdlib.h>
+#			include <sys/wait.h>
+#		endif /* DOWNLOAD_WGET */
 #	endif
 #endif /* NODOWNLOAD */
 
