@@ -138,9 +138,17 @@ int GetFromInternet(const char *URL, const char *File)
 
 	sprintf(Cmd, "wget -t 2 -T 60 -N -q --no-check-certificate %s -O %s ", URL, File);
 
-	ret = retcode(Cmd);
+	ret = system(Cmd);
 
-	return ret;
+	if( ret != -1 && WIFEXITED(ret) )
+	{
+		if( WEXITSTATUS(ret) == 0 )
+		{
+			return 0;
+		}
+	}
+
+	return -1;
 #endif /* DOWNLOAD_WGET */
 #endif /* WIN32 */
 #else /* NODOWNLOAD */
