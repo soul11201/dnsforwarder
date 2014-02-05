@@ -95,8 +95,6 @@
 	#define WILDCARD_MATCHED		TRUE	/* Used as return value */
 
 	typedef short	sa_family_t;
-	typedef u_short	in_port_t;
-
 
 #else /* For Linux below */
 
@@ -132,7 +130,11 @@
 	/* And mutex */
 	typedef	pthread_mutex_t		MutexHandle;
 	/* spin lock */
+#	ifdef HAVE_PTHREAD_SPIN_INIT
 	typedef	pthread_spinlock_t	SpinHandle;
+#	else
+	typedef	pthread_mutex_t		SpinHandle;
+#	endif
 
 	/* There are so many HANDLEs are just ints in Linux. */
 	typedef	int	FileHandle;	/* The type of return value of open() */
@@ -145,7 +147,6 @@
     /* TCP_TIME_OUT, used as a return value */
 	#define TCP_TIME_OUT	EAGAIN
 
-	extern	int			errno;
 	#define GET_LAST_ERROR()	errno
 	#define SET_LAST_ERROR(i)	(errno = (i))
 
@@ -178,11 +179,19 @@
 	#define GET_MUTEX_FAILED	(!0)
 
 	/* spin lock */
+#	ifdef HAVE_PTHREAD_SPIN_INIT
 	#define CREATE_SPIN(s)		(pthread_spin_init(&(s), PTHREAD_PROCESS_PRIVATE))
 	#define LOCK_SPIN(s)		(pthread_spin_lock(&(s)))
 	#define LOCK_SPIN_TRY(s)	(pthread_spin_trylock(&(s)))
 	#define UNLOCK_SPIN(s)		(pthread_spin_unlock(&(s)))
 	#define DESTROY_SPIN(s)		(pthread_spin_destroy(&(s)))
+#	else
+	#define CREATE_SPIN(s)		(pthread_mutex_init(&(s), NULL))
+	#define LOCK_SPIN(s)		(pthread_mutex_lock(&(s)))
+	#define LOCK_SPIN_TRY(s)	(pthread_mutex_trylock(&(s)))
+	#define UNLOCK_SPIN(s)		(pthread_mutex_unlock(&(s)))
+	#define DESTROY_SPIN(s)		(pthread_mutex_destroy(&(s)))
+#	endif
 
     /* File and Mapping */
     /* In Linux, there is no a long process to map a file like Windows. */
@@ -241,7 +250,7 @@
 /* something is STILL on some state */
 #define __STILL
 
-#if HAVE_STDINT_H
+#ifdef HAVE_STDINT_H
 #	include <stdint.h>
 #else
 #	if (INT_MAX == 2147483647)
@@ -254,6 +263,10 @@
 #		define int16_t	short
 #		define uint16_t	unsigned short
 #	endif
+#endif
+
+#ifndef HAVE_IN_PORT_T
+typedef uint16_t	in_port_t;
 #endif
 
 /* Parameters' tag */

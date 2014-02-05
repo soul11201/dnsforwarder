@@ -453,7 +453,7 @@ int	GetConfigDirectory(char *out)
 #ifdef WIN32
 
 #else /* WIN32 */
-#ifndef STATIC_LINK
+#ifndef ANDROID
 	struct passwd *pw = getpwuid(getuid());
 	char *home = pw -> pw_dir;
 	*out = '\0';
@@ -464,9 +464,9 @@ int	GetConfigDirectory(char *out)
 	strcat(out, "/.dnsforwarder");
 
 	return 0;
-#else /* STATIC_LINK */
+#else /* ANDROID */
 	strcpy(out, "/system/root/.dnsforwarder");
-#endif /* STATIC_LINK */
+#endif /* ANDROID */
 #endif /* WIN32 */
 }
 

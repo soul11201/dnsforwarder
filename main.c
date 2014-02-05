@@ -33,7 +33,7 @@ static char		*ConfigFile;
 static BOOL		DeamonMode;
 
 #ifdef INTERNAL_DEBUG
-static BOOL		DebugMode == TRUE;
+static BOOL		DebugMode = TRUE;
 static int		DebugFileThresholdLength  = 102400;
 #endif
 
