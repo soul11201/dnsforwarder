@@ -83,7 +83,6 @@ fi
 
 
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h memory.h netinet/in.h stdlib.h string.h sys/ioctl.h sys/socket.h unistd.h math.h stdint.h curl/curl.h openssl/bio.h openssl/evp.h])
 
 if test "$DOWNLOADER" == "libcurl"
 then
