@@ -101,7 +101,7 @@ AC_ARG_ENABLE([debug],
 	
 AC_ARG_ENABLE([android],
 	[AS_HELP_STRING([--enable-android],
-	    [enable downloader (default=no)]
+	    [compile for android (default=no)]
 	)],
 	[   case "${enableval}" in
 	    yes)  [CFLAGS="${CFLAGS} -DANDROID "];;
