@@ -2,18 +2,19 @@
 #include <stdlib.h>
 
 #ifndef NODOWNLOAD
-#ifdef WIN32
-#include "common.h"
-#else
-#include <limits.h>
-#include <curl/curl.h>
-#endif
+#	ifdef WIN32
+#		include "common.h"
+#	else
+#		include <limits.h>
+#		ifdef DOWNLOAD_LIBCURL
+#			include <curl/curl.h>
+#		endif /* DOWNLOAD_LIBCURL */
+#	endif
 #endif /* NODOWNLOAD */
 
 #include "downloader.h"
 
-#ifndef NODOWNLOAD
-#ifndef WIN32
+#ifdef DOWNLOAD_LIBCURL
 static size_t WriteFileCallback(void *Contents, size_t Size, size_t nmemb, void *FileDes)
 {
 
@@ -22,8 +23,7 @@ static size_t WriteFileCallback(void *Contents, size_t Size, size_t nmemb, void 
 	return Size * nmemb;
 	return 0;
 }
-#endif /* WIN32 */
-#endif /* NODOWNLOAD */
+#endif /* DOWNLOAD_LIBCURL */
 
 int GetFromInternet(const char *URL, const char *File)
 {
@@ -91,7 +91,8 @@ int GetFromInternet(const char *URL, const char *File)
 	fclose(fp);
 
 	return 0;
-#else
+#else /* WIN32 */
+#ifdef DOWNLOAD_LIBCURL
 	CURL *curl;
 	CURLcode res;
 
@@ -130,9 +131,8 @@ int GetFromInternet(const char *URL, const char *File)
 		fclose(fp);
 		return 0;
 	}
-#endif /* WIN32 */
-#else /* NODOWNLOAD */
-/*
+#endif /* DOWNLOAD_LIBCURL */
+#ifdef DOWNLOAD_WGET
 	int	ret;
 	char Cmd[2048];
 
@@ -141,7 +141,9 @@ int GetFromInternet(const char *URL, const char *File)
 	ret = retcode(Cmd);
 
 	return ret;
-*/
+#endif /* DOWNLOAD_WGET */
+#endif /* WIN32 */
+#else /* NODOWNLOAD */
 	return -1;
 #endif /* NODOWNLOAD */
 }
