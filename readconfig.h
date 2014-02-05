@@ -42,7 +42,7 @@ typedef enum _MultilineStrategy{
 
 typedef union _VType{
 	const char	*str;
-	_32BIT_INT	INT32;
+	int32_t	INT32;
 	BOOL		boolean;
 } VType;
 
@@ -71,7 +71,7 @@ typedef struct _Option{
 	/* Value holder */
 	union {
 		StringList	str;
-		_32BIT_INT	INT32;
+		int32_t	INT32;
 		BOOL		boolean;
 	} Holder;
 
@@ -109,9 +109,9 @@ const char *ConfigGetRawString(ConfigFileInfo *Info, char *KeyName);
 
 StringList *ConfigGetStringList(ConfigFileInfo *Info, char *KeyName);
 
-_32BIT_INT ConfigGetNumberOfStrings(ConfigFileInfo *Info, char *KeyName);
+int32_t ConfigGetNumberOfStrings(ConfigFileInfo *Info, char *KeyName);
 
-_32BIT_INT ConfigGetInt32(ConfigFileInfo *Info, char *KeyName);
+int32_t ConfigGetInt32(ConfigFileInfo *Info, char *KeyName);
 
 BOOL ConfigGetBoolean(ConfigFileInfo *Info, char *KeyName);
 

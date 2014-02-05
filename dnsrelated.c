@@ -70,7 +70,7 @@ const DNSSECAlgorithm DNSSECAlgorithmList[] = {
 	{255,	"(reserved)"}
 };
 
-const char *DNSGetTypeName(_16BIT_UINT Num)
+const char *DNSGetTypeName(uint16_t Num)
 {
 	int loop;
 

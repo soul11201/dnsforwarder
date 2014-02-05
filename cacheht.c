@@ -5,7 +5,7 @@
 #include "utils.h"
 
 typedef struct _Cht_Slot{
-	_32BIT_INT	Next;
+	int32_t	Next;
 } Cht_Slot;
 
 static int CacheHT_CalculateSlotCount(int CacheSize)
@@ -53,7 +53,7 @@ int CacheHT_ReInit(CacheHT *h, char *BaseAddr, int CacheSize)
 	return 0;
 }
 
-static int CacheHT_CreateNewNode(CacheHT *h, _32BIT_UINT ChunkSize, Cht_Node **Out, void *Boundary)
+static int CacheHT_CreateNewNode(CacheHT *h, uint32_t ChunkSize, Cht_Node **Out, void *Boundary)
 {
 	int			NewNode_i;
 	Cht_Node	*NewNode;
@@ -79,13 +79,13 @@ static int CacheHT_CreateNewNode(CacheHT *h, _32BIT_UINT ChunkSize, Cht_Node **O
 	return NewNode_i;
 }
 
-_32BIT_INT CacheHT_FindUnusedNode(CacheHT		*h,
-								  _32BIT_UINT	ChunkSize,
+int32_t CacheHT_FindUnusedNode(CacheHT		*h,
+								  uint32_t	ChunkSize,
 								  Cht_Node		**Out,
 								  void			*Boundary
 								  )
 {
-	_32BIT_INT	Subscript = h -> FreeList;
+	int32_t	Subscript = h -> FreeList;
 	Cht_Node	*FirstNode = NULL;
 	Cht_Node	*SecondNode = NULL;
 
@@ -170,7 +170,7 @@ int CacheHT_InsertToSlot(CacheHT	*h,
 	return 0;
 }
 
-static Cht_Node *CacheHT_FindPredecesor(CacheHT *h, Cht_Slot *Slot, _32BIT_INT SubScriptOfNode)
+static Cht_Node *CacheHT_FindPredecesor(CacheHT *h, Cht_Slot *Slot, int32_t SubScriptOfNode)
 {
 	int Next = Slot -> Next;
 	Cht_Node *Node;
@@ -193,7 +193,7 @@ static Cht_Node *CacheHT_FindPredecesor(CacheHT *h, Cht_Slot *Slot, _32BIT_INT S
 
 }
 
-int CacheHT_RemoveFromSlot(CacheHT *h, _32BIT_INT SubScriptOfNode, Cht_Node *Node)
+int CacheHT_RemoveFromSlot(CacheHT *h, int32_t SubScriptOfNode, Cht_Node *Node)
 {
 	Array		*NodeChunk = &(h -> NodeChunk);
 	Cht_Slot	*Slot;

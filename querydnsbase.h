@@ -66,7 +66,7 @@ void ShowRefusingMassage(ThreadContext *Context);
 
 void ShowErrorMassage(ThreadContext *Context, char ProtocolCharacter);
 
-void ShowNormalMassage(ThreadContext *Context, _32BIT_INT Offset, char ProtocolCharacter);
+void ShowNormalMassage(ThreadContext *Context, int32_t Offset, char ProtocolCharacter);
 
 void ShowBlockedMessage(const char *RequestingDomain, const char *Package, const char *Message);
 

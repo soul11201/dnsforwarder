@@ -327,7 +327,7 @@ int	Base64Decode(const char *File)
 
 int IPv6AddressToNum(const char *asc, void *Buffer)
 {
-	_16BIT_INT	*buf_s	=	(_16BIT_INT *)Buffer;
+	int16_t	*buf_s	=	(int16_t *)Buffer;
 	const char	*itr;
 
 	memset(Buffer, 0, 16);
@@ -375,7 +375,7 @@ int IPv6AddressToNum(const char *asc, void *Buffer)
 			++buf_s;
 			++asc;
 		}
-		buf_s = (_16BIT_INT *)Buffer + 7;
+		buf_s = (int16_t *)Buffer + 7;
 		for(; *asc != '\0'; ++asc);
 		while(1)
 		{
@@ -453,7 +453,7 @@ int	GetConfigDirectory(char *out)
 #ifdef WIN32
 
 #else /* WIN32 */
-#ifndef ARMVERSION
+#ifndef STATIC_LINK
 	struct passwd *pw = getpwuid(getuid());
 	char *home = pw -> pw_dir;
 	*out = '\0';
@@ -464,9 +464,9 @@ int	GetConfigDirectory(char *out)
 	strcat(out, "/.dnsforwarder");
 
 	return 0;
-#else /* ARMVERSION */
+#else /* STATIC_LINK */
 	strcpy(out, "/system/root/.dnsforwarder");
-#endif /* ARMVERSION */
+#endif /* STATIC_LINK */
 #endif /* WIN32 */
 }
 
@@ -546,8 +546,8 @@ BOOL ContainWildCard(const char *item)
 
 int ELFHash(const char *str, int Unused)
 {
-	_32BIT_UINT h = 0;
-	_32BIT_UINT x = 0;
+	uint32_t h = 0;
+	uint32_t x = 0;
 
 	while( *str != '\0' )
 	{

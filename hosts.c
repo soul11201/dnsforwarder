@@ -198,6 +198,8 @@ static void GetHostsFromInternet_Thread(void *Unused)
 	const char *Script = ConfigGetRawString(&ConfigInfo, "HostsScript");
 	int			HostsRetryInterval = ConfigGetInt32(&ConfigInfo, "HostsRetryInterval");
 
+	INFO("Hosts File : \"%s\" -> \"%s\"\n", URL, File);
+
 	while(1)
 	{
 

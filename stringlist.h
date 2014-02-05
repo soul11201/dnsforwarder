@@ -14,9 +14,9 @@ const char *StringList_Get(__in StringList *s, __in int Subscript);
 
 int StringList_Count(StringList *s);
 
-_32BIT_INT StringList_Add(StringList *s, const char *str, char Delimiter);
+int32_t StringList_Add(StringList *s, const char *str, char Delimiter);
 
-_32BIT_INT StringList_AppendLast(StringList *s, const char *str, char Delimiter);
+int32_t StringList_AppendLast(StringList *s, const char *str, char Delimiter);
 
 void StringList_Catenate(StringList *des, StringList *src);
 

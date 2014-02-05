@@ -9,21 +9,21 @@ typedef struct _ExtendableBuffer{
 	char			*Data;
 
 	/* How many bytes have been used. */
-	_32BIT_UINT		Used;
+	uint32_t		Used;
 
 	/* How many bytes have allocated. */
-	_32BIT_UINT		Allocated;
+	uint32_t		Allocated;
 
 	/* Length of bytes allocated when initializing */
-	_32BIT_UINT		InitialSize;
+	uint32_t		InitialSize;
 
 	/* GuardSize */
-	_32BIT_INT		GuardSize;
+	int32_t		GuardSize;
 } ExtendableBuffer;
 
 int ExtendableBuffer_Init(	__in ExtendableBuffer	*eb,
-							__in _32BIT_UINT		InitSize,
-							__in _32BIT_INT			GuardSize);
+							__in uint32_t		InitSize,
+							__in int32_t			GuardSize);
 /* Description:
  *  Initialize an ExtendableBuffer.
  * Parameters:
@@ -54,7 +54,7 @@ int ExtendableBuffer_Init(	__in ExtendableBuffer	*eb,
  */
 
 BOOL ExtendableBuffer_GuarantyLeft(	__in ExtendableBuffer	*eb,
-									__in _32BIT_UINT		GuarantiedSize);
+									__in uint32_t		GuarantiedSize);
 /* Description:
  *  Make sure that the number of unused(left) bytes (`Allocated' - `Used') is
  *  greater than `GuarantiedSize'. Straightforwardly, make sure the unused
@@ -82,8 +82,8 @@ BOOL ExtendableBuffer_GuarantyLeft(	__in ExtendableBuffer	*eb,
  */
 
 char *ExtendableBuffer_Expand(	__in ExtendableBuffer	*eb,
-								__in _32BIT_UINT		ExpandedSize,
-								__out_opt _32BIT_INT	*Offset
+								__in uint32_t		ExpandedSize,
+								__out_opt int32_t	*Offset
 								);
 /* Description:
  *  Increase the number of used bytes by `ExpandedSize'. There is a call to
@@ -114,9 +114,9 @@ char *ExtendableBuffer_Expand(	__in ExtendableBuffer	*eb,
 
 #define	ExtendableBuffer_GetPositionByOffset(eb_ptr, offset)	((    (  (char *)  (    (eb_ptr) -> Data)   ) + (offset)         ))
 
-_32BIT_INT ExtendableBuffer_Add(ExtendableBuffer *eb, const char *Data, _32BIT_UINT DataLength);
+int32_t ExtendableBuffer_Add(ExtendableBuffer *eb, const char *Data, uint32_t DataLength);
 
-char *ExtendableBuffer_Eliminate(ExtendableBuffer *eb, _32BIT_UINT Start, _32BIT_UINT Length);
+char *ExtendableBuffer_Eliminate(ExtendableBuffer *eb, uint32_t Start, uint32_t Length);
 
 #define	ExtendableBuffer_Eliminate_Tail(eb_ptr, length)	(((eb_ptr) -> Used) -= (length))
 

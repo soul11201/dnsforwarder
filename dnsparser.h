@@ -5,8 +5,8 @@
 #include "common.h"
 #include "dnsrelated.h"
 
-#define GET_16_BIT_U_INT(ptr)	(ntohs(*(_16BIT_INT *)(ptr)))
-#define GET_32_BIT_U_INT(ptr)		(ntohl(*(_32BIT_INT *)(ptr)))
+#define GET_16_BIT_U_INT(ptr)	(ntohs(*(int16_t *)(ptr)))
+#define GET_32_BIT_U_INT(ptr)		(ntohl(*(int32_t *)(ptr)))
 #define GET_8_BIT_U_INT(ptr)		(*(unsigned char*)(ptr))
 
 #define DNS_HEADER_LENGTH	12
@@ -64,7 +64,7 @@ void DNSExpandCName(const char *DNSBody);
 typedef enum _RecordElement{
 	DNS_UNKNOWN  = 0,
 	DNS_LABELED_NAME,
-	DNS_32BIT_UINT,
+	DNSuint32_t,
 	DNS_16BIT_UINT,
 	DNS_8BIT_UINT,
 	DNS_CHARACTER_STRING,
@@ -125,28 +125,28 @@ int DNSGetDescriptor(DNSRecordType Type, BOOL NeededCache, const ElementDescript
  * http://www.ietf.org/rfc/rfc2535.txt (Section 6.1)
  */
 typedef struct _DNSMessageProperties{
-	_16BIT_UINT	Direction	:	1; /* query (0), or response (1) */
+	uint16_t	Direction	:	1; /* query (0), or response (1) */
 
 	/* Type:
 	 * 0	a standard query (QUERY).
 	 * 1	an inverse query (IQUERY).
 	 * 2	a server status request (STATUS).
 	 * 3-15	reserved for future use  */
-	_16BIT_UINT Type			:	4;
+	uint16_t Type			:	4;
 
-	_16BIT_UINT	AuthoritativeAnswer:1;
+	uint16_t	AuthoritativeAnswer:1;
 
-	_16BIT_UINT	TrunCation		:	1;
+	uint16_t	TrunCation		:	1;
 
-	_16BIT_UINT	RecursionDesired:	1; /* 0 no, 1 yes */
+	uint16_t	RecursionDesired:	1; /* 0 no, 1 yes */
 
-	_16BIT_UINT	RecursionAvailable:	1; /* 0 no, 1 yes */
+	uint16_t	RecursionAvailable:	1; /* 0 no, 1 yes */
 
-	_16BIT_UINT	Unused			:	1;
+	uint16_t	Unused			:	1;
 
-	_16BIT_UINT AuthenticData	:	1;
+	uint16_t AuthenticData	:	1;
 
-	_16BIT_UINT CheckingDisabled:	1;
+	uint16_t CheckingDisabled:	1;
 
 	/* ResponseCode:
 	 * 0	No error condition.
@@ -156,25 +156,25 @@ typedef struct _DNSMessageProperties{
 	 * 4	Not Implemented - The name server does not support the requested kind of query.
 	 * 5	Refused - The name server refuses to perform the specified operation for policy reasons. For example, a name server may not wish to provide the information to the particular requester, or a name server may not wish to perform a particular operation (e.g., zone transfer) for particular data.
 	 * 6-15	Reserved for future use. */
-	_16BIT_UINT	ResponseCode	:	4;
+	uint16_t	ResponseCode	:	4;
 
 }DNSFlags;
 #else
 typedef struct _DNSMessageProperties{
-	_16BIT_UINT	RecursionDesired:	1; /* 0 no, 1 yes */
+	uint16_t	RecursionDesired:	1; /* 0 no, 1 yes */
 
-	_16BIT_UINT	TrunCation		:	1;
+	uint16_t	TrunCation		:	1;
 
-	_16BIT_UINT	AuthoritativeAnswer:1;
+	uint16_t	AuthoritativeAnswer:1;
 
 	/* Type:
 	 * 0	a standard query (QUERY).
 	 * 1	an inverse query (IQUERY).
 	 * 2	a server status request (STATUS).
 	 * 3-15	reserved for future use  */
-	_16BIT_UINT Type			:	4;
+	uint16_t Type			:	4;
 
-	_16BIT_UINT	Direction	:	1; /* query (0), or response (1) */
+	uint16_t	Direction	:	1; /* query (0), or response (1) */
 
 
 	/* ResponseCode:
@@ -185,26 +185,26 @@ typedef struct _DNSMessageProperties{
 	 * 4	Not Implemented - The name server does not support the requested kind of query.
 	 * 5	Refused - The name server refuses to perform the specified operation for policy reasons. For example, a name server may not wish to provide the information to the particular requester, or a name server may not wish to perform a particular operation (e.g., zone transfer) for particular data.
 	 * 6-15	Reserved for future use. */
-	_16BIT_UINT	ResponseCode	:	4;
+	uint16_t	ResponseCode	:	4;
 
-	_16BIT_UINT CheckingDisabled:	1;
+	uint16_t CheckingDisabled:	1;
 
-	_16BIT_UINT AuthenticData	:	1;
+	uint16_t AuthenticData	:	1;
 
-	_16BIT_UINT	Unused			:	1;
+	uint16_t	Unused			:	1;
 
-	_16BIT_UINT	RecursionAvailable:	1; /* 0 no, 1 yes */
+	uint16_t	RecursionAvailable:	1; /* 0 no, 1 yes */
 
 }DNSFlags;
 #endif
 
 typedef struct _DNSHeader{
-	_16BIT_UINT		Identifier;
+	uint16_t		Identifier;
 	DNSFlags		Flags;
-	_16BIT_UINT		QuestionCount;
-	_16BIT_UINT		AnswerCount;
-	_16BIT_UINT		NameServerCount;
-	_16BIT_UINT		AdditionalCount;
+	uint16_t		QuestionCount;
+	uint16_t		AnswerCount;
+	uint16_t		NameServerCount;
+	uint16_t		AdditionalCount;
 }DNSHeader;
 
 #define DNSGetHeader(dns_body_ptr)	((DNSHeader *)(dns_body_ptr))

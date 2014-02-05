@@ -33,7 +33,7 @@ typedef struct _AddressList {
 	/* The `Counter' is used by `AddressList_Advance' and `AddressList_GetOne',
 	 * see them.
 	 */
-	_32BIT_UINT	Counter;
+	uint32_t	Counter;
 
 } AddressList;
 

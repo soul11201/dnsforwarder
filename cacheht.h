@@ -5,26 +5,26 @@
 #include "array.h"
 
 typedef struct _Cht_Node{
-	_32BIT_INT	Slot;
-	_32BIT_INT	Next;
-	_32BIT_INT	Offset;
-	_32BIT_UINT	TTL;
+	int32_t	Slot;
+	int32_t	Next;
+	int32_t	Offset;
+	uint32_t	TTL;
 	time_t		TimeAdded;
-	_32BIT_UINT	Length;
+	uint32_t	Length;
 } Cht_Node;
 
 typedef struct _HashTable{
 	Array		NodeChunk;
 	Array		Slots;
-	_32BIT_INT	FreeList;
+	int32_t	FreeList;
 }CacheHT;
 
 int CacheHT_Init(CacheHT *h, char *BaseAddr, int CacheSize);
 
 int CacheHT_ReInit(CacheHT *h, char *BaseAddr, int CacheSize);
 
-_32BIT_INT CacheHT_FindUnusedNode(CacheHT		*h,
-								  _32BIT_UINT	ChunkSize,
+int32_t CacheHT_FindUnusedNode(CacheHT		*h,
+								  uint32_t	ChunkSize,
 								  Cht_Node		**Out,
 								  void			*Boundary
 								  );
@@ -36,7 +36,7 @@ int CacheHT_InsertToSlot(CacheHT	*h,
 						 int		*HashValue
 						 );
 
-int CacheHT_RemoveFromSlot(CacheHT *h, _32BIT_INT SubScriptOfNode, Cht_Node *Node);
+int CacheHT_RemoveFromSlot(CacheHT *h, int32_t SubScriptOfNode, Cht_Node *Node);
 
 Cht_Node *CacheHT_Get(CacheHT *h, const char *Key, Cht_Node *Start, int *HashValue);
 

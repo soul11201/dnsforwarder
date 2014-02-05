@@ -4,14 +4,14 @@
 #include "array.h"
 
 typedef struct _Bst_NodeHead{
-	_32BIT_INT	Left;
-	_32BIT_INT	Right;
+	int32_t	Left;
+	int32_t	Right;
 } Bst_NodeHead;
 
 typedef struct _Bst {
 	Array		*Nodes;
 
-	_32BIT_INT	Root;
+	int32_t	Root;
 
 	int		(*Compare)(const void *, const void *);
 } Bst;

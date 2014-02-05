@@ -8,10 +8,10 @@ static HostsContainer	MainContainer;
 static BOOL				Inited = FALSE;
 
 typedef struct _OffsetOfHosts{
-	_32BIT_INT	Offset;
+	int32_t	Offset;
 } OffsetOfHosts;
 
-static _32BIT_INT Hosts_IdenticalToLast(HostsContainer	*Container,
+static int32_t Hosts_IdenticalToLast(HostsContainer	*Container,
 										HostsRecordType	CurrentType,
 										const char		*CurrentContent,
 										int				CurrentLength
@@ -19,8 +19,8 @@ static _32BIT_INT Hosts_IdenticalToLast(HostsContainer	*Container,
 {
 	static HostsContainer *LastContainer = NULL;
 	static HostsRecordType LastType = HOSTS_TYPE_UNKNOWN;
-	static _32BIT_INT LastOffset = 0;
-	static _32BIT_INT LastLength = 0;
+	static int32_t LastOffset = 0;
+	static int32_t LastLength = 0;
 
 	if( LastContainer == NULL || LastContainer != Container )
 	{

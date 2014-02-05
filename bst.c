@@ -33,7 +33,7 @@ static int Add(Bst *t, int ParentNode, BOOL IsLeft, const void *Data)
 {
 	static const Bst_NodeHead	NewHead = {-1, -1};
 
-	_32BIT_INT	NewElement = Array_PushBack(t -> Nodes, NULL, NULL);
+	int32_t	NewElement = Array_PushBack(t -> Nodes, NULL, NULL);
 
 	if( NewElement >= 0 )
 	{
@@ -67,7 +67,7 @@ int Bst_Add(Bst *t, const void *Data)
     {
 		return Add(t, -1, FALSE, Data);
     } else {
-		_32BIT_INT CurrentNode = t -> Root;
+		int32_t CurrentNode = t -> Root;
 
 		Bst_NodeHead *Current;
 
@@ -96,7 +96,7 @@ int Bst_Add(Bst *t, const void *Data)
 
 const void *Bst_Search(Bst *t, const void *Data, const void *Start)
 {
-	_32BIT_INT			CurrentNode;
+	int32_t			CurrentNode;
 	const Bst_NodeHead	*Current;
 	int					CompareResult;
 

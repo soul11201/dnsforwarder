@@ -95,7 +95,7 @@ void ShowErrorMassage(ThreadContext *Context, char ProtocolCharacter)
 			   );
 }
 
-void ShowNormalMassage(ThreadContext *Context, _32BIT_INT Offset, char ProtocolCharacter)
+void ShowNormalMassage(ThreadContext *Context, int32_t Offset, char ProtocolCharacter)
 {
 	char DateAndTime[32];
 	char InfoBuffer[1024];
@@ -156,7 +156,7 @@ int DNSFetchFromHosts(__in ThreadContext *Context)
 {
 	char		*Header;
 	int			RecordsLength;
-	_32BIT_INT	HeaderOffset;
+	int32_t	HeaderOffset;
 	int			AnswerCount;
 
 	Header = ExtendableBuffer_Expand(Context -> ResponseBuffer, Context -> RequestLength, &HeaderOffset);
@@ -202,7 +202,7 @@ int DNSFetchFromCache(__in ThreadContext *Context)
 {
 	int			RecordsCount, RecordsLength;
 	char		*Header;
-	_32BIT_INT	HeaderOffset;
+	int32_t	HeaderOffset;
 
 	Header = ExtendableBuffer_Expand(Context -> ResponseBuffer, Context -> RequestLength, &HeaderOffset);
 	if( Header == NULL )
@@ -247,7 +247,7 @@ int DNSFetchFromCache(__in ThreadContext *Context)
 int FetchFromHostsAndCache(ThreadContext *Context)
 {
 	int			StateOfReceiving = -1;
-	_32BIT_INT	OriOffset = ExtendableBuffer_GetEndOffset(Context -> ResponseBuffer);
+	int32_t	OriOffset = ExtendableBuffer_GetEndOffset(Context -> ResponseBuffer);
 
 	if( DNSGetAdditionalCount(Context -> RequestEntity) > 0 )
 	{
@@ -495,7 +495,7 @@ static int QueryFromServer(ThreadContext *Context)
 
 	BOOL		UseSecondary;
 
-	_32BIT_INT	StartOffset = ExtendableBuffer_GetEndOffset(Context -> ResponseBuffer);
+	int32_t	StartOffset = ExtendableBuffer_GetEndOffset(Context -> ResponseBuffer);
 
 	int			AnswerCount;
 
@@ -735,7 +735,7 @@ int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Typ
         return -1;
 	}
 
-	*(_16BIT_UINT *)RequestEntity = rand();
+	*(uint16_t *)RequestEntity = rand();
 
 	memcpy(&RecursionContext, Context, sizeof(RecursionContext));
 

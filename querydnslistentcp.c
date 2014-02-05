@@ -102,7 +102,7 @@ int QueryDNSListenTCPInit(void)
 	return 0;
 }
 
-static int Query(ThreadContext *Context, _16BIT_UINT TCPLength, SOCKET *ClientSocket, CompatibleAddr *ClientAddr)
+static int Query(ThreadContext *Context, uint16_t TCPLength, SOCKET *ClientSocket, CompatibleAddr *ClientAddr)
 {
 	int		State;
 
@@ -160,7 +160,7 @@ static int Query(ThreadContext *Context, _16BIT_UINT TCPLength, SOCKET *ClientSo
 
 		default: /* Succeed */
 			{
-				_16BIT_UINT ResponseLength;
+				uint16_t ResponseLength;
 				SET_16_BIT_U_INT(&ResponseLength, State);
 				send(*ClientSocket, (const char *)&ResponseLength, 2, 0);
 				send(*ClientSocket, ExtendableBuffer_GetData(Context -> ResponseBuffer), State, 0);
@@ -176,7 +176,7 @@ static int ReceiveFromClient(RecvInfo *Info)
 	CompatibleAddr		Peer	=	Info -> Peer;
 	int					state;
 
-	_16BIT_UINT			TCPLength = 0; /* Big-endian */
+	uint16_t			TCPLength = 0; /* Big-endian */
 
 	ThreadContext		Context;
 

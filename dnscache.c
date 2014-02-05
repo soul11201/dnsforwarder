@@ -24,24 +24,24 @@ static char				*MapStart;
 
 static ThreadHandle		TTLCountdown_Thread;
 
-static _32BIT_INT		CacheSize;
+static int32_t		CacheSize;
 static int				OverrideTTL;
 static int				TTLMultiple;
 static BOOL				IgnoreTTL;
 
-static _32BIT_INT		*CacheCount;
+static int32_t		*CacheCount;
 
-static volatile _32BIT_INT	*CacheEnd; /* Offset */
+static volatile int32_t	*CacheEnd; /* Offset */
 
 static CacheHT			*CacheInfo;
 
 struct _Header{
-	_32BIT_UINT	Ver;
-	_32BIT_INT	CacheSize;
-	_32BIT_INT	End;
-	_32BIT_INT	CacheCount;
+	uint32_t	Ver;
+	int32_t	CacheSize;
+	int32_t	End;
+	int32_t	CacheCount;
 	CacheHT		ht;
-	char		Comment[128 - sizeof(_32BIT_UINT) - sizeof(_32BIT_INT) - sizeof(_32BIT_INT) - sizeof(_32BIT_INT) - sizeof(CacheHT)];
+	char		Comment[128 - sizeof(uint32_t) - sizeof(int32_t) - sizeof(int32_t) - sizeof(int32_t) - sizeof(CacheHT)];
 };
 
 static void DNSCacheTTLCountdown_Thread(void)
@@ -245,7 +245,11 @@ int DNSCache_Init(void)
 
 		InitCacheInfoState = InitCacheInfo(FALSE);
 	} else {
-		BOOL FileExists = FileIsReadable(CacheFile);
+		BOOL FileExists;
+
+		INFO("Cache File : %s\n", CacheFile);
+
+		FileExists = FileIsReadable(CacheFile);
 
 		CacheFileHandle = OPEN_FILE(CacheFile);
 		if(CacheFileHandle == INVALID_FILE)
@@ -312,11 +316,11 @@ BOOL Cache_IsInited(void)
 	return Inited;
 }
 
-static _32BIT_INT DNSCache_GetAviliableChunk(_32BIT_UINT Length, Cht_Node **Out)
+static int32_t DNSCache_GetAviliableChunk(uint32_t Length, Cht_Node **Out)
 {
-	_32BIT_INT	NodeNumber;
+	int32_t	NodeNumber;
 	Cht_Node	*Node;
-	_32BIT_UINT RoundedLength = ROUND_UP(Length, 8);
+	uint32_t RoundedLength = ROUND_UP(Length, 8);
 
 	NodeNumber = CacheHT_FindUnusedNode(CacheInfo, RoundedLength, &Node, MapStart + (*CacheEnd) + RoundedLength);
 	if( NodeNumber >= 0 )
@@ -376,13 +380,13 @@ static char *DNSCache_GenerateTextFromRawRecord(const char *DNSBody, const char 
 			{
 				case DNS_DATA_TYPE_INT:
 					if(Data.DataLength == 1)Buffer += sprintf(Buffer, "%d", (int)*(char *)InnerBuffer);
-					if(Data.DataLength == 2)Buffer += sprintf(Buffer, "%d", (int)*(_16BIT_INT *)InnerBuffer);
-					if(Data.DataLength == 4)Buffer += sprintf(Buffer, "%u", *(_32BIT_INT *)InnerBuffer);
+					if(Data.DataLength == 2)Buffer += sprintf(Buffer, "%d", (int)*(int16_t *)InnerBuffer);
+					if(Data.DataLength == 4)Buffer += sprintf(Buffer, "%u", *(int32_t *)InnerBuffer);
 					break;
 				case DNS_DATA_TYPE_UINT:
 					if(Data.DataLength == 1)Buffer += sprintf(Buffer, "%d", (int)*(unsigned char *)InnerBuffer);
-					if(Data.DataLength == 2)Buffer += sprintf(Buffer, "%d", (int)*(_16BIT_UINT *)InnerBuffer);
-					if(Data.DataLength == 4)Buffer += sprintf(Buffer, "%u", *(_32BIT_UINT *)InnerBuffer);
+					if(Data.DataLength == 2)Buffer += sprintf(Buffer, "%d", (int)*(uint16_t *)InnerBuffer);
+					if(Data.DataLength == 4)Buffer += sprintf(Buffer, "%u", *(uint32_t *)InnerBuffer);
 					break;
 				case DNS_DATA_TYPE_STRING:
 					Buffer += sprintf(Buffer, "%s", InnerBuffer);
@@ -441,7 +445,7 @@ static int DNSCache_AddAItemToCache(const char *DNSBody, const char *RecordBody,
 		/* If not, add it */
 
 		/* Subscript of a chunk in the main cache zone */
-		_32BIT_INT	Subscript;
+		int32_t	Subscript;
 
 		/* Node with subscript `Subscript' */
 		Cht_Node	*Node;

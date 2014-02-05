@@ -20,11 +20,11 @@ const ElementDescriptor DNS_RECORD_CNAME[] = {
 const ElementDescriptor DNS_RECORD_SOA[] = {
 	{DNS_LABELED_NAME,	"primary name server"},
 	{DNS_LABELED_NAME,	"responsible mail addr"},
-	{DNS_32BIT_UINT,	"serial"},
-	{DNS_32BIT_UINT,	"refresh"},
-	{DNS_32BIT_UINT,	"retry"},
-	{DNS_32BIT_UINT,	"expire"},
-	{DNS_32BIT_UINT,	"default TTL"},
+	{DNSuint32_t,	"serial"},
+	{DNSuint32_t,	"refresh"},
+	{DNSuint32_t,	"retry"},
+	{DNSuint32_t,	"expire"},
+	{DNSuint32_t,	"default TTL"},
 };
 
 const ElementDescriptor DNS_RECORD_DOMAIN_POINTER[] = {
@@ -55,9 +55,9 @@ const ElementDescriptor DNS_RECORD_RRSIG[] = {
 	{DNS_16BIT_UINT,		"Type Covered"},
 	{DNS_DNSKEY_ALGORITHM,	"Algorithm"},
 	{DNS_8BIT_UINT,			"Labels"},
-	{DNS_32BIT_UINT,		"Original TTL"},
-	{DNS_32BIT_UINT,		"Signature Expiration"},
-	{DNS_32BIT_UINT,		"Signature Inception"},
+	{DNSuint32_t,		"Original TTL"},
+	{DNSuint32_t,		"Signature Expiration"},
+	{DNSuint32_t,		"Signature Inception"},
 	{DNS_16BIT_UINT,		"Key Tag"},
 	{DNS_LABELED_NAME,		"Signer's Name"},
 	{DNS_DNSSIG_SIGNATURE,	"Signature"}
@@ -263,7 +263,7 @@ DNSDataInfo DNSParseData(const char *DNSBody,
 				break;
 
 			case DNS_IPV4_ADDR:
-			case DNS_32BIT_UINT:
+			case DNSuint32_t:
 				PendingData += 4;
 				break;
 
@@ -312,9 +312,9 @@ DNSDataInfo DNSParseData(const char *DNSBody,
 
 			break;
 
-		case DNS_32BIT_UINT:
+		case DNSuint32_t:
 			{
-				_32BIT_UINT Tmp = GET_32_BIT_U_INT(PendingData);
+				uint32_t Tmp = GET_32_BIT_U_INT(PendingData);
 				if(BufferLength < 4)
 					break;
 				memcpy(Buffer, &Tmp, 4);
@@ -325,7 +325,7 @@ DNSDataInfo DNSParseData(const char *DNSBody,
 
 		case DNS_16BIT_UINT:
 			{
-				_16BIT_UINT Tmp = GET_16_BIT_U_INT(PendingData);
+				uint16_t Tmp = GET_16_BIT_U_INT(PendingData);
 				if(BufferLength < 2)
 					break;
 				memcpy(Buffer, &Tmp, 2);
@@ -481,10 +481,10 @@ char *GetAnswer(const char *DNSBody, const char *DataBody, int DataLength, char 
 						Buffer += sprintf(Buffer, "%d", (int)*(char *)InnerBuffer);
 
 					if(Data.DataLength == 2)
-						Buffer += sprintf(Buffer, "%d", (int)*(_16BIT_INT *)InnerBuffer);
+						Buffer += sprintf(Buffer, "%d", (int)*(int16_t *)InnerBuffer);
 
 					if(Data.DataLength == 4)
-						Buffer += sprintf(Buffer, "%u", *(_32BIT_INT *)InnerBuffer);
+						Buffer += sprintf(Buffer, "%u", *(int32_t *)InnerBuffer);
 
 					break;
 
@@ -493,10 +493,10 @@ char *GetAnswer(const char *DNSBody, const char *DataBody, int DataLength, char 
 						Buffer += sprintf(Buffer, "%d", (int)*(unsigned char *)InnerBuffer);
 
 					if(Data.DataLength == 2)
-						Buffer += sprintf(Buffer, "%d", (int)*(_16BIT_UINT *)InnerBuffer);
+						Buffer += sprintf(Buffer, "%d", (int)*(uint16_t *)InnerBuffer);
 
 					if(Data.DataLength == 4)
-						Buffer += sprintf(Buffer, "%u", *(_32BIT_UINT *)InnerBuffer);
+						Buffer += sprintf(Buffer, "%u", *(uint32_t *)InnerBuffer);
 
 					break;
 

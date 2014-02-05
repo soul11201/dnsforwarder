@@ -4,7 +4,7 @@
 #include "array.h"
 
 typedef struct _Sht_NodeHead{
-	_32BIT_INT	Next;
+	int32_t	Next;
 	int			HashValue;
 } Sht_NodeHead;
 
@@ -25,7 +25,7 @@ const char *SimpleHT_Add(SimpleHT *ht, const char *Key, int KeyLength, const cha
 
 const char *SimpleHT_Find(SimpleHT *ht, const char *Key, int KeyLength, int *HashValue, const char *Start);
 
-const char *SimpleHT_Enum(SimpleHT *ht, _32BIT_INT *Start);
+const char *SimpleHT_Enum(SimpleHT *ht, int32_t *Start);
 
 void SimpleHT_Free(SimpleHT *ht);
 

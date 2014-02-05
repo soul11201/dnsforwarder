@@ -2,7 +2,7 @@
 #include "extendablebuffer.h"
 #include "utils.h"
 
-int ExtendableBuffer_Init(ExtendableBuffer *eb, _32BIT_UINT InitSize, _32BIT_INT GuardSize)
+int ExtendableBuffer_Init(ExtendableBuffer *eb, uint32_t InitSize, int32_t GuardSize)
 {
 	if( eb == NULL )
 	{
@@ -27,7 +27,7 @@ int ExtendableBuffer_Init(ExtendableBuffer *eb, _32BIT_UINT InitSize, _32BIT_INT
 	return 0;
 }
 
-BOOL ExtendableBuffer_GuarantyLeft(ExtendableBuffer *eb, _32BIT_UINT GuarantiedSize)
+BOOL ExtendableBuffer_GuarantyLeft(ExtendableBuffer *eb, uint32_t GuarantiedSize)
 {
 	if( eb == NULL )
 	{
@@ -56,8 +56,8 @@ BOOL ExtendableBuffer_GuarantyLeft(ExtendableBuffer *eb, _32BIT_UINT GuarantiedS
 }
 
 char *ExtendableBuffer_Expand(ExtendableBuffer *eb,
-							  _32BIT_UINT ExpandedSize,
-							  _32BIT_INT *Offset
+							  uint32_t ExpandedSize,
+							  int32_t *Offset
 							  )
 {
 	if( ExtendableBuffer_GuarantyLeft(eb, ExpandedSize) == TRUE )
@@ -76,7 +76,7 @@ char *ExtendableBuffer_Expand(ExtendableBuffer *eb,
 }
 
 /* Offset returned */
-_32BIT_INT ExtendableBuffer_Add(ExtendableBuffer *eb, const char *Data, _32BIT_UINT DataLength)
+int32_t ExtendableBuffer_Add(ExtendableBuffer *eb, const char *Data, uint32_t DataLength)
 {
 	volatile char *Here;
 
@@ -96,7 +96,7 @@ _32BIT_INT ExtendableBuffer_Add(ExtendableBuffer *eb, const char *Data, _32BIT_U
 	return (char *)Here - ExtendableBuffer_GetData(eb);
 }
 
-char *ExtendableBuffer_Eliminate(ExtendableBuffer *eb, _32BIT_UINT Start, _32BIT_UINT Length)
+char *ExtendableBuffer_Eliminate(ExtendableBuffer *eb, uint32_t Start, uint32_t Length)
 {
 	if( eb == NULL )
 	{

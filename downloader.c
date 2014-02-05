@@ -100,14 +100,14 @@ int GetFromInternet(const char *URL, const char *File)
 	fp = fopen(File, "w");
 	if( fp == NULL )
 	{
-		return 1;
+		return -1;
 	}
 
 	curl = curl_easy_init();
 	if( curl == NULL )
 	{
 		fclose(fp);
-		return 2;
+		return -2;
 	}
 
 
@@ -124,7 +124,7 @@ int GetFromInternet(const char *URL, const char *File)
 	{
 		curl_easy_cleanup(curl);
 		fclose(fp);
-		return 3;
+		return -3;
 	} else {
 		curl_easy_cleanup(curl);
 		fclose(fp);

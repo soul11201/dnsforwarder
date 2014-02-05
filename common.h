@@ -2,6 +2,7 @@
 #define _COMMON_H_
 
 #include <limits.h>
+#include "config.h"
 
 /* There are some differeces between Linux and Windows.
  * For convenience, we defined something here to unify interfaces,
@@ -235,49 +236,49 @@
 
 #define INVALID_THREAD	((ThreadHandle)NULL)
 
-#define	MAKE_RETURN_CODE()	(GET_LAST_ERROR == 0 ? 0 : (-1) * GET_LAST_ERROR - 1)
-#define	MAKE_ERROR_CODE()	(GET_LAST_ERROR == 0 ? 0 : (-1) * (GET_LAST_ERROR + 1))
-
 /* Unified interfaces end */
 
 /* something is STILL on some state */
 #define __STILL
 
-/* As the name suggests */
-#if (INT_MAX == 2147483647)
-	#define _32BIT_INT		int
-	#define _32BIT_UINT		unsigned int
-	#define _32BIT_UINT_MAX	0xFFFFFFFF
-#endif
-
-#if (SHRT_MAX == 32767)
-	#define _16BIT_INT	short
-	#define _16BIT_UINT	unsigned short
+#if HAVE_STDINT_H
+#	include <stdint.h>
+#else
+#	if (INT_MAX == 2147483647)
+#		define int32_t		int
+#		define uint32_t		unsigned int
+#		define UINT32_T_MAX	0xFFFFFFFF
+#	endif
+#
+#	if (SHRT_MAX == 32767)
+#		define int16_t	short
+#		define uint16_t	unsigned short
+#	endif
 #endif
 
 /* Parameters' tag */
 #ifndef __in
-	#define __in
+#	define __in
 #endif /* __in */
 
 #ifndef __in_opt
-	#define __in_opt
+#	define __in_opt
 #endif /* __in_opt */
 
 #ifndef __out
-	#define __out
+#	define __out
 #endif /* __out */
 
 #ifndef __out_opt
-	#define __out_opt
+#	define __out_opt
 #endif /* __out_opt */
 
 #ifndef __inout
-	#define __inout
+#	define __inout
 #endif /* __inout */
 
 #ifndef __inout_opt
-	#define __inout_opt
+#	define __inout_opt
 #endif /* __inout_opt */
 
 #define LENGTH_OF_IPV6_ADDRESS_ASCII	40

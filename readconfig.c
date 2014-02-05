@@ -266,7 +266,7 @@ static void ParseInt32(ConfigOption *Option, const char *Value)
 
 		case STRATEGY_APPEND:
 			{
-				_32BIT_INT SpecifiedValue;
+				int32_t SpecifiedValue;
 
 				sscanf(Value, "%d", &SpecifiedValue);
 				Option -> Holder.INT32 += SpecifiedValue;
@@ -449,7 +449,7 @@ StringList *ConfigGetStringList(ConfigFileInfo *Info, char *KeyName)
 	return NULL;
 }
 
-_32BIT_INT ConfigGetNumberOfStrings(ConfigFileInfo *Info, char *KeyName)
+int32_t ConfigGetNumberOfStrings(ConfigFileInfo *Info, char *KeyName)
 {
 	ConfigOption *Option = GetOptionOfAInfo(Info, KeyName);
 
@@ -461,7 +461,7 @@ _32BIT_INT ConfigGetNumberOfStrings(ConfigFileInfo *Info, char *KeyName)
 	return 0;
 }
 
-_32BIT_INT ConfigGetInt32(ConfigFileInfo *Info, char *KeyName)
+int32_t ConfigGetInt32(ConfigFileInfo *Info, char *KeyName)
 {
 	ConfigOption *Option = GetOptionOfAInfo(Info, KeyName);
 

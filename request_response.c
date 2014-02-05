@@ -48,7 +48,7 @@ int SendAndReveiveRawMessageViaTCP(SOCKET			Sock,
 								   const void		*Content,
 								   int				ContentLength,
 								   ExtendableBuffer	*ResultBuffer,
-								   _16BIT_UINT		*TCPLength /* Big-endian */
+								   uint16_t		*TCPLength /* Big-endian */
 								   )
 {
 	int		StateOfReceiving;
@@ -110,7 +110,7 @@ int QueryDNSViaTCP(SOCKET			Sock,
 {
 	int			StateOfReceiving;
 	int			CurrentOffset;
-	_16BIT_UINT	TCPLength;
+	uint16_t	TCPLength;
 
 	if(RequestLength == 0) return 0;
 	if(RequestLength < 0) return -1;
@@ -155,7 +155,7 @@ static IpChunk	*BlockedIP = NULL;
 int InitBlockedIP(StringList *l)
 {
 	const char	*Itr = NULL;
-	_32BIT_UINT	Ip;
+	uint32_t	Ip;
 
 	if( l == NULL )
 	{
@@ -260,7 +260,7 @@ int QueryDNSViaUDP(SOCKET			Sock,
 			break;
 		}
 
-		if( *(_16BIT_UINT *)RequestEntity != *(_16BIT_UINT *)NewlyReceived )
+		if( *(uint16_t *)RequestEntity != *(uint16_t *)NewlyReceived )
 		{
 			continue;
 		}
@@ -278,7 +278,7 @@ int QueryDNSViaUDP(SOCKET			Sock,
 			DNSGetAdditionalCount(NewlyReceived) <= 0 )
 		{
 			const unsigned char *Answer;
-			_32BIT_UINT *Data;
+			uint32_t *Data;
 
 			Answer = (const unsigned char *)DNSGetAnswerRecordPosition(NewlyReceived, 1);
 
@@ -288,7 +288,7 @@ int QueryDNSViaUDP(SOCKET			Sock,
 				continue;
 			}
 
-			Data = (_32BIT_UINT *)DNSGetResourceDataPos(Answer);
+			Data = (uint32_t *)DNSGetResourceDataPos(Answer);
 
 			if( DNSGetRecordType(Answer) == DNS_TYPE_A && *Answer != 0xC0 )
 			{
@@ -311,7 +311,7 @@ int QueryDNSViaUDP(SOCKET			Sock,
 			{
 				int					Loop		=	2;
 				const unsigned char	*Answer1	=	Answer;
-				_32BIT_UINT			*Data1		=	Data;
+				uint32_t			*Data1		=	Data;
 
 				do
 				{
@@ -325,7 +325,7 @@ int QueryDNSViaUDP(SOCKET			Sock,
 					++Loop;
 
 					Answer1 = (const unsigned char *)DNSGetAnswerRecordPosition(NewlyReceived, Loop);
-					Data1 = (_32BIT_UINT *)DNSGetResourceDataPos(Answer1);
+					Data1 = (uint32_t *)DNSGetResourceDataPos(Answer1);
 
 				} while( Loop <= AnswerCount );
 
@@ -387,7 +387,7 @@ int ProbeFakeAddresses(const char	*ServerAddress,
 
 	RequestLength = 12 + strlen(RequestingDomain) + 2 + 4;
 
-	*(_16BIT_UINT *)RequestEntity = rand();
+	*(uint16_t *)RequestEntity = rand();
 
 	if( sendto(Sock, RequestEntity, RequestLength, 0, (struct sockaddr *)&PeerAddr, AddrLen) == 0 )
 	{
@@ -402,7 +402,7 @@ int ProbeFakeAddresses(const char	*ServerAddress,
 			break;
 		}
 
-		if( *(_16BIT_UINT *)RequestEntity != *(_16BIT_UINT *)NewlyReceived )
+		if( *(uint16_t *)RequestEntity != *(uint16_t *)NewlyReceived )
 		{
 			continue;
 		}
@@ -573,7 +573,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 {
 	int			StateOfReceiving;
 
-	_32BIT_INT	StartOffset = ExtendableBuffer_GetEndOffset(ResultBuffer);
+	int32_t	StartOffset = ExtendableBuffer_GetEndOffset(ResultBuffer);
 
 	/* Connecting to Server */
 	if( ProtocolToServer == DNS_QUARY_PROTOCOL_UDP )

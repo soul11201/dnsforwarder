@@ -186,6 +186,41 @@ void Probe(int Threshold)
 	StringChunk_Free(&s, TRUE);
 }
 
+int GetDefaultConfigureFile(char *out, int OutLength)
+{
+#ifdef WIN32
+	GetModulePath(out, OutLength);
+	strcat(out, "\\dnsforwarder.config");
+#else
+	GetConfigDirectory(out);
+	strcat(out, "/config");
+#endif
+	return 0;
+}
+
+#ifndef WIN32
+void PrepareEnvironment(void)
+{
+	char ConfigDirectory[2048];
+
+	GetConfigDirectory(ConfigDirectory);
+
+	if( mkdir(ConfigDirectory, S_IRWXU | S_IRGRP | S_IROTH) != 0 )
+	{
+		int		ErrorNum = GET_LAST_ERROR();
+		char	ErrorMessage[320];
+		ErrorMessage[0] = '\0';
+
+		GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
+
+		printf("mkdir : %s failed : %s\n", ConfigDirectory, ErrorMessage);
+		return;
+	}
+
+	printf("Please put configure file into `%s' and rename it to `config'.\n", ConfigDirectory);
+}
+#endif
+
 int ArgParse(int argc, char *argv_ori[])
 {
 	char **argv = argv_ori;
@@ -203,9 +238,15 @@ int ArgParse(int argc, char *argv_ori[])
 				  "  -d         Daemon mode. Running at background.\n"
 				  "  -P         Try to probe all the fake IP addresses held in false DNS responses,\n"
 #ifdef INTERNAL_DEBUG
+				  "\n"
 				  "  -nD        \n"
 				  "  -DT <NUM>  \n"
 #endif
+#ifndef WIN32
+				  "\n"
+				  "  -p         Prepare needed environment.\n"
+#endif
+				  "\n"
 				  "  -h         Show this help.\n"
 				  "\n"
 				  "Output format:\n"
@@ -277,23 +318,22 @@ int ArgParse(int argc, char *argv_ori[])
 		}
 #endif
 
+#ifndef WIN32
+		if( strcmp("-p", *argv) == 0 )
+		{
+			PrepareEnvironment();
+			exit(0);
+
+			++argv;
+            continue;
+		}
+#endif
+
 		PRINTM("Unrecognisable arg `%s'\n", *argv);
         ++argv;
     }
 
     return 0;
-}
-
-int GetDefaultConfigureFile(char *out, int OutLength)
-{
-#ifdef WIN32
-	GetModulePath(out, OutLength);
-	strcat(out, "\\dnsforwarder.config");
-#else
-	GetConfigDirectory(out);
-	strcat(out, "/config");
-#endif
-	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -303,12 +343,12 @@ int main(int argc, char *argv[])
 #endif
 
 #ifndef NODOWNLOAD
-#ifdef WIN32
+#	ifdef WIN32
     if(WSAStartup(MAKEWORD(2, 2), &wdata) != 0)
         return -1;
-#else
+#	else
 	curl_global_init(CURL_GLOBAL_ALL);
-#endif /* WIN32 */
+#	endif /* WIN32 */
 #endif /* NODOWNLOAD */
 
 #ifdef WIN32
@@ -337,6 +377,10 @@ int main(int argc, char *argv[])
 	}
 
     PRINTM("DNSforwarder by holmium. Free for non-commercial use. Version "VERSION" .\nTime of compilation : %s %s.\n\n", __DATE__, __TIME__);
+
+#ifndef WIN32
+    PRINTM("Please run `dnsforwarder -p' if something wrong.\n")
+#endif
 
     PRINTM("Configure File : %s\n\n", ConfigFile);
 

@@ -99,7 +99,7 @@ int StringList_Count(StringList *s)
 	return n;
 }
 
-_32BIT_INT StringList_Add(StringList *s, const char *str, char Delimiter)
+int32_t StringList_Add(StringList *s, const char *str, char Delimiter)
 {
 	int Offset = ExtendableBuffer_Add((ExtendableBuffer *)s, str, strlen(str) + 1);
 
@@ -131,7 +131,7 @@ const char *StringList_Find(StringList *s, const char *str)
 	return NULL;
 }
 
-_32BIT_INT StringList_AppendLast(StringList *s, const char *str, char Delimiter)
+int32_t StringList_AppendLast(StringList *s, const char *str, char Delimiter)
 {
 	char *Tail;
 	int Length = strlen(str);

@@ -5,8 +5,8 @@
 //#include "common.h"
 #include "dnsparser.h"
 
-#define SET_16_BIT_U_INT(here, val)	(*(_16BIT_UINT *)(here) = htons((_16BIT_UINT)(val)))
-#define SET_32_BIT_U_INT(here, val)	(*(_32BIT_UINT *)(here) = htonl((_32BIT_UINT)(val)))
+#define SET_16_BIT_U_INT(here, val)	(*(uint16_t *)(here) = htons((uint16_t)(val)))
+#define SET_32_BIT_U_INT(here, val)	(*(uint32_t *)(here) = htonl((uint32_t)(val)))
 
 /* Handle DNS header*/
 #define DNSSetQueryIdentifier(dns_start, QId)	SET_16_BIT_U_INT((char *)(dns_start), QId)
@@ -43,18 +43,18 @@ char *DNSGenHeader(	__out char			*Buffer,
 int DNSGenQuestionRecord(__out char			*Buffer,
 						 __in int			BufferLength,
 						 __in const char		*Name,
-						 __in _16BIT_UINT	Type,
-						 __in _16BIT_UINT	Class
+						 __in uint16_t	Type,
+						 __in uint16_t	Class
 						 );
 
 int DNSGenResourceRecord(	__out char			*Buffer,
 							__in int			BufferLength,
 							__in const char		*Name,
-							__in _16BIT_UINT	Type,
-							__in _16BIT_UINT	Class,
-							__in _32BIT_UINT	TTL,
+							__in uint16_t	Type,
+							__in uint16_t	Class,
+							__in uint32_t	TTL,
 							__in const void		*Data,
-							__in _16BIT_UINT	DataLength,
+							__in uint16_t	DataLength,
 							__in BOOL			LablelizedData
 						   );
 

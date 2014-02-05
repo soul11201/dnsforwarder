@@ -175,7 +175,7 @@ static void AddToRankList(RankList *List, int NumberOfInList, const char *Curren
 int DomainStatistic_Hold(void)
 {
 	const char *Str;
-	_32BIT_INT Enum_Start;
+	int32_t Enum_Start;
 
 	DomainInfo *Info;
 

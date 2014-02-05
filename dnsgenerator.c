@@ -83,15 +83,15 @@ int DNSCompress(__inout char *DNSBody, __in int DNSBodyLength)
 }
 
 char *DNSGenHeader(	__out char			*Buffer,
-					__in _16BIT_UINT	QueryIdentifier,
+					__in uint16_t	QueryIdentifier,
 					__in DNSFlags		Flags,
-					__in _16BIT_UINT	QuestionCount,
-					__in _16BIT_UINT	AnswerCount,
-					__in _16BIT_UINT	NameServerCount,
-					__in _16BIT_UINT	AdditionalCount
+					__in uint16_t	QuestionCount,
+					__in uint16_t	AnswerCount,
+					__in uint16_t	NameServerCount,
+					__in uint16_t	AdditionalCount
 					){
 	DNSSetQueryIdentifier(Buffer, QueryIdentifier);
-	DNSSetFlags(Buffer, *(_16BIT_UINT *)&Flags);
+	DNSSetFlags(Buffer, *(uint16_t *)&Flags);
 	DNSSetQuestionCount(Buffer, QuestionCount);
 	DNSSetAnswerCount(Buffer, AnswerCount);
 	DNSSetNameServerCount(Buffer, NameServerCount);
@@ -102,8 +102,8 @@ char *DNSGenHeader(	__out char			*Buffer,
 int DNSGenQuestionRecord(__out char			*Buffer,
 						 __in int			BufferLength,
 						 __in const char	*Name,
-						 __in _16BIT_UINT	Type,
-						 __in _16BIT_UINT	Class
+						 __in uint16_t	Type,
+						 __in uint16_t	Class
 						 ){
 	int NameLen;
 
@@ -127,11 +127,11 @@ int DNSGenQuestionRecord(__out char			*Buffer,
 int DNSGenResourceRecord(	__out char			*Buffer,
 							__in int			BufferLength,
 							__in const char		*Name,
-							__in _16BIT_UINT	Type,
-							__in _16BIT_UINT	Class,
-							__in _32BIT_UINT	TTL,
+							__in uint16_t	Type,
+							__in uint16_t	Class,
+							__in uint32_t	TTL,
 							__in const void		*Data,
-							__in _16BIT_UINT	DataLength,
+							__in uint16_t	DataLength,
 							__in BOOL			LablelizedData
 						   )
 {
@@ -214,7 +214,7 @@ int DNSGenerateData(__in			char				*Data,
 			return strlen(Data) + 1;
 			break;
 
-		case DNS_32BIT_UINT:
+		case DNSuint32_t:
 			if( Buffer != NULL )
 			{
 				int a;
@@ -269,14 +269,14 @@ int DNSGenerateData(__in			char				*Data,
 				sscanf(Data, "%x:%x:%x:%x:%x:%x:%x:%x",
 						a, a + 1, a + 2, a + 3, a + 4, a + 5, a + 6, a + 7
 						);
-				SET_16_BIT_U_INT((_16BIT_UINT *)Buffer, a[0]);
-				SET_16_BIT_U_INT((_16BIT_UINT *)Buffer + 1, a[1]);
-				SET_16_BIT_U_INT((_16BIT_UINT *)Buffer + 2, a[2]);
-				SET_16_BIT_U_INT((_16BIT_UINT *)Buffer + 3, a[3]);
-				SET_16_BIT_U_INT((_16BIT_UINT *)Buffer + 4, a[4]);
-				SET_16_BIT_U_INT((_16BIT_UINT *)Buffer + 5, a[5]);
-				SET_16_BIT_U_INT((_16BIT_UINT *)Buffer + 6, a[6]);
-				SET_16_BIT_U_INT((_16BIT_UINT *)Buffer + 7, a[7]);
+				SET_16_BIT_U_INT((uint16_t *)Buffer, a[0]);
+				SET_16_BIT_U_INT((uint16_t *)Buffer + 1, a[1]);
+				SET_16_BIT_U_INT((uint16_t *)Buffer + 2, a[2]);
+				SET_16_BIT_U_INT((uint16_t *)Buffer + 3, a[3]);
+				SET_16_BIT_U_INT((uint16_t *)Buffer + 4, a[4]);
+				SET_16_BIT_U_INT((uint16_t *)Buffer + 5, a[5]);
+				SET_16_BIT_U_INT((uint16_t *)Buffer + 6, a[6]);
+				SET_16_BIT_U_INT((uint16_t *)Buffer + 7, a[7]);
 
 			}
 			return 16;

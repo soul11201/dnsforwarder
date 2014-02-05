@@ -14,7 +14,7 @@ int SendAndReveiveRawMessageViaTCP(SOCKET			Sock,
 								   const void		*Content,
 								   int				ContentLength,
 								   ExtendableBuffer	*ResultBuffer,
-								   _16BIT_UINT		*TCPLength /* Big-endian */
+								   uint16_t		*TCPLength /* Big-endian */
 								   );
 
 int QueryDNSViaTCP(SOCKET			Sock,

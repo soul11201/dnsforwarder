@@ -2,7 +2,7 @@
 #include "simpleht.h"
 
 typedef struct _Sht_Slot{
-	_32BIT_INT	Next;
+	int32_t	Next;
 } Sht_Slot;
 
 static const Sht_Slot EmptySlot = {-1};
@@ -199,7 +199,7 @@ const char *SimpleHT_Find(SimpleHT *ht, const char *Key, int KeyLength, int *Has
 
 }
 
-const char *SimpleHT_Enum(SimpleHT *ht, _32BIT_INT *Start)
+const char *SimpleHT_Enum(SimpleHT *ht, int32_t *Start)
 {
 	Array *Nodes = &(ht -> Nodes);
 	Sht_NodeHead *Node;

@@ -10,13 +10,13 @@ int IpChunk_Init(IpChunk *ic)
 	return Bst_Init(ic, NULL, sizeof(IpElement), (int (*)(const void *, const void *))Compare);
 }
 
-int IpChunk_Add(IpChunk *ic, _32BIT_UINT Ip)
+int IpChunk_Add(IpChunk *ic, uint32_t Ip)
 {
 	IpElement	New = {Ip};
 	return Bst_Add(ic, &New);
 }
 
-BOOL IpChunk_Find(IpChunk *ic, _32BIT_UINT Ip)
+BOOL IpChunk_Find(IpChunk *ic, uint32_t Ip)
 {
 	IpElement	Key = {Ip};
 

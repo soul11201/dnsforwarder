@@ -42,7 +42,7 @@ BOOL StringChunk_Match_OnlyWildCard(StringChunk *dl,
 
 BOOL StringChunk_Match(StringChunk *dl, const char *Str, int *HashValue, char **Data);
 
-const char *StringChunk_Enum_NoWildCard(StringChunk *dl, _32BIT_INT *Start, char **Data);
+const char *StringChunk_Enum_NoWildCard(StringChunk *dl, int32_t *Start, char **Data);
 
 void StringChunk_Free(StringChunk *dl, BOOL FreeStringList);
 
