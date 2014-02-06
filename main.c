@@ -20,7 +20,7 @@
 #include "request_response.h"
 #include "debug.h"
 
-#define VERSION "2.6 Beta 1"
+#define VERSION__ "2.6 Beta 1"
 
 #define PRINTM(...)		if(ShowMassages == TRUE) printf(__VA_ARGS__);
 
@@ -229,7 +229,7 @@ int ArgParse(int argc, char *argv_ori[])
     {
     	if(strcmp("-h", *argv) == 0)
 		{
-			printf("DNSforwarder by holmium. Free for non-commercial use. Version "VERSION" . Time of compilation : %s %s.\n\n", __DATE__, __TIME__);
+			printf("DNSforwarder by holmium. Free for non-commercial use. Version "VERSION__" . Time of compilation : %s %s.\n\n", __DATE__, __TIME__);
 			printf("Usage : %s [args].\n", strrchr(argv_ori[0], PATH_SLASH_CH) == NULL ? argv_ori[0] : strrchr(argv_ori[0], PATH_SLASH_CH) + 1);
 			printf(" [args] is case sensitivity and can be zero or more (in any order) of:\n"
 				  "  -f <FILE>  Use configuration <FILE> instead of the default one.\n"
@@ -347,7 +347,9 @@ int main(int argc, char *argv[])
     if(WSAStartup(MAKEWORD(2, 2), &wdata) != 0)
         return -1;
 #	else
+#		ifdef DOWNLOAD_LIBCURL
 	curl_global_init(CURL_GLOBAL_ALL);
+#		endif /* DOWNLOAD_LIBCURL */
 #	endif /* WIN32 */
 #endif /* NODOWNLOAD */
 
@@ -376,7 +378,7 @@ int main(int argc, char *argv[])
 
 	}
 
-    PRINTM("DNSforwarder by holmium. Free for non-commercial use. Version "VERSION" .\nTime of compilation : %s %s.\n\n", __DATE__, __TIME__);
+    PRINTM("DNSforwarder by holmium. Free for non-commercial use. Version "VERSION__" .\nTime of compilation : %s %s.\n\n", __DATE__, __TIME__);
 
 #ifndef WIN32
     PRINTM("Please run `dnsforwarder -p' if something wrong.\n")

@@ -8,6 +8,14 @@
 #include "utils.h"
 #include "dnsgenerator.h"
 
+#ifndef DOWNLOAD_LIBCURL
+#ifndef DOWNLOAD_WGET
+#ifndef NODOWNLOAD
+#define NODOWNLOAD
+#endif /* NODOWNLOAD */
+#endif /* DOWNLOAD_WGET */
+#endif /*  DOWNLOAD_LIBCURL */
+
 #ifndef NODOWNLOAD
 #ifdef WIN32
 	#include <wincrypt.h>

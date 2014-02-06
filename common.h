@@ -2,7 +2,9 @@
 #define _COMMON_H_
 
 #include <limits.h>
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif /* HAVE_CONFIG_H */
 
 /* There are some differeces between Linux and Windows.
  * For convenience, we defined something here to unify interfaces,
@@ -115,7 +117,9 @@
 	#include <sys/mman.h>	/* mmap */
 	#include <fcntl.h>
 
+#ifdef HAVE_SYS_SYSCALL_H
 	#include <sys/syscall.h> /* syscall */
+#endif /* HAVE_SYS_SYSCALL_H */
 
 	#include <pwd.h>	/* struct passwd */
 
@@ -162,8 +166,10 @@
 	#define	FALSE	0
 	#define	TRUE	(!0)
 
-	/* I don't know if this have a effect in linux. But in windows, this is defined. */
+
+#ifndef SO_DONTLINGER
 	#define SO_DONTLINGER   ((unsigned int) (~SO_LINGER))
+#endif
 
 	/* pthread */
 	#define CREATE_THREAD(func_ptr, para_ptr, return_value) (pthread_create(&return_value, NULL, (void *(*)())(func_ptr), (para_ptr)))
@@ -185,13 +191,13 @@
 	#define LOCK_SPIN_TRY(s)	(pthread_spin_trylock(&(s)))
 	#define UNLOCK_SPIN(s)		(pthread_spin_unlock(&(s)))
 	#define DESTROY_SPIN(s)		(pthread_spin_destroy(&(s)))
-#	else
+#	else /*HAVE_PTHREAD_SPIN_INIT  */
 	#define CREATE_SPIN(s)		(pthread_mutex_init(&(s), NULL))
 	#define LOCK_SPIN(s)		(pthread_mutex_lock(&(s)))
 	#define LOCK_SPIN_TRY(s)	(pthread_mutex_trylock(&(s)))
 	#define UNLOCK_SPIN(s)		(pthread_mutex_unlock(&(s)))
 	#define DESTROY_SPIN(s)		(pthread_mutex_destroy(&(s)))
-#	endif
+#	endif /*HAVE_PTHREAD_SPIN_INIT  */
 
     /* File and Mapping */
     /* In Linux, there is no a long process to map a file like Windows. */
@@ -214,7 +220,11 @@
     /* As the name suggests */
 	#define GET_TEMP_DIR()	"/tmp"
 
+#ifdef HAVE_SYS_SYSCALL_H
 	#define GET_THREAD_ID()	syscall(__NR_gettid)
+#else /* HAVE_SYS_SYSCALL_H */
+	#define GET_THREAD_ID()	(-1)
+#endif /* HAVE_SYS_SYSCALL_H */
 
 	#define WILDCARD_MATCH(p, s)	fnmatch((p), (s), FNM_NOESCAPE)
 	#define WILDCARD_MATCHED	0
@@ -228,14 +238,14 @@
 	#define EFFECTIVE_LOCK_TRY_GET(l)	ENTER_CRITICAL_SECTION_TRY(l)
 	#define EFFECTIVE_LOCK_RELEASE(l)	LEAVE_CRITICAL_SECTION(l)
 	#define EFFECTIVE_LOCK_DESTROY(l)	DELETE_CRITICAL_SECTION(l)
-#else
+#else /* WIN32 */
 	typedef	SpinHandle	EFFECTIVE_LOCK;
 	#define EFFECTIVE_LOCK_INIT(l)		CREATE_SPIN(l)
 	#define EFFECTIVE_LOCK_GET(l)		LOCK_SPIN(l)
 	#define EFFECTIVE_LOCK_TRY_GET(l)	LOCK_SPIN_TRY(l)
 	#define EFFECTIVE_LOCK_RELEASE(l)	UNLOCK_SPIN(l)
 	#define EFFECTIVE_LOCK_DESTROY(l)	DESTROY_SPIN(l)
-#endif
+#endif /* WIN32 */
 
 #ifdef WIN32
 	#define GetFileDirectory(out)	(GetModulePath(out, sizeof(out)))
