@@ -717,9 +717,10 @@ enable_option_checking
 enable_silent_rules
 with_ccflags
 enable_dependency_tracking
+enable_android
 enable_downloader
 enable_debug
-enable_android
+enable_static
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1350,9 +1351,10 @@ Optional Features:
                           do not reject slow dependency extractors
   --disable-dependency-tracking
                           speeds up one-time build
+  --enable-android        compile for android (default=no)
   --enable-downloader     downloader, libcurl, wget, or no (default=libcurl)
   --enable-debug          enable DEBUG mode (default=no)
-  --enable-android        compile for android (default=no)
+  --enable-static         static link (default=no)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1533,37 +1535,6 @@ fi
 
 } # ac_fn_c_try_link
 
-# ac_fn_c_check_header_compile LINENO HEADER VAR INCLUDES
-# -------------------------------------------------------
-# Tests whether HEADER exists and can be compiled using the include files in
-# INCLUDES, setting the cache variable VAR accordingly.
-ac_fn_c_check_header_compile ()
-{
-  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
-$as_echo_n "checking for $2... " >&6; }
-if eval \${$3+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-$4
-#include <$2>
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  eval "$3=yes"
-else
-  eval "$3=no"
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
-eval ac_res=\$$3
-	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
-$as_echo "$ac_res" >&6; }
-  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
-
-} # ac_fn_c_check_header_compile
-
 # ac_fn_c_try_cpp LINENO
 # ----------------------
 # Try to preprocess conftest.$ac_ext, and return whether this succeeded.
@@ -1733,6 +1704,37 @@ fi
   as_fn_set_status $ac_retval
 
 } # ac_fn_c_try_run
+
+# ac_fn_c_check_header_compile LINENO HEADER VAR INCLUDES
+# -------------------------------------------------------
+# Tests whether HEADER exists and can be compiled using the include files in
+# INCLUDES, setting the cache variable VAR accordingly.
+ac_fn_c_check_header_compile ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
+$as_echo_n "checking for $2... " >&6; }
+if eval \${$3+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$4
+#include <$2>
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  eval "$3=yes"
+else
+  eval "$3=no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+eval ac_res=\$$3
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+
+} # ac_fn_c_check_header_compile
 
 # ac_fn_c_check_type LINENO TYPE VAR INCLUDES
 # -------------------------------------------
@@ -4050,7 +4052,23 @@ else
 fi
 
 
+# Check whether --enable-android was given.
+if test "${enable_android+set}" = set; then :
+  enableval=$enable_android;    case "${enableval}" in
+	    yes)  ANDROID=yes;;
+	    no)   ANDROID=no;;
+	    *)   as_fn_error $? "bad value ${enableval} for --enable-android" "$LINENO" 5 ;;
+	    esac
+
+else
+  ANDROID=no
+
+fi
+
+
 # Checks for pthread.
+if test "ANDROID" = "yes"
+then
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -lpthread" >&5
 $as_echo_n "checking for pthread_create in -lpthread... " >&6; }
 if ${ac_cv_lib_pthread_pthread_create+:} false; then :
@@ -4147,6 +4165,7 @@ else
 
 fi
 
+fi
 
 # Check whether --enable-downloader was given.
 if test "${enable_downloader+set}" = set; then :
@@ -4281,29 +4300,6 @@ fi
 
 
 # Checks for header files.
-
-if test "$DOWNLOADER" == "libcurl"
-then
-for ac_header in curl/curl.h
-do :
-  ac_fn_c_check_header_compile "$LINENO" "curl/curl.h" "ac_cv_header_curl_curl_h" "
-
-"
-if test "x$ac_cv_header_curl_curl_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_CURL_CURL_H 1
-_ACEOF
-
-else
-  as_fn_error $? "No libcurl headers found." "$LINENO" 5
-fi
-
-done
-
-fi
-
-if test "$DOWNLOADER" != "no"
-then
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -4701,23 +4697,58 @@ fi
 done
 
 
-for ac_header in openssl/evp.h openssl/bio.h
+for ac_header in sys/syscall.h
 do :
-  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
-ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
-if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  ac_fn_c_check_header_mongrel "$LINENO" "sys/syscall.h" "ac_cv_header_sys_syscall_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_syscall_h" = xyes; then :
   cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+#define HAVE_SYS_SYSCALL_H 1
 _ACEOF
 
 fi
 
 done
-,
-                 ,
-                 as_fn_error $? "No openssl headers found." "$LINENO" 5,
 
-                 )
+
+if test "$DOWNLOADER" == "libcurl"
+then
+for ac_header in curl/curl.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "curl/curl.h" "ac_cv_header_curl_curl_h" "
+
+"
+if test "x$ac_cv_header_curl_curl_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_CURL_CURL_H 1
+_ACEOF
+
+else
+  as_fn_error $? "No libcurl headers found." "$LINENO" 5
+fi
+
+done
+
+fi
+
+if test "$DOWNLOADER" != "no"
+then
+for ac_header in openssl/evp.h openssl/bio.h
+do :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "
+
+"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "No openssl headers found." "$LINENO" 5
+fi
+
+done
+
 fi
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -5114,7 +5145,7 @@ $as_echo "#define realloc rpl_realloc" >>confdefs.h
 fi
 
 
-for ac_func in inet_ntoa memmove memset pow select socket sqrt strchr strerror strpbrk strrchr strstr mkdir pthread_spin_init pthread_rwlock_init
+for ac_func in pthread_spin_init pthread_rwlock_init
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -5141,12 +5172,12 @@ else
 fi
 
 
-# Check whether --enable-android was given.
-if test "${enable_android+set}" = set; then :
-  enableval=$enable_android;    case "${enableval}" in
-	    yes)  CFLAGS="${CFLAGS} -DANDROID ";;
+# Check whether --enable-static was given.
+if test "${enable_static+set}" = set; then :
+  enableval=$enable_static;    case "${enableval}" in
+	    yes)  CFLAGS="${CFLAGS} -static ";;
 	    no)   ;;
-	    *)   as_fn_error $? "bad value ${enableval} for --enable-android" "$LINENO" 5 ;;
+	    *)   as_fn_error $? "bad value ${enableval} for --enable-static" "$LINENO" 5 ;;
 	    esac
 
 fi

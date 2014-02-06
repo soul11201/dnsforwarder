@@ -32,14 +32,30 @@ AC_CHECK_LIB(m, log, ,
 AC_CHECK_LIB(m, sqrt, , 
 	AC_MSG_ERROR(No libmath found.)
 	)
+	
+AC_ARG_ENABLE([android],
+	[AS_HELP_STRING([--enable-android],
+	    [compile for android (default=no)]
+	)],
+	[   case "${enableval}" in
+	    yes)  [ANDROID=yes];;
+	    no)   [ANDROID=no];;
+	    *)   AC_MSG_ERROR(bad value ${enableval} for --enable-android) ;;
+	    esac
+	],
+	[ANDROID=no]
+	)
 
 # Checks for pthread.
+if test "ANDROID" = "yes"
+then
 AC_CHECK_LIB(pthread, pthread_create, , 
 	AC_MSG_ERROR(No pthread found.)
 	)
 AC_CHECK_LIB(pthread, pthread_mutex_init, , 
 	AC_MSG_ERROR(No pthread found.)
 	)
+fi
 
 AC_ARG_ENABLE([downloader],
 	[AS_HELP_STRING([--enable-downloader],
@@ -83,6 +99,7 @@ fi
 
 
 # Checks for header files.
+AC_CHECK_HEADERS([sys/syscall.h])
 
 if test "$DOWNLOADER" == "libcurl"
 then
@@ -95,7 +112,7 @@ fi
 
 if test "$DOWNLOADER" != "no"
 then
-AC_CHECK_HEADERS([openssl/evp.h openssl/bio.h]),
+AC_CHECK_HEADERS([openssl/evp.h openssl/bio.h],
                  [],
                  AC_MSG_ERROR(No openssl headers found.),
                  []
@@ -112,7 +129,7 @@ AC_TYPE_INT32_T
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([inet_ntoa memmove memset pow select socket sqrt strchr strerror strpbrk strrchr strstr mkdir pthread_spin_init pthread_rwlock_init])
+AC_CHECK_FUNCS([pthread_spin_init pthread_rwlock_init])
 
 AC_ARG_ENABLE([debug],
 	[AS_HELP_STRING([--enable-debug],
@@ -127,14 +144,14 @@ AC_ARG_ENABLE([debug],
 	[CFLAGS="${CFLAGS} -O2 "]
 	)
 	
-AC_ARG_ENABLE([android],
-	[AS_HELP_STRING([--enable-android],
-	    [compile for android (default=no)]
+AC_ARG_ENABLE([static],
+	[AS_HELP_STRING([--enable-static],
+	    [static link (default=no)]
 	)],
 	[   case "${enableval}" in
-	    yes)  [CFLAGS="${CFLAGS} -DANDROID "];;
+	    yes)  [CFLAGS="${CFLAGS} -static "];;
 	    no)   [];;
-	    *)   AC_MSG_ERROR(bad value ${enableval} for --enable-android) ;;
+	    *)   AC_MSG_ERROR(bad value ${enableval} for --enable-static) ;;
 	    esac
 	],
 	[]
