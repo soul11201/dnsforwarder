@@ -719,6 +719,7 @@ with_ccflags
 enable_dependency_tracking
 enable_android
 enable_downloader
+enable_base64decoder
 enable_debug
 enable_static
 '
@@ -1353,6 +1354,7 @@ Optional Features:
                           speeds up one-time build
   --enable-android        compile for android (default=no)
   --enable-downloader     downloader, libcurl, wget, or no (default=libcurl)
+  --enable-base64decoder  base64decoder, openssl or uudecode (default=openssl)
   --enable-debug          enable DEBUG mode (default=no)
   --enable-static         static link (default=no)
 
@@ -4067,7 +4069,7 @@ fi
 
 
 # Checks for pthread.
-if test "ANDROID" = "yes"
+if test "ANDROID" = "no"
 then
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -lpthread" >&5
 $as_echo_n "checking for pthread_create in -lpthread... " >&6; }
@@ -4246,7 +4248,25 @@ fi
 if test "$DOWNLOADER" == "no"
 then
 CFLAGS="${CFLAGS} -DNODOWNLOAD "
+fi
+
+# Check whether --enable-base64decoder was given.
+if test "${enable_base64decoder+set}" = set; then :
+  enableval=$enable_base64decoder;    case "${enableval}" in
+	    openssl)    BASE64DECODER=openssl;;
+	    uudecode)   BASE64DECODER=uudecode;;
+	    *)          as_fn_error $? "bad value ${enableval} for --enable-base64decoder" "$LINENO" 5 ;;
+	    esac
+
 else
+  BASE64DECODER=openssl
+
+fi
+
+
+if test "$BASE64DECODER" == "openssl"
+then
+CFLAGS="${CFLAGS} -DBASE64_DECODER_OPENSSL "
 # Checks for openssl.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for BIO_new in -lcrypto" >&5
 $as_echo_n "checking for BIO_new in -lcrypto... " >&6; }
@@ -4296,6 +4316,11 @@ else
 
 fi
 
+fi
+
+if test "$BASE64DECODER" == "uudecode"
+then
+CFLAGS="${CFLAGS} -DBASE64_DECODER_UUDECODE "
 fi
 
 
@@ -4730,7 +4755,7 @@ done
 
 fi
 
-if test "$DOWNLOADER" != "no"
+if test "$BASE64DECODER" == "openssl"
 then
 for ac_header in openssl/evp.h openssl/bio.h
 do :

@@ -47,7 +47,7 @@ AC_ARG_ENABLE([android],
 	)
 
 # Checks for pthread.
-if test "ANDROID" = "yes"
+if test "ANDROID" = "no"
 then
 AC_CHECK_LIB(pthread, pthread_create, , 
 	AC_MSG_ERROR(No pthread found.)
@@ -90,11 +90,33 @@ fi
 if test "$DOWNLOADER" == "no" 
 then
 CFLAGS="${CFLAGS} -DNODOWNLOAD "
-else
+fi
+
+AC_ARG_ENABLE([base64decoder],
+	[AS_HELP_STRING([--enable-base64decoder],
+	    [base64decoder, openssl or uudecode (default=openssl)]
+	)],
+	[   case "${enableval}" in
+	    openssl)    BASE64DECODER=openssl;;
+	    uudecode)   BASE64DECODER=uudecode;;
+	    *)          AC_MSG_ERROR(bad value ${enableval} for --enable-base64decoder) ;;
+	    esac
+	],
+	[BASE64DECODER=openssl]
+	)
+
+if test "$BASE64DECODER" == "openssl" 
+then 
+CFLAGS="${CFLAGS} -DBASE64_DECODER_OPENSSL "
 # Checks for openssl.
 AC_CHECK_LIB(crypto, BIO_new, ,
 	AC_MSG_ERROR(No openssl found.)
 	)
+fi
+
+if test "$BASE64DECODER" == "uudecode" 
+then
+CFLAGS="${CFLAGS} -DBASE64_DECODER_UUDECODE "
 fi
 
 
@@ -110,8 +132,8 @@ AC_CHECK_HEADERS([curl/curl.h],
                  )
 fi
 
-if test "$DOWNLOADER" != "no"
-then
+if test "$BASE64DECODER" == "openssl" 
+then 
 AC_CHECK_HEADERS([openssl/evp.h openssl/bio.h],
                  [],
                  AC_MSG_ERROR(No openssl headers found.),
