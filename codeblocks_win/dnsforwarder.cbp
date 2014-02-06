@@ -95,7 +95,10 @@
 					<Add option="-fexpensive-optimizations" />
 					<Add option="-Os" />
 					<Add option="-O3" />
-					<Add option="-DNODOWNLOAD" />
+					<Add option="-DHAVE_PTHREAD_RWLOCK_INIT" />
+					<Add option="-DDOWNLOAD_WGET" />
+					<Add option="-DBASE64_DECODER_UUDECODE" />
+					<Add option="-DANDROID" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -114,7 +117,10 @@
 					<Add option="-fexpensive-optimizations" />
 					<Add option="-Os" />
 					<Add option="-O3" />
-					<Add option="-DNODOWNLOAD" />
+					<Add option="-DHAVE_PTHREAD_RWLOCK_INIT" />
+					<Add option="-DDOWNLOAD_WGET" />
+					<Add option="-DBASE64_DECODER_UUDECODE" />
+					<Add option="-DANDROID" />
 					<Add option="-DINTERNAL_DEBUG" />
 				</Compiler>
 				<Linker>
