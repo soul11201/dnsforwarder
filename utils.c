@@ -1,4 +1,23 @@
 #include <stdlib.h>
+#ifndef WIN32
+#include <sys/wait.h>
+int Execute(const char *Cmd)
+{
+	int	ret;
+
+	ret = system(Cmd);
+
+	if( ret != -1 && WIFEXITED(ret) )
+	{
+		if( WEXITSTATUS(ret) == 0 )
+		{
+			return 0;
+		}
+	}
+
+	return -1;
+}
+#endif /* WIN32 */
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,26 +27,20 @@
 #include "utils.h"
 #include "dnsgenerator.h"
 
-#ifndef DOWNLOAD_LIBCURL
-#ifndef DOWNLOAD_WGET
-#ifndef NODOWNLOAD
-#define NODOWNLOAD
-#endif /* NODOWNLOAD */
-#endif /* DOWNLOAD_WGET */
-#endif /*  DOWNLOAD_LIBCURL */
-
-#ifndef NODOWNLOAD
 #ifdef WIN32
-	#include <wincrypt.h>
-	#ifndef CryptStringToBinary
+#	include <wincrypt.h>
+#	ifndef CryptStringToBinary
 		BOOL WINAPI CryptStringToBinaryA(const BYTE *,DWORD,DWORD,LPTSTR,DWORD *,DWORD *,DWORD *);
-	#define	CryptStringToBinary CryptStringToBinaryA
-	#endif /* CryptStringToBinary */
-#else
-	#include <openssl/bio.h>
-	#include <openssl/evp.h>
+#		define	CryptStringToBinary CryptStringToBinaryA
+#	endif /* CryptStringToBinary */
+#else /* WIN32 */
+#	ifdef BASE64_DECODER_OPENSSL
+#		include <openssl/bio.h>
+#		include <openssl/evp.h>
+#	endif /* BASE64_DECODER_OPENSSL */
+#	ifdef BASE64_DECODER_UUDECODE
+#	endif /* BASE64_DECODER_UUDECODE */
 #endif /* WIN32 */
-#endif /* NODOWNLOAD */
 
 int SafeRealloc(void **Memory_ptr, size_t NewBytes)
 {
@@ -133,7 +146,6 @@ char *GetCurDateAndTime(char *Buffer, int BufferLength)
 
 int	Base64Decode(const char *File)
 {
-#ifndef NODOWNLOAD
 #ifdef WIN32
 	FILE *fp = fopen(File, "rb");
 	long FileSize;
@@ -221,6 +233,7 @@ int	Base64Decode(const char *File)
 	return 0;
 
 #else /* WIN32 */
+#	ifdef BASE64_DECODER_OPENSSL
 	BIO *ub64, *bmem;
 
 	FILE *fp = fopen(File, "rb");
@@ -326,11 +339,44 @@ int	Base64Decode(const char *File)
 	SafeFree(FileContent);
 	fclose(fp);
 	return 0;
+#	endif /* BASE64_DECODER_OPENSSL */
+#	ifdef BASE64_DECODER_UUDECODE
+	char Cmd[2048];
+	FILE *fp;
 
+	sprintf(Cmd, "%s.base64", File);
+
+	fp = fopen(Cmd, "w");
+	if( fp == NULL )
+	{
+		return -1;
+	}
+
+	fputs("begin-base64 775 \xA7\x0A", fp);
+
+	fclose(fp);
+
+	sprintf(Cmd, "cat %s >> %s.base64", File, File);
+
+	if( Execute(Cmd) != 0 )
+	{
+		return -1;
+	}
+
+	sprintf(Cmd, "rm %s", File);
+
+	if( Execute(Cmd) != 0 )
+	{
+		return -1;
+	}
+
+	sprintf(Cmd, "uudecode -o %s %s.base64", File, File);
+
+	Execute(Cmd);
+
+	return 0;
+#	endif /* BASE64_DECODER_UUDECODE */
 #endif /* WIN32 */
-#else /* NODOWNLOAD */
-	return -1;
-#endif /* NODOWNLOAD */
 }
 
 int IPv6AddressToNum(const char *asc, void *Buffer)

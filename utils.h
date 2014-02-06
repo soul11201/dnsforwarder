@@ -69,6 +69,10 @@ int GetErrorMsg(int Code, char *Buffer, int BufferLength);
 
 char *GetCurDateAndTime(char *Buffer, int BufferLength);
 
+#ifndef WIN32
+int Execute(const char *Cmd);
+#endif /* WIN32 */
+
 int	Base64Decode(const char *File);
 
 int IPv6AddressToNum(const char *asc, void *Buffer);

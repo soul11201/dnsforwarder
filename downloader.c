@@ -18,6 +18,7 @@
 #			include <curl/curl.h>
 #		endif /* DOWNLOAD_LIBCURL */
 #		ifdef DOWNLOAD_WGET
+#			include "utils.h"
 #			include <stdlib.h>
 #			include <sys/wait.h>
 #		endif /* DOWNLOAD_WGET */
@@ -146,22 +147,11 @@ int GetFromInternet(const char *URL, const char *File)
 	}
 #		endif /* DOWNLOAD_LIBCURL */
 #		ifdef DOWNLOAD_WGET
-	int	ret;
 	char Cmd[2048];
 
-	sprintf(Cmd, "wget -t 2 -T 60 -N -q --no-check-certificate %s -O %s ", URL, File);
+	sprintf(Cmd, "wget -t 2 -T 60 -q --no-check-certificate %s -O %s ", URL, File);
 
-	ret = system(Cmd);
-
-	if( ret != -1 && WIFEXITED(ret) )
-	{
-		if( WEXITSTATUS(ret) == 0 )
-		{
-			return 0;
-		}
-	}
-
-	return -1;
+	return Execute(Cmd);
 #		endif /* DOWNLOAD_WGET */
 #	endif /* WIN32 */
 #else /* NODOWNLOAD */

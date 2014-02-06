@@ -8,7 +8,9 @@
 #ifndef WIN32
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifdef DOWNLOAD_LIBCURL
 #include <curl/curl.h>
+#endif /* DOWNLOAD_LIBCURL */
 #endif /* WIN32 */
 #endif /* NODOWNLOAD */
 
