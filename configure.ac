@@ -20,6 +20,8 @@ AC_ARG_WITH([ccflags],
 	],
     [CFLAGS=""]
     )
+    
+LDFLAGS=" ${LDFLAGS} -pthread "
 
 # Checks for programs.
 AC_PROG_CC
@@ -47,15 +49,8 @@ AC_ARG_ENABLE([android],
 	)
 
 # Checks for pthread.
-if test "$ANDROID" == "no"
+if test "$ANDROID" == "yes"
 then
-AC_CHECK_LIB(pthread, pthread_create, , 
-	AC_MSG_ERROR(No pthread found.)
-	)
-AC_CHECK_LIB(pthread, pthread_mutex_init, , 
-	AC_MSG_ERROR(No pthread found.)
-	)
-else
 CFLAGS="${CFLAGS} -DANDROID "
 fi
 

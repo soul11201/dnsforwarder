@@ -268,7 +268,7 @@
 #define uint32_t		unsigned int
 #define UINT32_T_MAX	0xFFFFFFFF
 #endif
-#
+
 #if (SHRT_MAX == 32767)
 #define int16_t	short
 #define uint16_t	unsigned short

@@ -16,11 +16,13 @@
 		typedef CRITICAL_SECTION RWLock;
 	#endif /* WIN64 */
 #else /* WIN32 */
+
 #ifdef HAVE_PTHREAD_RWLOCK_INIT
 typedef pthread_rwlock_t  RWLock;
 #else /* HAVE_PTHREAD_RWLOCK_INIT */
 typedef pthread_mutex_t  RWLock;
 #endif /* HAVE_PTHREAD_RWLOCK_INIT */
+
 #endif /* WIN32 */
 
 #ifdef WIN32
