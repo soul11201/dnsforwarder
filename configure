@@ -4069,7 +4069,7 @@ fi
 
 
 # Checks for pthread.
-if test "ANDROID" = "no"
+if test "$ANDROID" == "no"
 then
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -lpthread" >&5
 $as_echo_n "checking for pthread_create in -lpthread... " >&6; }

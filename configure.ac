@@ -47,7 +47,7 @@ AC_ARG_ENABLE([android],
 	)
 
 # Checks for pthread.
-if test "ANDROID" = "no"
+if test "$ANDROID" == "no"
 then
 AC_CHECK_LIB(pthread, pthread_create, , 
 	AC_MSG_ERROR(No pthread found.)
