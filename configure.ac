@@ -55,6 +55,8 @@ AC_CHECK_LIB(pthread, pthread_create, ,
 AC_CHECK_LIB(pthread, pthread_mutex_init, , 
 	AC_MSG_ERROR(No pthread found.)
 	)
+else
+CFLAGS="${CFLAGS} -DANDROID "
 fi
 
 AC_ARG_ENABLE([downloader],
@@ -151,7 +153,32 @@ AC_TYPE_INT32_T
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([pthread_spin_init pthread_rwlock_init])
+
+AC_ARG_ENABLE([spinlock],
+	[AS_HELP_STRING([--enable-spinlock],
+	    [spinlock will be used. (default=yes)]
+	)],
+	[   case "${enableval}" in
+	    yes)  AC_CHECK_FUNCS([pthread_spin_init]) ;;
+	    no)   [];;
+	    *)   AC_MSG_ERROR(bad value ${enableval} for --enable-spinlock) ;;
+	    esac
+	],
+	[]
+	)
+	
+AC_ARG_ENABLE([rwlock],
+	[AS_HELP_STRING([--enable-rwlock],
+	    [rwlock will be used. (default=yes)]
+	)],
+	[   case "${enableval}" in
+	    yes)  AC_CHECK_FUNCS([pthread_rwlock_init]) ;;
+	    no)   [];;
+	    *)   AC_MSG_ERROR(bad value ${enableval} for --enable-rwlock) ;;
+	    esac
+	],
+	[]
+	)
 
 AC_ARG_ENABLE([debug],
 	[AS_HELP_STRING([--enable-debug],

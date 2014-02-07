@@ -720,6 +720,8 @@ enable_dependency_tracking
 enable_android
 enable_downloader
 enable_base64decoder
+enable_spinlock
+enable_rwlock
 enable_debug
 enable_static
 '
@@ -1355,6 +1357,8 @@ Optional Features:
   --enable-android        compile for android (default=no)
   --enable-downloader     downloader, libcurl, wget, or no (default=libcurl)
   --enable-base64decoder  base64decoder, openssl or uudecode (default=openssl)
+  --enable-spinlock       spinlock will be used. (default=yes)
+  --enable-rwlock         rwlock will be used. (default=yes)
   --enable-debug          enable DEBUG mode (default=no)
   --enable-static         static link (default=no)
 
@@ -4167,6 +4171,8 @@ else
 
 fi
 
+else
+CFLAGS="${CFLAGS} -DANDROID "
 fi
 
 # Check whether --enable-downloader was given.
@@ -5170,17 +5176,47 @@ $as_echo "#define realloc rpl_realloc" >>confdefs.h
 fi
 
 
-for ac_func in pthread_spin_init pthread_rwlock_init
+
+# Check whether --enable-spinlock was given.
+if test "${enable_spinlock+set}" = set; then :
+  enableval=$enable_spinlock;    case "${enableval}" in
+	    yes)  for ac_func in pthread_spin_init
 do :
-  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
-ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
-if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
+  ac_fn_c_check_func "$LINENO" "pthread_spin_init" "ac_cv_func_pthread_spin_init"
+if test "x$ac_cv_func_pthread_spin_init" = xyes; then :
   cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
+#define HAVE_PTHREAD_SPIN_INIT 1
 _ACEOF
 
 fi
 done
+ ;;
+	    no)   ;;
+	    *)   as_fn_error $? "bad value ${enableval} for --enable-spinlock" "$LINENO" 5 ;;
+	    esac
+
+fi
+
+
+# Check whether --enable-rwlock was given.
+if test "${enable_rwlock+set}" = set; then :
+  enableval=$enable_rwlock;    case "${enableval}" in
+	    yes)  for ac_func in pthread_rwlock_init
+do :
+  ac_fn_c_check_func "$LINENO" "pthread_rwlock_init" "ac_cv_func_pthread_rwlock_init"
+if test "x$ac_cv_func_pthread_rwlock_init" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_PTHREAD_RWLOCK_INIT 1
+_ACEOF
+
+fi
+done
+ ;;
+	    no)   ;;
+	    *)   as_fn_error $? "bad value ${enableval} for --enable-rwlock" "$LINENO" 5 ;;
+	    esac
+
+fi
 
 
 # Check whether --enable-debug was given.

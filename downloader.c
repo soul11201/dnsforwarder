@@ -10,19 +10,19 @@
 #endif /*  DOWNLOAD_LIBCURL */
 
 #ifndef NODOWNLOAD
-#	ifdef WIN32
-#		include "common.h"
-#	else
-#		include <limits.h>
-#		ifdef DOWNLOAD_LIBCURL
-#			include <curl/curl.h>
-#		endif /* DOWNLOAD_LIBCURL */
-#		ifdef DOWNLOAD_WGET
-#			include "utils.h"
-#			include <stdlib.h>
-#			include <sys/wait.h>
-#		endif /* DOWNLOAD_WGET */
-#	endif
+#ifdef WIN32
+#include "common.h"
+#else
+#include <limits.h>
+#ifdef DOWNLOAD_LIBCURL
+#include <curl/curl.h>
+#endif /* DOWNLOAD_LIBCURL */
+#ifdef DOWNLOAD_WGET
+#include "utils.h"
+#include <stdlib.h>
+#include <sys/wait.h>
+#endif /* DOWNLOAD_WGET */
+#endif
 #endif /* NODOWNLOAD */
 
 #include "downloader.h"
@@ -41,7 +41,7 @@ static size_t WriteFileCallback(void *Contents, size_t Size, size_t nmemb, void 
 int GetFromInternet(const char *URL, const char *File)
 {
 #ifndef NODOWNLOAD
-#	ifdef WIN32
+#ifdef WIN32
 	FILE		*fp;
 	HINTERNET	webopen		=	NULL,
 				webopenurl	=	NULL;
@@ -104,9 +104,9 @@ int GetFromInternet(const char *URL, const char *File)
 	fclose(fp);
 
 	return 0;
-#	else /* WIN32 */
+#else /* WIN32 */
 
-#		ifdef DOWNLOAD_LIBCURL
+#ifdef DOWNLOAD_LIBCURL
 	CURL *curl;
 	CURLcode res;
 
@@ -145,15 +145,15 @@ int GetFromInternet(const char *URL, const char *File)
 		fclose(fp);
 		return 0;
 	}
-#		endif /* DOWNLOAD_LIBCURL */
-#		ifdef DOWNLOAD_WGET
+#endif /* DOWNLOAD_LIBCURL */
+#ifdef DOWNLOAD_WGET
 	char Cmd[2048];
 
 	sprintf(Cmd, "wget -t 2 -T 60 -q --no-check-certificate %s -O %s ", URL, File);
 
 	return Execute(Cmd);
-#		endif /* DOWNLOAD_WGET */
-#	endif /* WIN32 */
+#endif /* DOWNLOAD_WGET */
+#endif /* WIN32 */
 #else /* NODOWNLOAD */
 	return -1;
 #endif /* NODOWNLOAD */

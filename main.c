@@ -352,14 +352,14 @@ int main(int argc, char *argv[])
 #endif
 
 #ifndef NODOWNLOAD
-#	ifdef WIN32
+#ifdef WIN32
     if(WSAStartup(MAKEWORD(2, 2), &wdata) != 0)
         return -1;
-#	else
-#		ifdef DOWNLOAD_LIBCURL
+#else
+#ifdef DOWNLOAD_LIBCURL
 	curl_global_init(CURL_GLOBAL_ALL);
-#		endif /* DOWNLOAD_LIBCURL */
-#	endif /* WIN32 */
+#endif /* DOWNLOAD_LIBCURL */
+#endif /* WIN32 */
 #endif /* NODOWNLOAD */
 
 #ifdef WIN32

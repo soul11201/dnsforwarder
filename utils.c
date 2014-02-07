@@ -28,18 +28,18 @@ int Execute(const char *Cmd)
 #include "dnsgenerator.h"
 
 #ifdef WIN32
-#	include <wincrypt.h>
-#	ifndef CryptStringToBinary
+#include <wincrypt.h>
+#ifndef CryptStringToBinary
 		BOOL WINAPI CryptStringToBinaryA(const BYTE *,DWORD,DWORD,LPTSTR,DWORD *,DWORD *,DWORD *);
-#		define	CryptStringToBinary CryptStringToBinaryA
-#	endif /* CryptStringToBinary */
+#define	CryptStringToBinary CryptStringToBinaryA
+#endif /* CryptStringToBinary */
 #else /* WIN32 */
-#	ifdef BASE64_DECODER_OPENSSL
-#		include <openssl/bio.h>
-#		include <openssl/evp.h>
-#	endif /* BASE64_DECODER_OPENSSL */
-#	ifdef BASE64_DECODER_UUDECODE
-#	endif /* BASE64_DECODER_UUDECODE */
+#ifdef BASE64_DECODER_OPENSSL
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+#endif /* BASE64_DECODER_OPENSSL */
+#ifdef BASE64_DECODER_UUDECODE
+#endif /* BASE64_DECODER_UUDECODE */
 #endif /* WIN32 */
 
 int SafeRealloc(void **Memory_ptr, size_t NewBytes)
@@ -233,7 +233,7 @@ int	Base64Decode(const char *File)
 	return 0;
 
 #else /* WIN32 */
-#	ifdef BASE64_DECODER_OPENSSL
+#ifdef BASE64_DECODER_OPENSSL
 	BIO *ub64, *bmem;
 
 	FILE *fp = fopen(File, "rb");
@@ -339,8 +339,8 @@ int	Base64Decode(const char *File)
 	SafeFree(FileContent);
 	fclose(fp);
 	return 0;
-#	endif /* BASE64_DECODER_OPENSSL */
-#	ifdef BASE64_DECODER_UUDECODE
+#endif /* BASE64_DECODER_OPENSSL */
+#ifdef BASE64_DECODER_UUDECODE
 	char Cmd[2048];
 	FILE *fp;
 
@@ -375,7 +375,7 @@ int	Base64Decode(const char *File)
 	Execute(Cmd);
 
 	return 0;
-#	endif /* BASE64_DECODER_UUDECODE */
+#endif /* BASE64_DECODER_UUDECODE */
 #endif /* WIN32 */
 }
 

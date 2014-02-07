@@ -134,11 +134,11 @@
 	/* And mutex */
 	typedef	pthread_mutex_t		MutexHandle;
 	/* spin lock */
-#	ifdef HAVE_PTHREAD_SPIN_INIT
+#ifdef HAVE_PTHREAD_SPIN_INIT
 	typedef	pthread_spinlock_t	SpinHandle;
-#	else
+#else
 	typedef	pthread_mutex_t		SpinHandle;
-#	endif
+#endif
 
 	/* There are so many HANDLEs are just ints in Linux. */
 	typedef	int	FileHandle;	/* The type of return value of open() */
@@ -185,19 +185,19 @@
 	#define GET_MUTEX_FAILED	(!0)
 
 	/* spin lock */
-#	ifdef HAVE_PTHREAD_SPIN_INIT
+#ifdef HAVE_PTHREAD_SPIN_INIT
 	#define CREATE_SPIN(s)		(pthread_spin_init(&(s), PTHREAD_PROCESS_PRIVATE))
 	#define LOCK_SPIN(s)		(pthread_spin_lock(&(s)))
 	#define LOCK_SPIN_TRY(s)	(pthread_spin_trylock(&(s)))
 	#define UNLOCK_SPIN(s)		(pthread_spin_unlock(&(s)))
 	#define DESTROY_SPIN(s)		(pthread_spin_destroy(&(s)))
-#	else /*HAVE_PTHREAD_SPIN_INIT  */
+#else /*HAVE_PTHREAD_SPIN_INIT  */
 	#define CREATE_SPIN(s)		(pthread_mutex_init(&(s), NULL))
 	#define LOCK_SPIN(s)		(pthread_mutex_lock(&(s)))
 	#define LOCK_SPIN_TRY(s)	(pthread_mutex_trylock(&(s)))
 	#define UNLOCK_SPIN(s)		(pthread_mutex_unlock(&(s)))
 	#define DESTROY_SPIN(s)		(pthread_mutex_destroy(&(s)))
-#	endif /*HAVE_PTHREAD_SPIN_INIT  */
+#endif /*HAVE_PTHREAD_SPIN_INIT  */
 
     /* File and Mapping */
     /* In Linux, there is no a long process to map a file like Windows. */
@@ -261,18 +261,18 @@
 #define __STILL
 
 #ifdef HAVE_STDINT_H
-#	include <stdint.h>
+#include <stdint.h>
 #else
-#	if (INT_MAX == 2147483647)
-#		define int32_t		int
-#		define uint32_t		unsigned int
-#		define UINT32_T_MAX	0xFFFFFFFF
-#	endif
+#if (INT_MAX == 2147483647)
+#define int32_t		int
+#define uint32_t		unsigned int
+#define UINT32_T_MAX	0xFFFFFFFF
+#endif
 #
-#	if (SHRT_MAX == 32767)
-#		define int16_t	short
-#		define uint16_t	unsigned short
-#	endif
+#if (SHRT_MAX == 32767)
+#define int16_t	short
+#define uint16_t	unsigned short
+#endif
 #endif
 
 #ifndef HAVE_IN_PORT_T
@@ -281,27 +281,27 @@ typedef uint16_t	in_port_t;
 
 /* Parameters' tag */
 #ifndef __in
-#	define __in
+#define __in
 #endif /* __in */
 
 #ifndef __in_opt
-#	define __in_opt
+#define __in_opt
 #endif /* __in_opt */
 
 #ifndef __out
-#	define __out
+#define __out
 #endif /* __out */
 
 #ifndef __out_opt
-#	define __out_opt
+#define __out_opt
 #endif /* __out_opt */
 
 #ifndef __inout
-#	define __inout
+#define __inout
 #endif /* __inout */
 
 #ifndef __inout_opt
-#	define __inout_opt
+#define __inout_opt
 #endif /* __inout_opt */
 
 #define LENGTH_OF_IPV6_ADDRESS_ASCII	40
