@@ -301,7 +301,7 @@ int QueryDNSViaUDP(SOCKET			Sock,
 
 			if( BlockedIP != NULL )
 			{
-				int					Loop		=	2;
+				int					Loop		=	1;
 				const unsigned char	*Answer1	=	Answer;
 				uint32_t			*Data1		=	Data;
 
