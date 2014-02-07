@@ -22,6 +22,7 @@ AC_ARG_WITH([ccflags],
     )
     
 LDFLAGS=" ${LDFLAGS} -pthread "
+CFLAGS=" ${CFLAGS} -pthread "
 
 # Checks for programs.
 AC_PROG_CC

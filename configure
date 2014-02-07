@@ -2918,6 +2918,7 @@ fi
 
 
 LDFLAGS=" ${LDFLAGS} -pthread "
+CFLAGS=" ${CFLAGS} -pthread "
 
 # Checks for programs.
 ac_ext=c
