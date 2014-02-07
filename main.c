@@ -130,6 +130,10 @@ int DaemonInit()
 
 void Probe(int Threshold)
 {
+	static const char *Servers[] = {
+		"8.8.8.8"
+	};
+
 	static const char *Domains[] = {
 		"www.youtube.com",
 		"www.googlevideo.com",
@@ -150,7 +154,7 @@ void Probe(int Threshold)
 	{
 		printf("; Pass %d:\n", Pass + 1);
 
-		if( ProbeFakeAddresses("8.8.8.8", Domains[Pass % (sizeof(Domains) / sizeof(const char *))], &l) > 0 )
+		if( ProbeFakeAddresses(Servers[Pass % (sizeof(Servers) / sizeof(const char *))], Domains[Pass % (sizeof(Domains) / sizeof(const char *))], &l) > 0 )
 		{
 			const char *Itr = NULL;
 			int NumberOfNew = 0;
@@ -216,7 +220,6 @@ void PrepareEnvironment(void)
 		GetErrorMsg(ErrorNum, ErrorMessage, sizeof(ErrorMessage));
 
 		printf("mkdir : %s failed : %s\n", ConfigDirectory, ErrorMessage);
-		return;
 	}
 
 	printf("Please put configure file into `%s' and rename it to `config'.\n", ConfigDirectory);
@@ -331,7 +334,7 @@ int ArgParse(int argc, char *argv_ori[])
 		}
 #endif
 
-		PRINTM("Unrecognisable arg `%s'\n", *argv);
+		PRINTM("Unrecognisable arg `%s'. Try `-h'.\n", *argv);
         ++argv;
     }
 
@@ -383,7 +386,7 @@ int main(int argc, char *argv[])
     PRINTM("DNSforwarder by holmium. Free for non-commercial use. Version "VERSION__" .\nTime of compilation : %s %s.\n\n", __DATE__, __TIME__);
 
 #ifndef WIN32
-    PRINTM("Please run `dnsforwarder -p' if something wrong.\n")
+    PRINTM("Please run `dnsforwarder -p' if something wrong.\n\n")
 #endif
 
     PRINTM("Configure File : %s\n\n", ConfigFile);

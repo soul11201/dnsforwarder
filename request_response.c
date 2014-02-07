@@ -273,20 +273,18 @@ int QueryDNSViaUDP(SOCKET			Sock,
 		AnswerCount = DNSGetAnswerCount(NewlyReceived);
 
 		if( UDPAntiPollution == TRUE &&
-			AnswerCount > 0 &&
-			DNSGetNameServerCount(NewlyReceived) <= 0 &&
-			DNSGetAdditionalCount(NewlyReceived) <= 0 )
+			AnswerCount > 0)
 		{
 			const unsigned char *Answer;
 			uint32_t *Data;
 
-			Answer = (const unsigned char *)DNSGetAnswerRecordPosition(NewlyReceived, 1);
-
-			if( ThereExistAdditionalRecord == TRUE )
+			if( ThereExistAdditionalRecord == TRUE && DNSGetAdditionalCount(NewlyReceived) <= 0 )
 			{
 				ShowBlockedMessage(RequestingDomain, NewlyReceived, "False package, discarded");
 				continue;
 			}
+
+			Answer = (const unsigned char *)DNSGetAnswerRecordPosition(NewlyReceived, 1);
 
 			Data = (uint32_t *)DNSGetResourceDataPos(Answer);
 
