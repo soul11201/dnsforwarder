@@ -5,17 +5,17 @@
 #include "array.h"
 
 typedef struct _Cht_Node{
-	int32_t	Slot;
-	int32_t	Next;
-	int32_t	Offset;
+	int32_t		Slot;
+	int32_t		Next;
+	int32_t		Offset;
 	uint32_t	TTL;
 	time_t		TimeAdded;
 	uint32_t	Length;
 } Cht_Node;
 
 typedef struct _HashTable{
-	Array		NodeChunk;
-	Array		Slots;
+	Array	NodeChunk;
+	Array	Slots;
 	int32_t	FreeList;
 }CacheHT;
 

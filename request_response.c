@@ -316,10 +316,15 @@ int QueryDNSViaUDP(SOCKET			Sock,
 
 					++Loop;
 
+					if( Loop > AnswerCount )
+					{
+						break;
+					}
+
 					Answer1 = (const unsigned char *)DNSGetAnswerRecordPosition(NewlyReceived, Loop);
 					Data1 = (uint32_t *)DNSGetResourceDataPos(Answer1);
 
-				} while( Loop <= AnswerCount );
+				} while( TRUE );
 
 				if( Loop == -1 )
 				{
