@@ -49,6 +49,7 @@
 			<Add option="-DHAVE_PTHREAD_SPIN_INIT" />
 			<Add option="-DHAVE_PTHREAD_RWLOCK_INIT" />
 			<Add option="-DDOWNLOAD_LIBCURL" />
+			<Add option="-DBASE64_DECODER_OPENSSL" />
 			<Add option="-DHAVE_SYS_SYSCALL_H" />
 		</Compiler>
 		<Linker>
