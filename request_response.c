@@ -278,12 +278,6 @@ int QueryDNSViaUDP(SOCKET			Sock,
 			const unsigned char *Answer;
 			uint32_t *Data;
 
-			if( ThereExistAdditionalRecord == TRUE && DNSGetAdditionalCount(NewlyReceived) <= 0 )
-			{
-				ShowBlockedMessage(RequestingDomain, NewlyReceived, "False package, discarded");
-				continue;
-			}
-
 			Answer = (const unsigned char *)DNSGetAnswerRecordPosition(NewlyReceived, 1);
 
 			Data = (uint32_t *)DNSGetResourceDataPos(Answer);
@@ -332,6 +326,12 @@ int QueryDNSViaUDP(SOCKET			Sock,
 					continue;
 				}
 
+			}
+
+			if( ThereExistAdditionalRecord == TRUE && DNSGetAdditionalCount(NewlyReceived) <= 0 )
+			{
+				ShowBlockedMessage(RequestingDomain, NewlyReceived, "False package, discarded");
+				continue;
 			}
 		}
 

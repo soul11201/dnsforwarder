@@ -131,7 +131,11 @@ int DaemonInit()
 void Probe(int Threshold)
 {
 	static const char *Servers[] = {
-		"8.8.8.8"
+		"8.8.8.8",
+		"208.67.220.220",
+		"199.85.126.10",
+		"4.2.2.1",
+		"8.26.56.26",
 	};
 
 	static const char *Domains[] = {
