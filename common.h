@@ -23,9 +23,7 @@
 	 * but in Windows, no this macro. And this prarmeter is zero, mostly.
 	 * So we define this macro for Windows.
 	 */
-	#define	MSG_NOSIGNAL	0
 
-	/* The same as MSG_NOSIGNAL, for recvfrom() and accept() */
 	typedef	int		socklen_t;
 
 	/* In Windows, the indetifer of a thread is just a 'HANDLE'. */
@@ -254,6 +252,10 @@
 #endif /* WIN32 */
 
 #define INVALID_THREAD	((ThreadHandle)NULL)
+
+#ifndef MSG_NOSIGNAL
+#define	MSG_NOSIGNAL	0
+#endif /* MSG_NOSIGNAL */
 
 /* Unified interfaces end */
 

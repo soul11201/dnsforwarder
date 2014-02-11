@@ -7,10 +7,10 @@
 #include "utils.h"
 #include "common.h"
 
-BOOL SocketIsStillReadable(SOCKET Sock)
+BOOL SocketIsStillReadable(SOCKET Sock, int timeout)
 {
 	fd_set rfd;
-	struct timeval TimeLimit = {0, 0};
+	struct timeval TimeLimit = {timeout / 1000, (timeout % 1000) * 1000};
 
 	FD_ZERO(&rfd);
 	FD_SET(Sock, &rfd);
@@ -36,7 +36,7 @@ void ClearSocketBuffer(SOCKET Sock)
 
 	int OriginErrorCode = GET_LAST_ERROR();
 
-	while( SocketIsStillReadable(Sock) )
+	while( SocketIsStillReadable(Sock, 0) )
 	{
 		recvfrom(Sock, BlackHole, sizeof(BlackHole), 0, NULL, NULL);
 	}
@@ -179,6 +179,13 @@ int InitBlockedIP(StringList *l)
 	StringList_Free(l);
 
 	return 0;
+}
+
+static int	ServerTimeOut = 2000;
+
+void SetServerTimeOut(int TimeOut)
+{
+	ServerTimeOut = TimeOut;
 }
 
 int QueryDNSViaUDP(SOCKET			Sock,
@@ -505,13 +512,6 @@ BOOL TCPSocketIsHealthy(SOCKET *sock)
 	}
 	/* Ineffective */
 	return FALSE;
-}
-
-static int	ServerTimeOut = 2000;
-
-void SetServerTimeOut(int TimeOut)
-{
-	ServerTimeOut = TimeOut;
 }
 
 /* BOOL ConnectToServer(SOCKET *sock, struct sockaddr_in *addr);

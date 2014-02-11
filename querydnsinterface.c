@@ -197,6 +197,7 @@ int QueryDNSInterfaceStart(void)
 	}
 
 	InitAddress();
+	SetPrimaryProtocol(ConfigGetRawString(&ConfigInfo, "PrimaryServer"));
 
 	srand(time(NULL));
 

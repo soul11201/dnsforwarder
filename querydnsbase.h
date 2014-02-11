@@ -32,13 +32,12 @@ struct _QueryContext{
 
 	SOCKET	TCPSocket;
 	SOCKET	UDPSocket;
+	sa_family_t	LastFamily;
 
 	SOCKET	*PrimarySocket;
 	SOCKET	*SecondarySocket;
 
 	DNSQuaryProtocol	PrimaryProtocolToServer;
-	struct sockaddr		*LastServer;
-	DNSQuaryProtocol	LastProtocol;
 
 	char				*RequestEntity;
 	int					RequestLength;
@@ -73,6 +72,8 @@ void ShowBlockedMessage(const char *RequestingDomain, const char *Package, const
 int DNSFetchFromCache(__in ThreadContext *Context);
 
 int InitAddress(void);
+
+void SetPrimaryProtocol(char *Protocol);
 
 int FetchFromHostsAndCache(ThreadContext *Context);
 

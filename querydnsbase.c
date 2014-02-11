@@ -407,6 +407,24 @@ int InitAddress(void)
 	return LoadDedicatedServer();
 
 }
+static DNSQuaryProtocol	PrimaryProtocol = DNS_QUARY_PROTOCOL_UDP;
+static BOOL	NullSecondary = FALSE;
+
+void SetPrimaryProtocol(char *Protocol)
+{
+	char ProtocolStr[8] = {0};
+
+	strncpy(ProtocolStr, Protocol, 3);
+	StrToLower(ProtocolStr);
+	if( strcmp(ProtocolStr, "tcp") == 0 )
+	{
+		PrimaryProtocol = DNS_QUARY_PROTOCOL_TCP;
+		NullSecondary = (ConfigGetStringList(&ConfigInfo, "UDPServer") == NULL);
+	} else {
+		PrimaryProtocol = DNS_QUARY_PROTOCOL_UDP;
+		NullSecondary = (ConfigGetStringList(&ConfigInfo, "TCPServer") == NULL);
+	}
+}
 
 static void SelectSocketAndProtocol(ThreadContext		*Context,
 									SOCKET				**SocketUsed,
@@ -414,13 +432,13 @@ static void SelectSocketAndProtocol(ThreadContext		*Context,
 									BOOL				IsSecondary
 									)
 {
-	if( IsSecondary == TRUE )
+	if( IsSecondary == TRUE && NullSecondary != TRUE )
 	{
 		*SocketUsed = Context -> SecondarySocket;
-		*ProtocolUsed = !(Context -> PrimaryProtocolToServer);
+		*ProtocolUsed = !PrimaryProtocol;
 	} else {
 		*SocketUsed = Context -> PrimarySocket;
-		*ProtocolUsed = Context -> PrimaryProtocolToServer;
+		*ProtocolUsed = PrimaryProtocol;
 	}
 }
 
@@ -449,22 +467,15 @@ static void SetAddressAndPrococolLetter(ThreadContext		*Context,
 		*NumberOfAddresses = 1;
 	}
 
-	if( *Addresses_List != Context -> LastServer )
-	{
-		if( Context -> LastProtocol == DNS_QUARY_PROTOCOL_UDP && ParallelQuery == FALSE )
-		{
-			CLOSE_SOCKET(Context -> Head -> UDPSocket);
-			Context -> UDPSocket = INVALID_SOCKET;
-		} else {
-			CloseTCPConnection(&(Context -> Head -> TCPSocket));
-		}
-	}
-
-	Context -> LastServer = *Addresses_List;
-	Context -> LastProtocol = ProtocolUsed;
-
 	if( ProtocolUsed == DNS_QUARY_PROTOCOL_UDP )
 	{
+		if( Context -> Head -> LastFamily != *Family )
+		{
+			CLOSE_SOCKET(Context -> Head -> UDPSocket);
+			Context -> Head -> UDPSocket = INVALID_SOCKET;
+			Context -> Head -> LastFamily = *Family;
+		}
+
 		/* Assign ProtocolCharacter used by output message */
 		if( ProtocolCharacter != NULL )
 		{
@@ -500,7 +511,7 @@ static int QueryFromServer(ThreadContext *Context)
 	int			AnswerCount;
 
 	/* Determine whether the secondaries are used */
-	if( Context -> SecondarySocket != NULL &&
+	if( NullSecondary != TRUE &&
 		(IsExcludedDomain(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue)) ||
 		GfwList_Match(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue)))
 		 )
@@ -537,7 +548,7 @@ static int QueryFromServer(ThreadContext *Context)
 		/* Move pointer to the next */
 		AddressChunk_Advance(&Addresses, ProtocolUsed);
 
-		if( UseSecondary == FALSE && Context -> SecondarySocket != NULL && AllowFallBack == TRUE )
+		if( UseSecondary == FALSE && NullSecondary != TRUE && AllowFallBack == TRUE )
 		{
 			INFO("Fallback from %c for %s .\n",
 				 ProtocolCharacter,
@@ -648,17 +659,13 @@ static BOOL DefinitionLoop(ThreadContext *Context, const char *Name)
 
 void InitContext(ThreadContext *Context, char *RequestEntity)
 {
-	static BOOL Inited = FALSE;
-	static DNSQuaryProtocol PrimaryProtocolToServer;
-	static BOOL NullSecondary = FALSE;
-
 	Context -> Head = Context;
 	Context -> Previous = NULL;
 
 	Context -> TCPSocket = INVALID_SOCKET;
 	Context -> UDPSocket = INVALID_SOCKET;
+	Context -> LastFamily = AF_UNSPEC;
 
-	Context -> LastServer = NULL;
 
 	Context -> Compress = TRUE;
 
@@ -667,42 +674,14 @@ void InitContext(ThreadContext *Context, char *RequestEntity)
 	Context -> RequestEntity = RequestEntity;
 
 	/* Choose and fill default primary and secondary socket */
-	if( Inited == FALSE )
+
+	if( PrimaryProtocol == DNS_QUARY_PROTOCOL_TCP )
 	{
-		char ProtocolStr[8] = {0};
-
-		strncpy(ProtocolStr, ConfigGetRawString(&ConfigInfo, "PrimaryServer"), 3);
-		StrToLower(ProtocolStr);
-		if( strcmp(ProtocolStr, "tcp") == 0 )
-		{
-			PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_TCP;
-			NullSecondary = (ConfigGetStringList(&ConfigInfo, "UDPServer") == NULL);
-		} else {
-			PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_UDP;
-			NullSecondary = (ConfigGetStringList(&ConfigInfo, "TCPServer") == NULL);
-		}
-
-		Inited = TRUE;
-	}
-
-	if( PrimaryProtocolToServer == DNS_QUARY_PROTOCOL_TCP )
-	{
-		Context -> PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_TCP;
 		Context -> PrimarySocket = &(Context -> TCPSocket);
-
-		if( NullSecondary == FALSE )
-			Context -> SecondarySocket = &(Context -> UDPSocket);
-		else
-			Context -> SecondarySocket = NULL;
-
+		Context -> SecondarySocket = &(Context -> UDPSocket);
 	} else {
-		Context -> PrimaryProtocolToServer = DNS_QUARY_PROTOCOL_UDP;
 		Context -> PrimarySocket = &(Context -> UDPSocket);
-
-		if( NullSecondary == FALSE )
-			Context -> SecondarySocket = &(Context -> TCPSocket);
-		else
-			Context -> SecondarySocket = NULL;
+		Context -> SecondarySocket = &(Context -> TCPSocket);
 	}
 
 }
@@ -753,9 +732,6 @@ int	GetAnswersByName(ThreadContext *Context, const char *Name, DNSRecordType Typ
 	{
 		return -1;
 	}
-
-	Context -> LastServer = RecursionContext.LastServer;
-	Context -> LastProtocol = RecursionContext.LastProtocol;
 
 	return StateOfReceiving;
 }

@@ -53,8 +53,7 @@
 			<Add option="-DHAVE_SYS_SYSCALL_H" />
 		</Compiler>
 		<Linker>
-			<Add option="-lcurl -lssl -lcrypto" />
-			<Add library="pthread" />
+			<Add option="-lcurl -lssl -lcrypto -pthread" />
 		</Linker>
 		<Unit filename="../addresschunk.c">
 			<Option compilerVar="CC" />

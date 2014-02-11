@@ -6,7 +6,7 @@
 #include "dnscache.h"
 #include "common.h"
 
-BOOL SocketIsStillReadable(SOCKET Sock);
+BOOL SocketIsStillReadable(SOCKET Sock, int timeout);
 
 void ClearSocketBuffer(SOCKET Sock);
 

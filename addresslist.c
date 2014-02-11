@@ -60,7 +60,7 @@ sa_family_t AddressList_ConvertToAddressFromString(struct _Address *Out, const c
 				PortPos = strchr(Addr_Port, ']');
 				if( PortPos == NULL )
 				{
-					return -1;
+					return AF_UNSPEC;
 				}
 
 				PortPos = strchr(PortPos, ':');
