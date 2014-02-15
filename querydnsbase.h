@@ -31,6 +31,8 @@ struct _QueryContext{
 	ThreadContext	*Previous;
 
 	SOCKET	TCPSocket;
+	struct	sockaddr	*LastServer;
+
 	SOCKET	UDPSocket;
 	sa_family_t	LastFamily;
 

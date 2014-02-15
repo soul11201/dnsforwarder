@@ -482,6 +482,12 @@ static void SetAddressAndPrococolLetter(ThreadContext		*Context,
 			*ProtocolCharacter = 'U';
 		}
 	} else { /* For TCP below */
+		if( Context -> Head -> LastServer != *Addresses_List )
+		{
+			CloseTCPConnection(&(Context -> Head -> TCPSocket));
+			Context -> Head -> LastServer = *Addresses_List;
+		}
+
 		if( ProtocolCharacter != NULL )
 		{
 			*ProtocolCharacter = 'T';
@@ -663,6 +669,8 @@ void InitContext(ThreadContext *Context, char *RequestEntity)
 	Context -> Previous = NULL;
 
 	Context -> TCPSocket = INVALID_SOCKET;
+	Context -> LastServer = NULL;
+
 	Context -> UDPSocket = INVALID_SOCKET;
 	Context -> LastFamily = AF_UNSPEC;
 
