@@ -9,7 +9,7 @@
 #include "rwlock.h"
 #include "cacheht.h"
 
-#define	CACHE_VERSION		17
+#define	CACHE_VERSION		22
 
 #define	CACHE_END	'\x0A'
 #define	CACHE_START	'\xFF'
@@ -320,19 +320,28 @@ static int32_t DNSCache_GetAviliableChunk(uint32_t Length, Cht_Node **Out)
 {
 	int32_t	NodeNumber;
 	Cht_Node	*Node;
-	uint32_t RoundedLength = ROUND_UP(Length, 8);
+	uint32_t	RoundedLength = ROUND_UP(Length, 8);
 
-	NodeNumber = CacheHT_FindUnusedNode(CacheInfo, RoundedLength, &Node, MapStart + (*CacheEnd) + RoundedLength);
+	BOOL	NewCreated;
+
+	NodeNumber = CacheHT_FindUnusedNode(CacheInfo, RoundedLength, &Node, MapStart + (*CacheEnd) + RoundedLength, &NewCreated);
 	if( NodeNumber >= 0 )
 	{
-		Node -> Offset = (*CacheEnd);
-		(*CacheEnd) += RoundedLength;
+		if( NewCreated == TRUE )
+		{
+			Node -> Offset = (*CacheEnd);
+			(*CacheEnd) += RoundedLength;
+		}
+
+		memset(MapStart + Node -> Offset + Length, 0xFE, RoundedLength - Length);
+
+		*Out = Node;
+		return NodeNumber;
+	} else {
+		*Out = NULL;
+		return -1;
 	}
 
-	memset(MapStart + Node -> Offset + Length, 0xFE, RoundedLength - Length);
-
-	*Out = Node;
-	return NodeNumber;
 }
 
 static Cht_Node *DNSCache_FindFromCache(char *Content, size_t Length, Cht_Node *Start, time_t CurrentTime)

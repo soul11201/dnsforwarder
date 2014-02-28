@@ -80,10 +80,11 @@ static int CacheHT_CreateNewNode(CacheHT *h, uint32_t ChunkSize, Cht_Node **Out,
 }
 
 int32_t CacheHT_FindUnusedNode(CacheHT		*h,
-								  uint32_t	ChunkSize,
-								  Cht_Node		**Out,
-								  void			*Boundary
-								  )
+								uint32_t	ChunkSize,
+								Cht_Node	**Out,
+								void		*Boundary,
+								BOOL		*NewCreated
+								)
 {
 	int32_t	Subscript = h -> FreeList;
 	Cht_Node	*FirstNode = NULL;
@@ -111,12 +112,15 @@ int32_t CacheHT_FindUnusedNode(CacheHT		*h,
 				*Out = SecondNode;
 			}
 
+			*NewCreated = FALSE;
+
 			return Subscript;
 		}
 
 		Subscript = SecondNode -> Next;
 	}
 
+	*NewCreated = TRUE;
 	return CacheHT_CreateNewNode(h, ChunkSize, Out, Boundary);
 }
 
