@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifndef	WIN32
 #ifndef DOWNLOAD_LIBCURL
 #ifndef DOWNLOAD_WGET
 #ifndef NODOWNLOAD
@@ -8,6 +9,7 @@
 #endif /* NODOWNLOAD */
 #endif /* DOWNLOAD_WGET */
 #endif /*  DOWNLOAD_LIBCURL */
+#endif /* WIN32 */
 
 #ifndef NODOWNLOAD
 #ifdef WIN32
