@@ -21,3 +21,11 @@ codeblocks_win/bin/*/*.bak
 codeblocks_win/bin/*/*.log
 codeblocks_win/bin/*/*.config
 test/
+
+.deps/
+autom4te.cache/
+config.h
+config.log
+config.status
+makefile
+stamp-h1
