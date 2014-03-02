@@ -215,8 +215,8 @@ int DomainStatistic_Hold(void)
 			    "Elapsed time : %ds\n"
 			    "\n"
 			    "Domain Statistic:\n"
-			    "                                                                Refused&Failed\n"
-			    "                                                          Domain   Total     | Hosts Cache   UDP   TCP\n",
+			    "                                                              Refused\n"
+			    "                                                 Domain   Total     | Hosts Cache   UDP   TCP\n",
 			InitTime_Str,
 			GenerateTime_Str,
 			(int)(GenerateTime_Num - InitTime_Num)

@@ -214,7 +214,7 @@ int DNSGenerateData(__in			char				*Data,
 			return strlen(Data) + 1;
 			break;
 
-		case DNSuint32_t:
+		case DNS_32BIT_UINT:
 			if( Buffer != NULL )
 			{
 				int a;

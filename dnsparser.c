@@ -20,11 +20,11 @@ const ElementDescriptor DNS_RECORD_CNAME[] = {
 const ElementDescriptor DNS_RECORD_SOA[] = {
 	{DNS_LABELED_NAME,	"primary name server"},
 	{DNS_LABELED_NAME,	"responsible mail addr"},
-	{DNSuint32_t,	"serial"},
-	{DNSuint32_t,	"refresh"},
-	{DNSuint32_t,	"retry"},
-	{DNSuint32_t,	"expire"},
-	{DNSuint32_t,	"default TTL"},
+	{DNS_32BIT_UINT,	"serial"},
+	{DNS_32BIT_UINT,	"refresh"},
+	{DNS_32BIT_UINT,	"retry"},
+	{DNS_32BIT_UINT,	"expire"},
+	{DNS_32BIT_UINT,	"default TTL"},
 };
 
 const ElementDescriptor DNS_RECORD_DOMAIN_POINTER[] = {
@@ -55,9 +55,9 @@ const ElementDescriptor DNS_RECORD_RRSIG[] = {
 	{DNS_16BIT_UINT,		"Type Covered"},
 	{DNS_DNSKEY_ALGORITHM,	"Algorithm"},
 	{DNS_8BIT_UINT,			"Labels"},
-	{DNSuint32_t,		"Original TTL"},
-	{DNSuint32_t,		"Signature Expiration"},
-	{DNSuint32_t,		"Signature Inception"},
+	{DNS_32BIT_UINT,		"Original TTL"},
+	{DNS_32BIT_UINT,		"Signature Expiration"},
+	{DNS_32BIT_UINT,		"Signature Inception"},
 	{DNS_16BIT_UINT,		"Key Tag"},
 	{DNS_LABELED_NAME,		"Signer's Name"},
 	{DNS_DNSSIG_SIGNATURE,	"Signature"}
@@ -77,7 +77,7 @@ static const struct _Type_Descriptor_DCount
 	{DNS_TYPE_PTR,		DNS_RECORD_DOMAIN_POINTER,	NUM_OF_DNS_RECORD_DOMAIN_POINTER, TRUE},
 	{DNS_TYPE_NS,		DNS_RECORD_NAME_SERVER,	NUM_OF_DNS_RECORD_NAME_SERVER, TRUE},
 	{DNS_TYPE_MX,		DNS_RECORD_MX,		NUM_OF_DNS_RECORD_MX,		TRUE},
-	{DNS_TYPE_TXT,		DNS_RECORD_TXT,		NUM_OF_DNS_RECORD_TXT,		TRUE},
+	{DNS_TYPE_TXT,		DNS_RECORD_TXT,		NUM_OF_DNS_RECORD_TXT,		FALSE},
 	{DNS_TYPE_DNSKEY,	DNS_RECORD_DNSKEY,	NUM_OF_DNS_RECORD_DNSKEY,	TRUE},
 	{DNS_TYPE_RRSIG,	DNS_RECORD_RRSIG,	NUM_OF_DNS_RECORD_RRSIG,	FALSE}
 
@@ -263,7 +263,7 @@ DNSDataInfo DNSParseData(const char *DNSBody,
 				break;
 
 			case DNS_IPV4_ADDR:
-			case DNSuint32_t:
+			case DNS_32BIT_UINT:
 				PendingData += 4;
 				break;
 
@@ -312,7 +312,7 @@ DNSDataInfo DNSParseData(const char *DNSBody,
 
 			break;
 
-		case DNSuint32_t:
+		case DNS_32BIT_UINT:
 			{
 				uint32_t Tmp = GET_32_BIT_U_INT(PendingData);
 				if(BufferLength < 4)

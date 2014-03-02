@@ -64,7 +64,7 @@ void DNSExpandCName(const char *DNSBody);
 typedef enum _RecordElement{
 	DNS_UNKNOWN  = 0,
 	DNS_LABELED_NAME,
-	DNSuint32_t,
+	DNS_32BIT_UINT,
 	DNS_16BIT_UINT,
 	DNS_8BIT_UINT,
 	DNS_CHARACTER_STRING,

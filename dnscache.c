@@ -24,7 +24,7 @@ static char				*MapStart;
 
 static ThreadHandle		TTLCountdown_Thread;
 
-static int32_t		CacheSize;
+static int32_t			CacheSize;
 static int				OverrideTTL;
 static int				TTLMultiple;
 static BOOL				IgnoreTTL;
@@ -456,8 +456,22 @@ static int DNSCache_AddAItemToCache(const char *DNSBody, const char *RecordBody,
 		/* Subscript of a chunk in the main cache zone */
 		int32_t	Subscript;
 
+		uint32_t RecordTTL;
+
 		/* Node with subscript `Subscript' */
 		Cht_Node	*Node;
+
+		if(OverrideTTL < 0)
+		{
+			RecordTTL = DNSGetTTL(RecordBody) * TTLMultiple;
+		} else {
+			RecordTTL = OverrideTTL;
+		}
+
+		if( RecordTTL == 0 )
+		{
+			return 0;
+		}
 
 		/* Get a usable chunk and its subscript */
 		Subscript = DNSCache_GetAviliableChunk(BufferItr - Buffer + 1, &Node);
@@ -469,24 +483,19 @@ static int DNSCache_AddAItemToCache(const char *DNSBody, const char *RecordBody,
 			memcpy(MapStart + Node -> Offset, Buffer, BufferItr - Buffer + 1);
 
 			/* Assign TTL */
-			if(OverrideTTL < 0)
-			{
-				Node -> TTL = DNSGetTTL(RecordBody) * TTLMultiple;
-			} else {
-				Node -> TTL = OverrideTTL;
-			}
+			Node -> TTL = RecordTTL;
 
 			Node -> TimeAdded = CurrentTime;
 
-			DEBUG_FILE("Added cache : %s, TTL : %d\n", Buffer + 1, Node -> TTL);
+			DEBUG_FILE("Added cache : %s, TTL : %d\n", Buffer + 1, RecordTTL);
 
 			/* Index this entry on the hash table */
 			CacheHT_InsertToSlot(CacheInfo, Buffer + 1, Subscript, Node, NULL);
+
+			++(*CacheCount);
 		} else {
 			return -1;
 		}
-
-		++(*CacheCount);
 	}
 
 	return 0;
@@ -561,9 +570,11 @@ static int DNSCache_GetRawRecordsFromCache(	__in	char				*Name,
 	char		*CacheItr;
 	Cht_Node	*Node = NULL;
 
-	int		DatasLen;
+	int			DatasLen;
 
-	int RecordCount = 0;
+	uint32_t	NewTTL;
+
+	int			RecordCount = 0;
 
 	const ElementDescriptor *Descriptor;
 	int CountOfDescriptor;
@@ -595,7 +606,14 @@ static int DNSCache_GetRawRecordsFromCache(	__in	char				*Name,
 
 				HereSaved = ExtendableBuffer_Expand((ExtendableBuffer *)Buffer, SingleLength, NULL);
 
-				DNSGenResourceRecord(HereSaved, SingleLength, Name, Type, Class, Node -> TTL - (CurrentTime - Node -> TimeAdded), NULL, 0, FALSE);
+				if( IgnoreTTL == TRUE )
+				{
+					NewTTL = Node -> TTL;
+				} else {
+					NewTTL = Node -> TTL - (CurrentTime - Node -> TimeAdded);
+				}
+
+				DNSGenResourceRecord(HereSaved, SingleLength, Name, Type, Class, NewTTL, NULL, 0, FALSE);
 
 				for(; *CacheItr != '\0'; ++CacheItr);
 				/* Then *CacheItr == '\0' */
@@ -645,6 +663,8 @@ int DNSCache_GetByQuestion(__in const char *Question, __inout ExtendableBuffer *
 
 	Cht_Node *Node;
 
+	uint32_t	NewTTL;
+
 	int		RecordsCount	=	0;
 
 	DNSRecordType	Type;
@@ -675,7 +695,14 @@ int DNSCache_GetByQuestion(__in const char *Question, __inout ExtendableBuffer *
 
 			HereSaved = ExtendableBuffer_Expand(Buffer, SingleLength, NULL);
 
-			DNSGenResourceRecord(HereSaved, SingleLength, Name, DNS_TYPE_CNAME, 1, Node -> TTL - (CurrentTime - Node -> TimeAdded), CName, strlen(CName) + 1, TRUE);
+			if( IgnoreTTL == TRUE )
+			{
+				NewTTL = Node -> TTL;
+			} else {
+				NewTTL = Node -> TTL - (CurrentTime - Node -> TimeAdded);
+			}
+
+			DNSGenResourceRecord(HereSaved, SingleLength, Name, DNS_TYPE_CNAME, 1, NewTTL, CName, strlen(CName) + 1, TRUE);
 
 			strcpy(Name, CName);
 		}
