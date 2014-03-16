@@ -32,26 +32,28 @@ void SetFallBack(BOOL FallBack)
 	AllowFallBack = FallBack;
 }
 
-void ShowRefusingMassage(ThreadContext *Context)
+void ShowRefusingMassage(ThreadContext *Context, const char *Massage)
 {
 	char DateAndTime[32];
 
-	if( ShowMassages == TRUE )
+	if( ShowMassages == TRUE || DEBUGMODE )
 	{
 		GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
 
-		printf("%s[R][%s][%s][%s] Refused.\n",
+		printf("%s[R][%s][%s][%s] %s.\n",
 			  DateAndTime,
 			  Context -> ClientIP,
 			  DNSGetTypeName(Context -> RequestingType),
-			  Context -> RequestingDomain
+			  Context -> RequestingDomain,
+			  Massage
 			  );
 	}
 
-	DEBUG_FILE("[R][%s][%s][%s].\n",
+	DEBUG_FILE("[R][%s][%s][%s] %s.\n",
 		   Context -> ClientIP,
 		   DNSGetTypeName(Context -> RequestingType),
-		   Context -> RequestingDomain
+		   Context -> RequestingDomain,
+		   Massage
 		   );
 }
 
@@ -619,11 +621,18 @@ int QueryBase(ThreadContext *Context)
 
 	int	QuestionCount;
 
-	/* Check if this domain or type is disabled */
-	if( IsDisabledType(Context -> RequestingType) || IsDisabledDomain(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue)) )
+	if( IsDisabledType(Context -> RequestingType) )
 	{
 		DomainStatistic_Add(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue), STATISTIC_TYPE_REFUSED);
-		ShowRefusingMassage(Context);
+		ShowRefusingMassage(Context, "Disabled type");
+		return QUERY_RESULT_DISABLE;
+	}
+
+	/* Check if this domain or type is disabled */
+	if( IsDisabledDomain(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue)) )
+	{
+		DomainStatistic_Add(Context -> RequestingDomain, &(Context -> RequestingDomainHashValue), STATISTIC_TYPE_REFUSED);
+		ShowRefusingMassage(Context, "Disabled domain");
 		return QUERY_RESULT_DISABLE;
 	}
 

@@ -188,6 +188,76 @@ void SetServerTimeOut(int TimeOut)
 	ServerTimeOut = TimeOut;
 }
 
+static BOOL WouldBeBlock(const char *Package, const char *RequestingDomain, BOOL ThereExistAdditionalRecord)
+{
+	int AnswerCount = DNSGetAnswerCount(Package);
+
+	if( UDPAntiPollution == TRUE &&
+		AnswerCount > 0)
+	{
+		const unsigned char *Answer;
+		uint32_t *Data;
+
+		Answer = (const unsigned char *)DNSGetAnswerRecordPosition(Package, 1);
+
+		Data = (uint32_t *)DNSGetResourceDataPos(Answer);
+
+		if( DNSGetRecordType(Answer) == DNS_TYPE_A && *Answer != 0xC0 )
+		{
+			if( BlockedIP != NULL && IpChunk_Find(BlockedIP, *Data) == TRUE )
+			{
+				ShowBlockedMessage(RequestingDomain, Package, "False package, discarded. And its IP address is not in `UDPBlock_IP'");
+			} else {
+				ShowBlockedMessage(RequestingDomain, Package, "False package, discarded");
+			}
+
+			return TRUE;
+		}
+
+		if( BlockedIP != NULL )
+		{
+			int					Loop		=	1;
+			const unsigned char	*Answer1	=	Answer;
+			uint32_t			*Data1		=	Data;
+
+			do
+			{
+				if( DNSGetRecordType(Answer1) == DNS_TYPE_A && IpChunk_Find(BlockedIP, *Data1) == TRUE )
+				{
+					ShowBlockedMessage(RequestingDomain, Package, "Containing blocked ip, discarded");
+					Loop = -1;
+					break;
+				}
+
+				++Loop;
+
+				if( Loop > AnswerCount )
+				{
+					break;
+				}
+
+				Answer1 = (const unsigned char *)DNSGetAnswerRecordPosition(Package, Loop);
+				Data1 = (uint32_t *)DNSGetResourceDataPos(Answer1);
+
+			} while( TRUE );
+
+			if( Loop == -1 )
+			{
+				return TRUE;
+			}
+
+		}
+
+		if( ThereExistAdditionalRecord == TRUE && DNSGetAdditionalCount(Package) <= 0 )
+		{
+			ShowBlockedMessage(RequestingDomain, Package, "False package, discarded");
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
 int QueryDNSViaUDP(SOCKET			Sock,
 				   struct sockaddr	*PeerAddr_List,
 				   int				NumberOfAddresses,
@@ -208,8 +278,6 @@ int QueryDNSViaUDP(SOCKET			Sock,
 	sa_family_t	Family;
 
 	BOOL	ThereExistAdditionalRecord = FALSE;
-
-	int		AnswerCount = 0;
 
 	if(RequestLength == 0) return 0;
 	if(RequestLength < 0) return -1;
@@ -277,74 +345,10 @@ int QueryDNSViaUDP(SOCKET			Sock,
 			continue;
 		}
 
-		AnswerCount = DNSGetAnswerCount(NewlyReceived);
-
-		if( UDPAntiPollution == TRUE &&
-			AnswerCount > 0)
+		if( WouldBeBlock(NewlyReceived, RequestingDomain, ThereExistAdditionalRecord) == TRUE )
 		{
-			const unsigned char *Answer;
-			uint32_t *Data;
-
-			Answer = (const unsigned char *)DNSGetAnswerRecordPosition(NewlyReceived, 1);
-
-			Data = (uint32_t *)DNSGetResourceDataPos(Answer);
-
-			if( DNSGetRecordType(Answer) == DNS_TYPE_A && *Answer != 0xC0 )
-			{
-				if( BlockedIP != NULL )
-				{
-					if( IpChunk_Find(BlockedIP, *Data) == TRUE )
-					{
-						ShowBlockedMessage(RequestingDomain, NewlyReceived, "False package, discarded");
-					} else {
-						ShowBlockedMessage(RequestingDomain, NewlyReceived, "False package, discarded. And its IP address is not in `UDPBlock_IP'");
-					}
-				} else {
-					ShowBlockedMessage(RequestingDomain, NewlyReceived, "False package, discarded");
-				}
-
-				continue;
-			}
-
-			if( BlockedIP != NULL )
-			{
-				int					Loop		=	1;
-				const unsigned char	*Answer1	=	Answer;
-				uint32_t			*Data1		=	Data;
-
-				do
-				{
-					if( DNSGetRecordType(Answer1) == DNS_TYPE_A && IpChunk_Find(BlockedIP, *Data1) == TRUE )
-					{
-						ShowBlockedMessage(RequestingDomain, NewlyReceived, "Containing blocked ip, discarded");
-						Loop = -1;
-						break;
-					}
-
-					++Loop;
-
-					if( Loop > AnswerCount )
-					{
-						break;
-					}
-
-					Answer1 = (const unsigned char *)DNSGetAnswerRecordPosition(NewlyReceived, Loop);
-					Data1 = (uint32_t *)DNSGetResourceDataPos(Answer1);
-
-				} while( TRUE );
-
-				if( Loop == -1 )
-				{
-					continue;
-				}
-
-			}
-
-			if( ThereExistAdditionalRecord == TRUE && DNSGetAdditionalCount(NewlyReceived) <= 0 )
-			{
-				ShowBlockedMessage(RequestingDomain, NewlyReceived, "False package, discarded");
-				continue;
-			}
+			DomainStatistic_Add(RequestingDomain, NULL, STATISTIC_TYPE_POISONED);
+			continue;
 		}
 
 		break;

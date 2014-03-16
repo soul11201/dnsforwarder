@@ -116,6 +116,16 @@ void *Array_SetToSubscript(Array *a, int Subscript, void *Data)
 	}
 }
 
+void Array_Sort(Array *a, int (*Compare)(const void *, const void *))
+{
+	if( a -> Allocated < 0 )
+	{
+		qsort(a -> Data - (a -> Used * a -> DataLength), a -> Used, a -> DataLength, Compare);
+	} else {
+		qsort(a -> Data, a -> Used, a -> DataLength, Compare);
+	}
+}
+
 void Array_Free(Array *a)
 {
 	if( a -> Allocated >= 0 )

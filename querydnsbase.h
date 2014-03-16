@@ -63,7 +63,7 @@ struct _QueryContext{
 
 void SetFallBack(BOOL FallBack);
 
-void ShowRefusingMassage(ThreadContext *Context);
+void ShowRefusingMassage(ThreadContext *Context, const char *Massage);
 
 void ShowErrorMassage(ThreadContext *Context, char ProtocolCharacter);
 
