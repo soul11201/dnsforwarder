@@ -48,7 +48,7 @@ int AddressChunk_AddADedicatedAddress_FromString(AddressChunk *ac, const char *D
 
 }
 
-struct sockaddr *AddressChunk_GetDedicated(AddressChunk *ac, sa_family_t *family, const char *RequestingDomain, int *HashValue, DNSQuaryProtocol Protocol)
+struct sockaddr *AddressChunk_GetDedicated(AddressChunk *ac, sa_family_t *family, const char *RequestingDomain, int *HashValue)
 {
 	struct _Address *Result;
 

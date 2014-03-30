@@ -22,7 +22,7 @@
 #include "request_response.h"
 #include "debug.h"
 
-#define VERSION__ "2.7"
+#define VERSION__ "2.7.1"
 
 #define PRINTM(...)		if(ShowMassages == TRUE) printf(__VA_ARGS__);
 
@@ -82,8 +82,13 @@ int DaemonInit()
 	strcat(NewArguments, ModuleName);
 	strcat(NewArguments, "\" ");
 	strcat(NewArguments, CmdLine);
+
 	itr = strstr(NewArguments + strlen(ModuleName) + 2, "-d");
-	*(itr + 1) = 'q';
+	while( itr != NULL )
+	{
+		*(itr + 1) = 'q';
+		itr = strstr(itr + 2, "-d");
+	}
 
 	StartUpInfo.cb = sizeof(StartUpInfo);
 	StartUpInfo.lpReserved = NULL;
@@ -239,13 +244,14 @@ int ArgParse(int argc, char *argv_ori[])
     	if(strcmp("-h", *argv) == 0)
 		{
 			printf("DNSforwarder by holmium. Free for non-commercial use. Version "VERSION__" . Time of compilation : %s %s.\n\n", __DATE__, __TIME__);
+			printf("http://micasmica.blogspot.com/2011/08/dns.html\nhttps://github.com/holmium/dnsforwarder\n\n");
 			printf("Usage : %s [args].\n", strrchr(argv_ori[0], PATH_SLASH_CH) == NULL ? argv_ori[0] : strrchr(argv_ori[0], PATH_SLASH_CH) + 1);
 			printf(" [args] is case sensitivity and can be zero or more (in any order) of:\n"
 				  "  -f <FILE>  Use configuration <FILE> instead of the default one.\n"
 				  "  -q         Quiet mode. Do not print any information.\n"
 				  "  -e         Show only error messages.\n"
 				  "  -d         Daemon mode. Running at background.\n"
-				  "  -P         Try to probe all the fake IP addresses held in false DNS responses,\n"
+				  "  -P         Try to probe all the fake IP addresses held in false DNS responses.\n"
 #ifdef INTERNAL_DEBUG
 				  "\n"
 				  "  -nD        \n"
@@ -400,6 +406,7 @@ int main(int argc, char *argv[])
 		if( DaemonInit() == 0 )
 		{
 			ShowMassages = FALSE;
+			ErrorMessages = FALSE;
 		} else {
 			printf("Daemon init failed, continuing on non-daemon mode.\n");
 		}

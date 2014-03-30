@@ -198,8 +198,6 @@ static void GetHostsFromInternet_Thread(void *Unused)
 	const char *Script = ConfigGetRawString(&ConfigInfo, "HostsScript");
 	int			HostsRetryInterval = ConfigGetInt32(&ConfigInfo, "HostsRetryInterval");
 
-	INFO("Hosts File : \"%s\" -> \"%s\"\n", URL, File);
-
 	while(1)
 	{
 
@@ -225,7 +223,7 @@ static void GetHostsFromInternet_Thread(void *Unused)
 			SLEEP(UpdateInterval * 1000);
 
 		} else {
-			ERRORMSG("Getting Hosts from Internet failed. Waiting %d second(s) for retry.\n", HostsRetryInterval);
+			ERRORMSG("Getting Hosts from Internet failed. Waiting %d second(s) to try again.\n", HostsRetryInterval);
 			SLEEP(HostsRetryInterval * 1000);
 		}
 	}
@@ -254,6 +252,8 @@ int DynamicHosts_Init(void)
 		/* Local file */
 		File = Path;
 
+		INFO("Hosts File : \"%s\"\n", Path);
+
 		if( DynamicHosts_Load() != 0 )
 		{
 			ERRORMSG("Loading Hosts failed.\n");
@@ -273,6 +273,8 @@ int DynamicHosts_Init(void)
 		}
 
 		Internet = TRUE;
+
+		INFO("Hosts File : \"%s\" -> \"%s\"\n", Path, File);
 
 		if( FileIsReadable(File) )
 		{

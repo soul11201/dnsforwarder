@@ -204,7 +204,7 @@ static BOOL WouldBeBlock(const char *Package, const char *RequestingDomain, BOOL
 
 		if( DNSGetRecordType(Answer) == DNS_TYPE_A && *Answer != 0xC0 )
 		{
-			if( BlockedIP != NULL && IpChunk_Find(BlockedIP, *Data) == TRUE )
+			if( BlockedIP != NULL && IpChunk_Find(BlockedIP, *Data) == FALSE )
 			{
 				ShowBlockedMessage(RequestingDomain, Package, "False package, discarded. And its IP address is not in `UDPBlock_IP'");
 			} else {
@@ -224,7 +224,7 @@ static BOOL WouldBeBlock(const char *Package, const char *RequestingDomain, BOOL
 			{
 				if( DNSGetRecordType(Answer1) == DNS_TYPE_A && IpChunk_Find(BlockedIP, *Data1) == TRUE )
 				{
-					ShowBlockedMessage(RequestingDomain, Package, "Containing blocked ip, discarded");
+					ShowBlockedMessage(RequestingDomain, Package, "One of the IPs is in blocked list, discarded");
 					Loop = -1;
 					break;
 				}

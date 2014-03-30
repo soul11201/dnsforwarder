@@ -20,7 +20,7 @@ int AddressChunk_AddAUDPAddress_FromString(AddressChunk *ac, const char *Addr_Po
 
 int AddressChunk_AddADedicatedAddress_FromString(AddressChunk *ac, const char *Domain, const char *Addr_Port);
 
-struct sockaddr *AddressChunk_GetDedicated(AddressChunk *ac, sa_family_t *family, const char *RequestingDomain, int *HashValue, DNSQuaryProtocol Protocol);
+struct sockaddr *AddressChunk_GetDedicated(AddressChunk *ac, sa_family_t *family, const char *RequestingDomain, int *HashValue);
 
 struct sockaddr *AddressChunk_GetOne(AddressChunk *ac, sa_family_t *family, DNSQuaryProtocol Protocol);
 

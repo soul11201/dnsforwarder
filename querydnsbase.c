@@ -39,7 +39,10 @@ void ShowRefusingMassage(ThreadContext *Context, const char *Massage)
 	if( ShowMassages == TRUE || DEBUGMODE )
 	{
 		GetCurDateAndTime(DateAndTime, sizeof(DateAndTime));
+	}
 
+	if( ShowMassages == TRUE )
+	{
 		printf("%s[R][%s][%s][%s] %s.\n",
 			  DateAndTime,
 			  Context -> ClientIP,
@@ -452,7 +455,7 @@ static void SetAddressAndPrococolLetter(ThreadContext		*Context,
 										char				*ProtocolCharacter
 										)
 {
-	*Addresses_List = AddressChunk_GetDedicated(&Addresses, Family, Context -> RequestingDomain, &(Context -> RequestingDomainHashValue), ProtocolUsed);
+	*Addresses_List = AddressChunk_GetDedicated(&Addresses, Family, Context -> RequestingDomain, &(Context -> RequestingDomainHashValue));
 
 	if( *Addresses_List == NULL )
 	{

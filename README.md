@@ -8,8 +8,8 @@ Dependencies :
   For Linux:
 
     pthread;
-    libcurl;
-    openssl.
+    libcurl (optional);
+    openssl (optional).
 
   For Windows:
   None.

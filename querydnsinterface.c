@@ -32,7 +32,7 @@ int QueryDNSInterfaceInit(char *ConfigFile)
     TmpTypeDescriptor.str = "TCP";
     ConfigAddOption(&ConfigInfo, "PrimaryServer", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Primary server");
 
-    TmpTypeDescriptor.INT32 = 3;
+    TmpTypeDescriptor.INT32 = 5;
     ConfigAddOption(&ConfigInfo, "UDPThreads", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = "8.8.8.8";
@@ -78,7 +78,7 @@ int QueryDNSInterfaceInit(char *ConfigFile)
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "Hosts", STRATEGY_REPLACE, TYPE_PATH, TmpTypeDescriptor, "Hosts File");
 
-    TmpTypeDescriptor.INT32 = 600;
+    TmpTypeDescriptor.INT32 = 18000;
     ConfigAddOption(&ConfigInfo, "HostsUpdateInterval", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
 	ConfigAddAlias(&ConfigInfo, "HostsFlushTime", "HostsUpdateInterval");
@@ -151,7 +151,7 @@ int QueryDNSInterfaceInit(char *ConfigFile)
     TmpTypeDescriptor.boolean = TRUE;
     ConfigAddOption(&ConfigInfo, "GfwListBase64Decode", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
 
-    TmpTypeDescriptor.INT32 = 7200;
+    TmpTypeDescriptor.INT32 = 21600;
     ConfigAddOption(&ConfigInfo, "GfwListUpdateInterval", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
 
     ConfigAddAlias(&ConfigInfo, "GfwListFlushTime", "GfwListUpdateInterval");

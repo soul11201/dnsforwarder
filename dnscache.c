@@ -220,7 +220,7 @@ int DNSCache_Init(void)
 		}
 	}
 
-	if( _CacheSize % sizeof(void *) != 0 )
+	if( _CacheSize % 8 != 0 )
 	{
 		CacheSize = ROUND_UP(_CacheSize, 8);
 	} else {
