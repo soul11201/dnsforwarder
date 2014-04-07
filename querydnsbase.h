@@ -3,10 +3,6 @@
 
 #include "debug.h"
 
-#define	PRINT(...)		if(ShowMassages == TRUE){ printf(__VA_ARGS__); } DEBUG_FILE(__VA_ARGS__);
-#define	INFO(...)		if(ShowMassages == TRUE){ printf("[INFO] "__VA_ARGS__); } DEBUG_FILE(__VA_ARGS__);
-#define	ERRORMSG(...)	if(ErrorMessages == TRUE){ fprintf(stderr, "[ERROR] "__VA_ARGS__); } DEBUG_FILE(__VA_ARGS__);
-
 typedef enum _DnsQuaryProtocol{
 	DNS_QUARY_PROTOCOL_UDP = 0,
 	DNS_QUARY_PROTOCOL_TCP = 1
@@ -18,11 +14,6 @@ typedef enum _DnsQuaryProtocol{
 #include "readconfig.h"
 #include "extendablebuffer.h"
 #include "request_response.h"
-
-/* Global Varibles */
-extern ConfigFileInfo	ConfigInfo;
-extern BOOL				ShowMassages;
-extern BOOL				ErrorMessages;
 
 typedef struct _QueryContext ThreadContext;
 
@@ -75,7 +66,7 @@ int DNSFetchFromCache(__in ThreadContext *Context);
 
 int InitAddress(void);
 
-void SetPrimaryProtocol(char *Protocol);
+void SetPrimaryProtocol(const char *Protocol);
 
 int FetchFromHostsAndCache(ThreadContext *Context);
 

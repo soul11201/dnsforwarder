@@ -415,7 +415,7 @@ int InitAddress(void)
 static DNSQuaryProtocol	PrimaryProtocol = DNS_QUARY_PROTOCOL_UDP;
 static BOOL	NullSecondary = FALSE;
 
-void SetPrimaryProtocol(char *Protocol)
+void SetPrimaryProtocol(const char *Protocol)
 {
 	char ProtocolStr[8] = {0};
 

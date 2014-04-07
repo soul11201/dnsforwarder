@@ -5,6 +5,11 @@
 #include "utils.h"
 #include "common.h"
 
+/* Global Variables */
+ConfigFileInfo	ConfigInfo;
+BOOL			ShowMassages = TRUE;
+BOOL			ErrorMessages = TRUE;
+
 #ifdef INTERNAL_DEBUG
 static EFFECTIVE_LOCK	Debug_Mutex;
 static FILE				*Debug_File = NULL;

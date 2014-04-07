@@ -605,7 +605,7 @@ int QueryFromServerBase(SOCKET				*Socket,
 				DomainStatistic_Add(RequestingDomain, NULL, STATISTIC_TYPE_REFUSED);
 				return -2; /* Failed */
 			} else {
-				INFO("(Connecting to server Successfully.)\n");
+				INFO("TCP connection to server established.\n");
 			}
 		}
 	}

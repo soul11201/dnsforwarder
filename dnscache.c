@@ -138,7 +138,7 @@ static void ReloadCache(void)
 {
 	struct _Header	*Header = (struct _Header *)MapStart;
 
-	INFO("Loading the existing cache ...\n");
+	INFO("Reloading the cache ...\n");
 
 	CacheInfo = &(Header -> ht);
 
