@@ -12,10 +12,17 @@
 #include "domainstatistic.h"
 #include "debug.h"
 
+static ConfigFileInfo	ConfigInfo;
+
 int QueryDNSInterfaceInit(char *ConfigFile)
 {
 	VType	TmpTypeDescriptor;
 	char	TmpStr[1024];
+
+	GetFileDirectory(TmpStr);
+	strcat(TmpStr, PATH_SLASH_STR);
+
+	SetProgramEnvironment("PROGRAMDIRECTORY", TmpStr);
 
 	ConfigInitInfo(&ConfigInfo);
 
@@ -43,6 +50,9 @@ int QueryDNSInterfaceInit(char *ConfigFile)
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "ExcludedDomain", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
+
+    TmpTypeDescriptor.str = NULL;
+    ConfigAddOption(&ConfigInfo, "ExcludedList", STRATEGY_APPEND, TYPE_PATH, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.boolean = FALSE;
     ConfigAddOption(&ConfigInfo, "AllowFallBack", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
@@ -95,7 +105,7 @@ int QueryDNSInterfaceInit(char *ConfigFile)
     ConfigAddOption(&ConfigInfo, "HostsDownloadPath", STRATEGY_REPLACE, TYPE_PATH, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = NULL;
-    ConfigAddOption(&ConfigInfo, "HostsScript", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, NULL);
+    ConfigAddOption(&ConfigInfo, "HostsScript", STRATEGY_REPLACE, TYPE_PATH, TmpTypeDescriptor, NULL);
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "AppendHosts", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
@@ -143,6 +153,9 @@ int QueryDNSInterfaceInit(char *ConfigFile)
 
     TmpTypeDescriptor.str = NULL;
     ConfigAddOption(&ConfigInfo, "DisabledDomain", STRATEGY_APPEND, TYPE_STRING, TmpTypeDescriptor, NULL);
+
+    TmpTypeDescriptor.str = NULL;
+    ConfigAddOption(&ConfigInfo, "DisabledList", STRATEGY_APPEND, TYPE_PATH, TmpTypeDescriptor, NULL);
 
 
     TmpTypeDescriptor.str = NULL;
@@ -196,8 +209,8 @@ int QueryDNSInterfaceStart(void)
 		putchar('\n');
 	}
 
-	InitAddress();
-	SetPrimaryProtocol(ConfigGetRawString(&ConfigInfo, "PrimaryServer"));
+	InitAddress(&ConfigInfo);
+	SetPrimaryProtocol(&ConfigInfo);
 
 	srand(time(NULL));
 
@@ -212,29 +225,29 @@ int QueryDNSInterfaceStart(void)
 		DomainStatistic_Init(ConfigGetInt32(&ConfigInfo, "StatisticUpdateInterval"));
 	}
 
-	ExcludedList_Init();
-	GfwList_Init(FALSE);
+	ExcludedList_Init(&ConfigInfo);
+	GfwList_Init(&ConfigInfo, FALSE);
 
 	SetServerTimeOut(ConfigGetInt32(&ConfigInfo, "TimeToServer"));
 	SetFallBack(ConfigGetBoolean(&ConfigInfo, "AllowFallBack"));
 
-	DNSCache_Init();
+	DNSCache_Init(&ConfigInfo);
 
 	if( ConfigGetInt32(&ConfigInfo, "UDPThreads") > 0)
 	{
-		if( QueryDNSListenUDPInit() == 0 )
+		if( QueryDNSListenUDPInit(&ConfigInfo) == 0 )
 		{
 			++state;
-			QueryDNSListenUDPStart(ConfigGetInt32(&ConfigInfo, "UDPThreads"));
+			QueryDNSListenUDPStart(&ConfigInfo);
 		}
 	}
 
 	if( ConfigGetBoolean(&ConfigInfo, "OpenLocalTCP") == TRUE )
 	{
-		if( QueryDNSListenTCPInit() == 0 )
+		if( QueryDNSListenTCPInit(&ConfigInfo) == 0 )
 		{
 			++state;
-			QueryDNSListenTCPStart();
+			QueryDNSListenTCPStart(&ConfigInfo);
 		}
 	}
 
@@ -243,9 +256,9 @@ int QueryDNSInterfaceStart(void)
 		return 1;
 	}
 
-	DynamicHosts_Init();
+	DynamicHosts_Init(&ConfigInfo);
 
-	GfwList_PeriodicWork();
+	GfwList_PeriodicWork(&ConfigInfo);
 
 	LocalAddr = ConfigGetRawString(&ConfigInfo, "LocalInterface");
 	IsZeroZeroZeroZero = !strncmp(LocalAddr, "0.0.0.0", 7);

@@ -34,11 +34,16 @@ typedef enum _HostsRecordType{
 
 } HostsRecordType;
 
+#define	MATCH_STATE_PERFECT		0
+#define	MATCH_STATE_ONLY_CNAME	1
+#define	MATCH_STATE_NONE		(-1)
+#define	MATCH_STATE_DISABLED	(-2)
+
 int Hosts_InitContainer(HostsContainer	*Container);
 
 HostsRecordType Hosts_LoadFromMetaLine(HostsContainer *Container, char *MetaLine);
 
-int StaticHosts_Init(void);
+int StaticHosts_Init(ConfigFileInfo *ConfigInfo);
 
 int Hosts_GetFromContainer(HostsContainer *Container, ThreadContext *Context, int *AnswerCount);
 

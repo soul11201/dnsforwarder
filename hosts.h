@@ -7,7 +7,7 @@
 
 #define DOMAIN_NAME_LENGTH_MAX 128
 
-int DynamicHosts_Init(void);
+int DynamicHosts_Init(ConfigFileInfo *ConfigInfo);
 
 int DynamicHosts_GetByQuestion(ThreadContext *Context, int *AnswerCount);
 

@@ -64,9 +64,9 @@ void ShowBlockedMessage(const char *RequestingDomain, const char *Package, const
 
 int DNSFetchFromCache(__in ThreadContext *Context);
 
-int InitAddress(void);
+int InitAddress(ConfigFileInfo *ConfigInfo);
 
-void SetPrimaryProtocol(const char *Protocol);
+void SetPrimaryProtocol(ConfigFileInfo *ConfigInfo);
 
 int FetchFromHostsAndCache(ThreadContext *Context);
 

@@ -1,10 +1,9 @@
 #ifndef DEBUG_H_INCLUDED
 #define DEBUG_H_INCLUDED
 
-#include "readconfig.h"
+#include "common.h"
 
 /* Global Varibles */
-extern ConfigFileInfo	ConfigInfo;
 extern BOOL				ShowMassages;
 extern BOOL				ErrorMessages;
 
@@ -14,8 +13,6 @@ extern BOOL				ErrorMessages;
 
 
 #ifdef INTERNAL_DEBUG
-
-#include "common.h"
 
 #define	DEBUG_FILE(...)	Debug_PrintFile(__FUNCTION__, __LINE__, __VA_ARGS__)
 

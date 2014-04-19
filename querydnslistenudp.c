@@ -32,17 +32,17 @@ static int			RefusingResponseCode = 0;
 						EFFECTIVE_LOCK_RELEASE(LockOfSendBack);
 
 /* Functions */
-int QueryDNSListenUDPInit(void)
+int QueryDNSListenUDPInit(ConfigFileInfo *ConfigInfo)
 {
 	CompatibleAddr ListenAddr;
 
-	const char	*LocalAddr = ConfigGetRawString(&ConfigInfo, "LocalInterface");
+	const char	*LocalAddr = ConfigGetRawString(ConfigInfo, "LocalInterface");
 
-	int			LocalPort = ConfigGetInt32(&ConfigInfo, "LocalPort");
+	int			LocalPort = ConfigGetInt32(ConfigInfo, "LocalPort");
 
 	int			AddrLen;
 
-	RefusingResponseCode = ConfigGetInt32(&ConfigInfo, "RefusingResponseCode");
+	RefusingResponseCode = ConfigGetInt32(ConfigInfo, "RefusingResponseCode");
 
 	Family = GetAddressFamily(LocalAddr);
 
@@ -316,10 +316,18 @@ static int QueryDNSListenUDP(void *ID){
 	return 0;
 }
 
-void QueryDNSListenUDPStart(int _ThreadCount)
+void QueryDNSListenUDPStart(ConfigFileInfo *ConfigInfo)
 {
+	int _ThreadCount;
+
 	if(Inited == FALSE) return;
-	if(_ThreadCount < 1) return;
+
+	_ThreadCount = ConfigGetInt32(ConfigInfo, "UDPThreads");
+	if(_ThreadCount < 1)
+	{
+		return;
+	}
+
 	Threads = SafeMalloc(_ThreadCount * sizeof(ThreadHandle));
 
 	for(; _ThreadCount != 0; --_ThreadCount)
@@ -330,7 +338,7 @@ void QueryDNSListenUDPStart(int _ThreadCount)
 					  );
 	}
 	INFO("Starting UDP socket %s:%d successfully.\n",
-		 ConfigGetRawString(&ConfigInfo, "LocalInterface"),
-		 ConfigGetInt32(&ConfigInfo, "LocalPort")
+		 ConfigGetRawString(ConfigInfo, "LocalInterface"),
+		 ConfigGetInt32(ConfigInfo, "LocalPort")
 		 );
 }

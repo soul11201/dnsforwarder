@@ -2,9 +2,10 @@
 #define _QUERY_DNS_UDP_H_
 
 #include "common.h"
+#include "readconfig.h"
 
-int QueryDNSListenUDPInit(void);
+int QueryDNSListenUDPInit(ConfigFileInfo *ConfigInfo);
 
-void QueryDNSListenUDPStart(int ThreadCount);
+void QueryDNSListenUDPStart(ConfigFileInfo *ConfigInfo);
 
 #endif /* _QUERY_DNS_UDP_H_ */

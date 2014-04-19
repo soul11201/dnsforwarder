@@ -20,7 +20,7 @@ BOOL IpChunk_Find(IpChunk *ic, uint32_t Ip)
 {
 	IpElement	Key = {Ip};
 
-	if( Bst_Search(ic, &Key, NULL) == NULL )
+	if( Bst_Search(ic, &Key, NULL) < 0 )
 	{
 		return FALSE;
 	} else {

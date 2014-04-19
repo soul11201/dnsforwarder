@@ -116,7 +116,7 @@ int Bst_Add(Bst *t, const void *Data)
     }
 }
 
-const void *Bst_Search(Bst *t, const void *Data, const void *Start)
+int32_t Bst_Search(Bst *t, const void *Data, const void *Start)
 {
 	int32_t			CurrentNode;
 	const Bst_NodeHead	*Current;
@@ -142,10 +142,10 @@ const void *Bst_Search(Bst *t, const void *Data, const void *Start)
 		} else if( CompareResult > 0 )
 		{
 			CurrentNode = Current -> Right;
-		} else {
-			return ((char *)Current) + sizeof(Bst_NodeHead);
+		} else { /* equal */
+			return CurrentNode;
 		}
 	}
 
-	return NULL;
+	return -1;
 }

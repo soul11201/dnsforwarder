@@ -192,11 +192,11 @@ static int TryLoadHosts(void)
 	return 0;
 }
 
-static void GetHostsFromInternet_Thread(void *Unused)
+static void GetHostsFromInternet_Thread(ConfigFileInfo *ConfigInfo)
 {
-	const char *URL = ConfigGetRawString(&ConfigInfo, "Hosts");
-	const char *Script = ConfigGetRawString(&ConfigInfo, "HostsScript");
-	int			HostsRetryInterval = ConfigGetInt32(&ConfigInfo, "HostsRetryInterval");
+	const char *URL = ConfigGetRawString(ConfigInfo, "Hosts");
+	const char *Script = ConfigGetRawString(ConfigInfo, "HostsScript");
+	int			HostsRetryInterval = ConfigGetInt32(ConfigInfo, "HostsRetryInterval");
 
 	while(1)
 	{
@@ -229,13 +229,13 @@ static void GetHostsFromInternet_Thread(void *Unused)
 	}
 }
 
-int DynamicHosts_Init(void)
+int DynamicHosts_Init(ConfigFileInfo *ConfigInfo)
 {
 	const char	*Path;
 
-	StaticHosts_Init();
+	StaticHosts_Init(ConfigInfo);
 
-	Path = ConfigGetRawString(&ConfigInfo, "Hosts");
+	Path = ConfigGetRawString(ConfigInfo, "Hosts");
 
 	if( Path == NULL )
 	{
@@ -243,7 +243,7 @@ int DynamicHosts_Init(void)
 		return 0;
 	}
 
-	UpdateInterval = ConfigGetInt32(&ConfigInfo, "HostsUpdateInterval");
+	UpdateInterval = ConfigGetInt32(ConfigInfo, "HostsUpdateInterval");
 
 	RWLock_Init(HostsLock);
 
@@ -263,9 +263,9 @@ int DynamicHosts_Init(void)
 
 	} else {
 		/* Internet file */
-		File = ConfigGetRawString(&ConfigInfo, "HostsDownloadPath");
+		File = ConfigGetRawString(ConfigInfo, "HostsDownloadPath");
 
-		if( ConfigGetInt32(&ConfigInfo, "HostsRetryInterval") < 1 )
+		if( ConfigGetInt32(ConfigInfo, "HostsRetryInterval") < 1 )
 		{
 			ERRORMSG("`HostsFlushTimeOnFailed' is too small (< 1).\n");
 			File = NULL;
@@ -284,7 +284,7 @@ int DynamicHosts_Init(void)
 			INFO("Hosts file is unreadable, this may cause some failures.\n");
 		}
 
-		CREATE_THREAD(GetHostsFromInternet_Thread, NULL, GetHosts_Thread);
+		CREATE_THREAD(GetHostsFromInternet_Thread, ConfigInfo, GetHosts_Thread);
 	}
 
 	LastUpdate = time(NULL);
@@ -295,11 +295,11 @@ int DynamicHosts_Init(void)
 
 int DynamicHosts_GetByQuestion(ThreadContext *Context, int *AnswerCount)
 {
-	int ret = -1;
+	int ret = MATCH_STATE_NONE;
 
 	ret = StaticHosts_GetByQuestion(Context, AnswerCount);
 
-	if( ret > 0 )
+	if( ret > 0 || ret == MATCH_STATE_DISABLED )
 	{
 		return ret;
 	}
@@ -319,7 +319,7 @@ int DynamicHosts_GetByQuestion(ThreadContext *Context, int *AnswerCount)
 
 		return ret;
 	} else {
-		return -1;
+		return MATCH_STATE_NONE;
 	}
 }
 

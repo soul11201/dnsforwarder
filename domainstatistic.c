@@ -284,7 +284,7 @@ int DomainStatistic_Hold(void)
 
 		fprintf(MainFile, "Total number of : Queried domains       : %d\n"
 						  "                  Requests              : %d\n"
-						  "                  Known Spoofed domains : %d\n"
+						  "                  Known spoofed domains : %d\n"
 						  "                  Refused&Failed        : %d\n"
 						  "                  Responses from hosts  : %d\n"
 						  "                  Responses from cache  : %d\n"

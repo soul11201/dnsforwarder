@@ -28,16 +28,16 @@ typedef struct _RecvInfo{
 } RecvInfo;
 
 /* Functions */
-int QueryDNSListenTCPInit(void)
+int QueryDNSListenTCPInit(ConfigFileInfo *ConfigInfo)
 {
 	static struct _Address	ListenAddr;
 
-	const char	*LocalAddr = ConfigGetRawString(&ConfigInfo, "LocalInterface");
-	int			LocalPort = ConfigGetInt32(&ConfigInfo, "LocalPort");
+	const char	*LocalAddr = ConfigGetRawString(ConfigInfo, "LocalInterface");
+	int			LocalPort = ConfigGetInt32(ConfigInfo, "LocalPort");
 
 	int			AddrLen;
 
-	RefusingResponseCode = ConfigGetInt32(&ConfigInfo, "RefusingResponseCode");
+	RefusingResponseCode = ConfigGetInt32(ConfigInfo, "RefusingResponseCode");
 
 	Family = GetAddressFamily(LocalAddr);
 
@@ -299,7 +299,7 @@ static int QueryDNSListenTCP(void *Unused)
 	return 0;
 }
 
-void QueryDNSListenTCPStart(void)
+void QueryDNSListenTCPStart(ConfigFileInfo *ConfigInfo)
 {
 	static ThreadHandle	Unused;
 
@@ -307,8 +307,8 @@ void QueryDNSListenTCPStart(void)
 		return;
 
 	INFO("Starting TCP socket %s:%d successfully.\n",
-		 ConfigGetRawString(&ConfigInfo, "LocalInterface"),
-		 ConfigGetInt32(&ConfigInfo, "LocalPort")
+		 ConfigGetRawString(ConfigInfo, "LocalInterface"),
+		 ConfigGetInt32(ConfigInfo, "LocalPort")
 		 );
 	CREATE_THREAD(QueryDNSListenTCP, NULL, Unused);
 

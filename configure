@@ -4634,12 +4634,13 @@ fi
 done
 
 
-for ac_header in sys/syscall.h
+for ac_header in sys/syscall.h wordexp.h
 do :
-  ac_fn_c_check_header_mongrel "$LINENO" "sys/syscall.h" "ac_cv_header_sys_syscall_h" "$ac_includes_default"
-if test "x$ac_cv_header_sys_syscall_h" = xyes; then :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_SYS_SYSCALL_H 1
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
 _ACEOF
 
 fi
@@ -5081,6 +5082,26 @@ $as_echo "#define realloc rpl_realloc" >>confdefs.h
 
 fi
 
+
+ac_fn_c_check_func "$LINENO" "setenv" "ac_cv_func_setenv"
+if test "x$ac_cv_func_setenv" = xyes; then :
+
+$as_echo "#define HAVE_SETENV /**/" >>confdefs.h
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Relative path is not supported." >&5
+$as_echo "$as_me: WARNING: Relative path is not supported." >&2;}
+fi
+
+ac_fn_c_check_func "$LINENO" "wordexp" "ac_cv_func_wordexp"
+if test "x$ac_cv_func_wordexp" = xyes; then :
+
+$as_echo "#define HAVE_WORDEXP /**/" >>confdefs.h
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Relative path is not supported." >&5
+$as_echo "$as_me: WARNING: Relative path is not supported." >&2;}
+fi
 
 
 # Check whether --enable-spinlock was given.

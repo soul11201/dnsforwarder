@@ -282,11 +282,11 @@ HostsRecordType Hosts_LoadFromMetaLine(HostsContainer *Container, char *MetaLine
 	return Hosts_AddToContainer(Container, IPOrCName, Domain);
 }
 
-int StaticHosts_Init(void)
+int StaticHosts_Init(ConfigFileInfo *ConfigInfo)
 {
 	int		IPv4Count = 0, IPv6Count = 0, CNameCount = 0, ExcludedCount = 0;
 
-	StringList *AppendHosts = ConfigGetStringList(&ConfigInfo, "AppendHosts");
+	StringList *AppendHosts = ConfigGetStringList(ConfigInfo, "AppendHosts");
 	const char *Itr;
 	char Buffer[2 * DOMAIN_NAME_LENGTH_MAX + 2];
 
@@ -378,14 +378,11 @@ static BOOL Hosts_IsExcludedDomain(HostsContainer *Container, const char *Name)
 	return StringChunk_Match((StringChunk *)&(Container -> ExcludedDomains), Name, NULL, NULL);
 }
 
-#define	MATCH_STATE_PERFECT	0
-#define	MATCH_STATE_ONLY_CNAME	1
-#define	MATCH_STATE_NONE	(-1)
 static int Hosts_Match(HostsContainer *Container, const char *Name, DNSRecordType Type, const char **Result)
 {
 	if( Hosts_IsExcludedDomain(Container, Name) == TRUE )
 	{
-		return MATCH_STATE_NONE;
+		return MATCH_STATE_DISABLED;
 	}
 
 	switch( Type )
@@ -547,13 +544,13 @@ int Hosts_GetFromContainer(HostsContainer *Container, ThreadContext *Context, in
 	Class = (DNSRecordClass)DNSGetRecordClass(DNSJumpHeader(Context -> RequestEntity));
 
 	if( Class != DNS_CLASS_IN )
-		return -1;
+		return MATCH_STATE_NONE;
 
 	MatchState = Hosts_Match(Container, Context -> RequestingDomain, Context -> RequestingType, &Result);
 
 	if( MatchState == MATCH_STATE_NONE )
 	{
-		return -1;
+		return MATCH_STATE_DISABLED;
 	}
 
 	if( MatchState == MATCH_STATE_PERFECT )
@@ -564,7 +561,7 @@ int Hosts_GetFromContainer(HostsContainer *Container, ThreadContext *Context, in
 	{
 		return Hosts_RecursivelyQuery(Result, AnswerCount, Context);
 	} else {
-		return -1;
+		return MATCH_STATE_NONE;
 	}
 }
 
@@ -572,7 +569,7 @@ int StaticHosts_GetByQuestion(ThreadContext *Context, int *AnswerCount)
 {
 	if( Inited == FALSE )
 	{
-		return -1;
+		return MATCH_STATE_NONE;
 	} else {
 		return Hosts_GetFromContainer(&MainContainer, Context, AnswerCount);
 	}

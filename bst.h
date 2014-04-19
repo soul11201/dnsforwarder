@@ -25,7 +25,7 @@ int Bst_NodesInit(Array *Nodes, int ElementLength);
 
 int Bst_Add(Bst *t, const void *Data);
 
-const void *Bst_Search(Bst *t, const void *Data, const void *Start);
+int32_t Bst_Search(Bst *t, const void *Data, const void *Start);
 
 int32_t *Bst_Minimum_ByNumber(Bst *t, int32_t SubTree);
 
