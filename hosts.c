@@ -223,8 +223,11 @@ static void GetHostsFromInternet_Thread(ConfigFileInfo *ConfigInfo)
 			SLEEP(UpdateInterval * 1000);
 
 		} else {
-			ERRORMSG("Getting Hosts from Internet failed. Waiting %d second(s) to try again.\n", HostsRetryInterval);
-			SLEEP(HostsRetryInterval * 1000);
+			if( HostsRetryInterval > 0 )
+			{
+				ERRORMSG("Getting Hosts from Internet failed. Waiting %d second(s) to try again.\n", HostsRetryInterval);
+				SLEEP(HostsRetryInterval * 1000);
+			}
 		}
 	}
 }
@@ -265,9 +268,9 @@ int DynamicHosts_Init(ConfigFileInfo *ConfigInfo)
 		/* Internet file */
 		File = ConfigGetRawString(ConfigInfo, "HostsDownloadPath");
 
-		if( ConfigGetInt32(ConfigInfo, "HostsRetryInterval") < 1 )
+		if( ConfigGetInt32(ConfigInfo, "HostsRetryInterval") < 0 )
 		{
-			ERRORMSG("`HostsFlushTimeOnFailed' is too small (< 1).\n");
+			ERRORMSG("`HostsRetryInterval' is too small (< 0).\n");
 			File = NULL;
 			return 1;
 		}
@@ -278,7 +281,7 @@ int DynamicHosts_Init(ConfigFileInfo *ConfigInfo)
 
 		if( FileIsReadable(File) )
 		{
-			INFO("Loading the existing Hosts ...\n");
+			INFO("Loading the existing hosts file ...\n");
 			DynamicHosts_Load();
 		} else {
 			INFO("Hosts file is unreadable, this may cause some failures.\n");
