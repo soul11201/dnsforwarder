@@ -26,6 +26,17 @@ int QueryDNSInterfaceInit(char *ConfigFile)
 
 	ConfigInitInfo(&ConfigInfo);
 
+    TmpTypeDescriptor.boolean = FALSE;
+    ConfigAddOption(&ConfigInfo, "LogOn", STRATEGY_DEFAULT, TYPE_BOOLEAN, TmpTypeDescriptor, NULL);
+
+    TmpTypeDescriptor.INT32 = 102400;
+    ConfigAddOption(&ConfigInfo, "LogFileThresholdLength", STRATEGY_DEFAULT, TYPE_INT32, TmpTypeDescriptor, NULL);
+
+	GetFileDirectory(TmpStr);
+	strcat(TmpStr, PATH_SLASH_STR);
+    TmpTypeDescriptor.str = TmpStr;
+    ConfigAddOption(&ConfigInfo, "LogFileFolder", STRATEGY_REPLACE, TYPE_PATH, TmpTypeDescriptor, NULL);
+
     TmpTypeDescriptor.str = "127.0.0.1";
     ConfigAddOption(&ConfigInfo, "LocalInterface", STRATEGY_REPLACE, TYPE_STRING, TmpTypeDescriptor, "Local working interface");
 
@@ -202,6 +213,8 @@ int QueryDNSInterfaceStart(void)
 	const char *LocalAddr;
 
 	int IsZeroZeroZeroZero;
+
+	Debug_Init(&ConfigInfo);
 
 	if( ShowMassages == TRUE )
 	{

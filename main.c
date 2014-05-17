@@ -22,17 +22,12 @@
 #include "request_response.h"
 #include "debug.h"
 
-#define VERSION__ "2.7.2"
+#define VERSION__ "2.7.3"
 
 #define PRINTM(...)		if(ShowMassages == TRUE) printf(__VA_ARGS__);
 
 static char		*ConfigFile;
 static BOOL		DeamonMode;
-
-#ifdef INTERNAL_DEBUG
-static BOOL		DebugMode = TRUE;
-static int		DebugFileThresholdLength  = 102400;
-#endif
 
 int DaemonInit()
 {
@@ -247,11 +242,6 @@ int ArgParse(int argc, char *argv_ori[])
 				  "  -e         Show only error messages.\n"
 				  "  -d         Daemon mode. Running at background.\n"
 				  "  -P         Try to probe all the fake IP addresses held in false DNS responses.\n"
-#ifdef INTERNAL_DEBUG
-				  "\n"
-				  "  -nD        \n"
-				  "  -DT <NUM>  \n"
-#endif
 #ifndef WIN32
 				  "\n"
 				  "  -p         Prepare needed environment.\n"
@@ -308,26 +298,6 @@ int ArgParse(int argc, char *argv_ori[])
 			++argv;
             continue;
         }
-
-#ifdef INTERNAL_DEBUG
-		if( strcmp("-nD", *argv) == 0 )
-		{
-			DebugMode = FALSE;
-
-			++argv;
-            continue;
-		}
-
-		if( strcmp("-DT", *argv) == 0 )
-		{
-			++argv;
-			sscanf(*argv, "%d", &DebugFileThresholdLength);
-
-			++argv;
-            continue;
-		}
-#endif
-
 #ifndef WIN32
 		if( strcmp("-p", *argv) == 0 )
 		{
@@ -368,13 +338,6 @@ int main(int argc, char *argv[])
 #endif /* WIN32 */
 
 	ArgParse(argc, argv);
-
-#ifdef INTERNAL_DEBUG
-	if( DebugMode == TRUE )
-	{
-		Debug_Init(DebugFileThresholdLength);
-	}
-#endif
 
 	if( ConfigFile == NULL )
 	{

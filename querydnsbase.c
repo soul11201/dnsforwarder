@@ -52,12 +52,13 @@ void ShowRefusingMassage(ThreadContext *Context, const char *Massage)
 			  );
 	}
 
-	DEBUG_FILE("[R][%s][%s][%s] %s.\n",
-		   Context -> ClientIP,
-		   DNSGetTypeName(Context -> RequestingType),
-		   Context -> RequestingDomain,
-		   Massage
-		   );
+	DEBUG_FILE("%s[R][%s][%s][%s] %s.\n",
+			  DateAndTime,
+			  Context -> ClientIP,
+			  DNSGetTypeName(Context -> RequestingType),
+			  Context -> RequestingDomain,
+			  Massage
+			  );
 }
 
 void ShowErrorMassage(ThreadContext *Context, char ProtocolCharacter)
@@ -90,7 +91,8 @@ void ShowErrorMassage(ThreadContext *Context, char ProtocolCharacter)
 			   );
 	}
 
-	DEBUG_FILE("[%c][%s][%s][%s] An error occured : %d : %s .\n",
+	DEBUG_FILE("%s[%c][%s][%s][%s] An error occured : %d : %s .\n",
+			   DateAndTime,
 			   ProtocolCharacter,
 			   Context -> ClientIP,
 			   DNSGetTypeName(Context -> RequestingType),
@@ -126,14 +128,15 @@ void ShowNormalMassage(ThreadContext *Context, int32_t Offset, char ProtocolChar
 			  );
 	}
 
-	DEBUG_FILE("[%c][%s][%s][%s] :%d bytes\n%s",
-			   ProtocolCharacter,
-			   Context -> ClientIP,
-			   DNSGetTypeName(Context -> RequestingType),
-			   Context -> RequestingDomain,
-			   ExtendableBuffer_GetUsedBytes(Context -> ResponseBuffer) - Offset,
-			   InfoBuffer
-			   );
+	DEBUG_FILE("%s[%c][%s][%s][%s] : %d bytes\n%s",
+			  DateAndTime,
+			  ProtocolCharacter,
+			  Context -> ClientIP,
+			  DNSGetTypeName(Context -> RequestingType),
+			  Context -> RequestingDomain,
+			  ExtendableBuffer_GetUsedBytes(Context -> ResponseBuffer) - Offset,
+			  InfoBuffer
+			  );
 }
 
 void ShowBlockedMessage(const char *RequestingDomain, const char *Package, const char *Message)
@@ -154,7 +157,7 @@ void ShowBlockedMessage(const char *RequestingDomain, const char *Package, const
 		printf("%s[B][%s] %s :\n%s", DateAndTime, RequestingDomain, Message == NULL ? "" : Message, InfoBuffer);
 	}
 
-	DEBUG_FILE("[B][%s] %s :\n%s", RequestingDomain, Message == NULL ? "" : Message, InfoBuffer);
+	DEBUG_FILE("%s[B][%s] %s :\n%s", DateAndTime, RequestingDomain, Message == NULL ? "" : Message, InfoBuffer);
 }
 
 int DNSFetchFromHosts(__in ThreadContext *Context)
@@ -339,7 +342,6 @@ int InitAddress(ConfigFileInfo *ConfigInfo)
 		{
 			INFO("Bad address : %s\n", Itr);
 		} else {
-			DEBUG_FILE("Add TCP address : %s\n", Itr);
 		}
 
 		Itr = StringList_GetNext(tcpaddrs, Itr);
@@ -352,7 +354,6 @@ int InitAddress(ConfigFileInfo *ConfigInfo)
 		{
 			INFO("Bad address : %s\n", Itr);
 		} else {
-			DEBUG_FILE("Add UDP address : %s\n", Itr);
 		}
 
 		Itr = StringList_GetNext(udpaddrs, Itr);
@@ -375,20 +376,13 @@ int InitAddress(ConfigFileInfo *ConfigInfo)
 			ERRORMSG("No UDP server specified, cannot use parallel query.\n")
 			ParallelQuery = FALSE;
 		} else {
-			DEBUG_FILE("Enable parallel query.\n");
-
 			AddressChunk_GetOneUDPBySubscript(&Addresses, &MainFamily, 0);
 
 			if( MainFamily == AF_INET )
 			{
 				AddrLen = sizeof(struct sockaddr);
-
-				DEBUG_FILE("Parallel query servers family IPv4.\n");
-
 			} else {
 				AddrLen = sizeof(struct sockaddr_in6);
-
-				DEBUG_FILE("Parallel query servers family IPv6.\n");
 			}
 
 			Array_Init(&Addresses_Array, AddrLen, NumberOfAddr, FALSE, NULL);
