@@ -69,7 +69,7 @@ static HostsRecordType Hosts_DetermineIPTypes(const char *IPOrCName)
 		return HOSTS_TYPE_UNKNOWN;
 	}
 
-	/* A hosts IPOrCName started by "@@ " is excluded */
+	/* A hosts IPOrCName started with "@@ " is excluded */
 	if( *IPOrCName == '@' && *(IPOrCName + 1) == '@' )
 	{
 		return HOSTS_TYPE_EXCLUEDE;
@@ -87,7 +87,7 @@ static HostsRecordType Hosts_DetermineIPTypes(const char *IPOrCName)
 		/* Check if it is CNAME */
 		for(Itr = IPOrCName; *Itr != '\0'; ++Itr)
 		{
-			if( isalpha(*Itr) )
+			if( isalpha(*Itr) || *Itr == '-' || *Itr == '.' )
 			{
 				return HOSTS_TYPE_CNAME;
 			}
@@ -112,7 +112,7 @@ static HostsRecordType Hosts_DetermineIPTypes(const char *IPOrCName)
 
 		for(; *IPOrCName != '\0'; ++IPOrCName)
 		{
-			if( !isalnum(*IPOrCName) && *IPOrCName != '.' )
+			if( !isalnum(*IPOrCName) && *IPOrCName != '-' && *IPOrCName != '.' )
 			{
 				return HOSTS_TYPE_UNKNOWN;
 			}
@@ -224,6 +224,7 @@ static HostsRecordType Hosts_AddToContainer(HostsContainer *Container, const cha
 			break;
 
 		default:
+			INFO("Unrecognisable hosts : %s %s\n", IPOrCName, Domain);
 			return HOSTS_TYPE_UNKNOWN;
 			break;
 	}
