@@ -224,7 +224,7 @@ static BOOL WouldBeBlock(const char *Package, const char *RequestingDomain, BOOL
 			{
 				if( DNSGetRecordType(Answer1) == DNS_TYPE_A && IpChunk_Find(BlockedIP, *Data1) == TRUE )
 				{
-					ShowBlockedMessage(RequestingDomain, Package, "One of the IPs is in blocked list, discarded");
+					ShowBlockedMessage(RequestingDomain, Package, "One of the IPs is in `UDPBlock_IP', discarded");
 					Loop = -1;
 					break;
 				}
