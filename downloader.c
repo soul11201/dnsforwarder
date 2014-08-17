@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifndef	WIN32
 #ifndef DOWNLOAD_LIBCURL
@@ -28,6 +29,7 @@
 #endif /* NODOWNLOAD */
 
 #include "downloader.h"
+#include "debug.h"
 
 int GetFromInternet_MultiFiles(const char	**URLs,
 							   const char	*File,
@@ -44,6 +46,9 @@ int GetFromInternet_MultiFiles(const char	**URLs,
 	if( fp != NULL )
 	{
 		fclose(fp);
+	} else {
+		ERRORMSG("Cannot read file %s\n", File);
+		return -1;
 	}
 
 	while( *URLs != NULL )

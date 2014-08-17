@@ -189,6 +189,8 @@ static void GetHostsFromInternet_Thread(ConfigFileInfo *ConfigInfo)
 			{
 				return;
 			}
+		} else {
+			ERRORMSG("Getting hosts file(s) failed.\n");
 		}
 
 		SLEEP(UpdateInterval * 1000);
@@ -788,7 +790,7 @@ int DynamicHosts_Init(ConfigFileInfo *ConfigInfo)
 
 int DynamicHosts_Start(ConfigFileInfo *ConfigInfo)
 {
-	if( StaticHostsInited == TRUE )
+	if( StaticHostsInited == TRUE || File != NULL )
 	{
 		ThreadHandle	t;
 
